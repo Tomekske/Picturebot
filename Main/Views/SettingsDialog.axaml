@@ -1,0 +1,21 @@
+﻿
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             Width="400"
+             x:Class="Main.Views.SettingsDialog"
+             xmlns:vm="using:Main.ViewModels"
+             x:DataType="vm:SettingsDialogViewModel">
+    <StackPanel Spacing="20" Margin="20">
+        <TextBlock Text="Custom Settings" />
+        <TextBlock Text="Adjust your library preferences below." />
+        
+        <TextBox Watermark="Library Name..." />
+        <ToggleSwitch Content="Enable Auto-Sync" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="Cancel" Command="{Binding CancelSettingsCommand}" />
+            <Button Content="Save" Command="{Binding SaveSettingsCommand}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>
