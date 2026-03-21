@@ -1,9 +1,9 @@
-﻿using System.Diagnostics;
+using System;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.Input;
 using Main.Views;
-using SukiUI.Controls;
 using SukiUI.Dialogs;
-
+using SukiUI.Toasts;
 
 namespace Main.ViewModels;
 
@@ -15,14 +15,19 @@ public partial class StatusBarViewModel : ViewModelBase
     private void OpenSettings()
     {
         Debug.WriteLine("Settings Command Triggered!");
-        // SukiHost.ShowDialog(new SettingsView(), allowBackgroundClose: true);
-        // MainWindow.DialogManager.CreateDialog().Dismiss().ByClickingBackground().TryShow();
-        // SukiMainHost.ShowDialog(dialogContent, allowBackgroundClose: true);
-        // SukiDialog.
-// Access the static manager from MainWindow to show the dialog
         MainWindow.DialogManager.CreateDialog()
-            .WithContent(new SettingsDialog()) // Your custom UserControl
-            .WithTitle("Settings") // Optional title
+            .WithContent(new SettingsDialog())
+            .WithTitle("Settings")
+            .WithActionButton("Save", (obj) =>
+            {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Settings")
+                    .WithContent("Settings saved successfully!")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+                MainWindow.DialogManager.DismissDialog();
+            })
+            .WithActionButton("Cancel", (obj) => { MainWindow.DialogManager.DismissDialog(); })
             .TryShow();
     }
 }

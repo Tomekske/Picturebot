@@ -5,10 +5,11 @@
              xmlns:local="using:Main"
              RequestedThemeVariant="Default">
     <Application.DataTemplates>
-        <local:ViewLocator/>
+        <local:ViewLocator />
     </Application.DataTemplates>
-  
+
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
+        <StyleInclude Source="avares://Material.Icons.Avalonia/MaterialIconStyles.xaml" />
     </Application.Styles>
 </Application>
