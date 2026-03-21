@@ -7,7 +7,6 @@ namespace Main.ViewModels;
 
 public partial class SettingsDialogViewModel : ViewModelBase
 {
-    // public ISukiDialogManager DialogManager { get; } = new SukiDialogManager();
     
     [RelayCommand]
     private void CancelSettings()
