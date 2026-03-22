@@ -2,7 +2,7 @@ namespace Domain.Enums;
 
 public enum CurationStatus
 {
-    Unflagged,
-    Flagged,
-    Rejected
+    Unflagged = 0,
+    Flagged = 1,
+    Rejected = 2
 }

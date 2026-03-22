@@ -8,15 +8,15 @@ public enum NodeType
     /// <summary>
     ///     A logical organizational container.
     /// </summary>
-    Folder,
+    Folder = 0,
 
     /// <summary>
     ///     A physical container that maps to a directory and contains pictures.
     /// </summary>
-    Album,
+    Album = 1,
 
     /// <summary>
     ///     An individual picture file with associated metadata.
     /// </summary>
-    Picture
+    Picture = 2
 }

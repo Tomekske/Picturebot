@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Databa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{697B1AFD-094F-4F6C-A405-A19643DE0C74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Test", "Database.Test\Database.Test.csproj", "{86B348C6-F97F-4719-A77A-7E28F36DE882}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{697B1AFD-094F-4F6C-A405-A19643DE0C74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{697B1AFD-094F-4F6C-A405-A19643DE0C74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{697B1AFD-094F-4F6C-A405-A19643DE0C74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
