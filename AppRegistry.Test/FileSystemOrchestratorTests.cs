@@ -1,7 +1,6 @@
 ﻿using System.IO.Abstractions.TestingHelpers;
 using AppRegistry.Infrastructure;
 using Domain.Enums;
-using ErrorOr;
 
 namespace AppRegistry.Test;
 
