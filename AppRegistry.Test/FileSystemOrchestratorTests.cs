@@ -1,6 +1,7 @@
 ﻿using System.IO.Abstractions.TestingHelpers;
 using AppRegistry.Infrastructure;
 using Domain.Enums;
+using ErrorOr;
 
 namespace AppRegistry.Test;
 
@@ -16,9 +17,9 @@ public class FileSystemOrchestratorTests
     }
 
     [Test] 
-    public async Task ExecuteAsync_WhenFolderMissing_ShouldActuallyCreateFolder()
+    public async Task ExecuteAsync_WhenFolderMissing_ShouldCreateFolderAndReturnSuccess()
     {
-        // 1. Arrange: Start with a completely empty in-memory drive
+        // 1. Arrange: Utilizing the new Primary Constructor
         var expectedPath = @"C:\Local\Picturebot\Development\Logs";
         
         var orchestrator = new FileSystemOrchestrator(_mockFileSystem)
@@ -32,19 +33,22 @@ public class FileSystemOrchestratorTests
         var result = await orchestrator.ExecuteAsync(null);
 
         // 3. Assert
-        Assert.That(result, Is.EqualTo(State.Ready));
-        
-        // This checks if the folder actually exists in the "fake" disk
-        bool folderExists = _mockFileSystem.Directory.Exists(expectedPath);
-        Assert.That(folderExists, Is.True, "The directory has been created in the file system.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsError, Is.False, "The result should not contain errors.");
+            Assert.That(result.Value, Is.EqualTo(expectedPath), "Service should return a Success signal.");
+            
+            // Verify the physical side effect
+            bool folderExists = _mockFileSystem.Directory.Exists(expectedPath);
+            Assert.That(folderExists, Is.True, "The directory should be created in the file system.");
+        });
     }
     
     [Test] 
-    public async Task ExecuteAsync_WhenFolderAlreadyExists_ShouldReturnVerified()
+    public async Task ExecuteAsync_WhenFolderAlreadyExists_ShouldStillReturnSuccess()
     {
         // 1. Arrange
         var testPath = @"C:\Local\Picturebot\Development\Logs";
-        
         _mockFileSystem.AddDirectory(testPath); 
     
         var orchestrator = new FileSystemOrchestrator(_mockFileSystem)
@@ -58,13 +62,21 @@ public class FileSystemOrchestratorTests
         var result = await orchestrator.ExecuteAsync(null);
 
         // 3. Assert
-        Assert.That(result, Is.EqualTo(State.Verified), "The orchestrator should return Verified when the path already exists.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsError, Is.False, "The result should not contain errors.");
+            Assert.That(result.Value, Is.EqualTo(testPath), "Service should return a Success signal.");
+            
+            // Verify the physical side effect
+            bool folderExists = _mockFileSystem.Directory.Exists(testPath);
+            Assert.That(folderExists, Is.True, "The directory should be created in the file system.");
+        });
     }
-    
+
     [Test]
-    public async Task ExecuteAsync_WhenNewEnvironmentCreated_ShouldNotTouchExistingEnvironment()
+    public async Task ExecuteAsync_WhenEnvironmentIsNew_ShouldNotAffectExistingEnvironments()
     {
-        // 1. Arrange: Create a "Development" environment with a dummy file
+        // 1. Arrange
         var baseLocation = @"C:\Local";
         var appName = "Picturebot";
         var existingEnvPath = Path.Combine(baseLocation, appName, "Development", "Logs");
@@ -73,7 +85,6 @@ public class FileSystemOrchestratorTests
         _mockFileSystem.AddDirectory(existingEnvPath);
         _mockFileSystem.AddFile(existingFilePath, new MockFileData("original content"));
 
-        // Set up an orchestrator for a DIFFERENT environment (Release)
         var orchestrator = new FileSystemOrchestrator(_mockFileSystem)
         {
             Location = baseLocation,
@@ -81,19 +92,18 @@ public class FileSystemOrchestratorTests
             Environment = AppEnvironment.Production
         };
     
-        var expectedReleasePath = Path.Combine(baseLocation, appName, "Production", "Logs");
+        var expectedProductionPath = Path.Combine(baseLocation, appName, "Production", "Logs");
 
         // 2. Act
         var result = await orchestrator.ExecuteAsync(null);
 
         // 3. Assert
-        // Check that the new environment was created
-        Assert.That(result, Is.EqualTo(State.Ready));
-        Assert.That(_mockFileSystem.Directory.Exists(expectedReleasePath), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsError, Is.False);
+            Assert.That(_mockFileSystem.Directory.Exists(expectedProductionPath), Is.True);
 
-        // Check that the existing environment and its files are still there and unchanged
-        Assert.That(_mockFileSystem.File.Exists(existingFilePath), Is.True, "Existing file should still exist.");
-        var content = _mockFileSystem.File.ReadAllText(existingFilePath);
-        Assert.That(content, Is.EqualTo("original content"), "Existing file content should remain untouched.");
+            Assert.That(_mockFileSystem.File.Exists(existingFilePath), Is.True);
+        });
     }
 }

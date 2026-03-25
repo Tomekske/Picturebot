@@ -15,7 +15,7 @@ sealed class Program
     public static async Task Main(string[] args)
     {
         // 1. Setup Configuration
-        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false)
@@ -26,20 +26,25 @@ sealed class Program
         {
             Location = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             Name = "Picturebot",
-            Environment = AppEnvironment.Development
+            Environment = env
         };
         
-        var state = await register.ExecuteAsync(null);
+        var response  = await register.ExecuteAsync(null);
         
-        // Log.Logger = new LoggerConfiguration()
-        //     .ReadFrom.Configuration(configuration)
-        //     .WriteTo.Console()
-        //     .WriteTo.File(Path.Combine(logFolder, "log-.txt"), rollingInterval: RollingInterval.Day)
-        //     .CreateLogger();
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(configuration)
+            .WriteTo.File(Path.Combine(response.Value, "log-.txt"), rollingInterval: RollingInterval.Day)
+            .CreateLogger();
+        
+        if (response.IsError)
+        {
+            Log.Error("Failed to initialize FileSystem: {Error}", response.FirstError.Description);
+        }
 
         try
         {
-            Log.Information("Starting Picturebot in {Environment} mode", env);
+            Log.Information("Starting Picturebot in {Env} mode", env);
+            Log.Debug("Application Directory: {AppDir}", response.Value);
             
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }

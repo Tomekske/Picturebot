@@ -1,9 +1,11 @@
-﻿using Domain.Enums;
+﻿
+using ErrorOr;
 
 namespace Domain.Interfaces;
 
 public interface IOrchestratorService
 {
-    Task<State> ExecuteAsync(object data);
+    Task<ErrorOr<string>> ExecuteAsync(object data);
+    
     Task CompensateAsync(object data);
 }
