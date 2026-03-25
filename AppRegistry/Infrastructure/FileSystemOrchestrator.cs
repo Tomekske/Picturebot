@@ -1,0 +1,47 @@
+﻿using Domain.Interfaces;
+using System.IO.Abstractions;
+using Domain.Enums;
+
+namespace AppRegistry.Infrastructure;
+
+public class FileSystemOrchestrator : IOrchestratorService
+{
+    private readonly IFileSystem _fileSystem;
+    public required string Location { get; init; }
+    public required string Name { get; init; }
+    public required string Environment { get; init; }
+    
+    // The default constructor for production uses the real file system
+    public FileSystemOrchestrator() : this(new FileSystem()) { }
+
+    // This constructor is used for Testing (Dependency Injection)
+    public FileSystemOrchestrator(IFileSystem fileSystem)
+    {
+        _fileSystem = fileSystem;
+    }
+    
+    public Task<State> ExecuteAsync(object data)
+    {
+        var appDirectory = Path.Combine(Location, Name, Environment, "Logs");
+        if (_fileSystem.Path.Exists(appDirectory))
+        {
+            return Task.FromResult(State.Verified);
+        }
+
+        try
+        {
+            _fileSystem.Directory.CreateDirectory(appDirectory);
+            
+            return Task.FromResult(State.Ready);
+        }
+        catch (Exception e)
+        {
+            return Task.FromResult(State.Failed);
+        }
+    }
+
+    public Task CompensateAsync(object data)
+    {
+        throw new NotImplementedException();
+    }
+}

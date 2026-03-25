@@ -8,6 +8,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Test", "Database.Test\Database.Test.csproj", "{86B348C6-F97F-4719-A77A-7E28F36DE882}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppRegistry", "AppRegistry\AppRegistry.csproj", "{DAAEF88A-D9E0-4AF6-9DEF-720DB587E156}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppRegistry.Test", "AppRegistry.Test\AppRegistry.Test.csproj", "{76BDEF4C-4257-4534-A2FE-11E79E010267}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +34,13 @@ Global
 		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86B348C6-F97F-4719-A77A-7E28F36DE882}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DAAEF88A-D9E0-4AF6-9DEF-720DB587E156}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAAEF88A-D9E0-4AF6-9DEF-720DB587E156}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAAEF88A-D9E0-4AF6-9DEF-720DB587E156}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAAEF88A-D9E0-4AF6-9DEF-720DB587E156}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76BDEF4C-4257-4534-A2FE-11E79E010267}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76BDEF4C-4257-4534-A2FE-11E79E010267}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76BDEF4C-4257-4534-A2FE-11E79E010267}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76BDEF4C-4257-4534-A2FE-11E79E010267}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
