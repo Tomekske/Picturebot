@@ -8,8 +8,7 @@ namespace Database.Domain.Entities;
 ///     Represents the global application settings and user preferences.
 /// </summary>
 [Table("settings")]
-public class Settings
-{
+public class Settings {
     /// <summary>
     ///     The unique identifier for the settings record.
     /// </summary>

@@ -7,8 +7,7 @@ using Avalonia.Styling;
 
 namespace Main.ViewModels;
 
-public partial class SettingsDialogViewModel : ViewModelBase
-{
+public partial class SettingsDialogViewModel : ViewModelBase {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLightActive))]
     [NotifyPropertyChangedFor(nameof(IsDarkActive))]
@@ -26,60 +25,48 @@ public partial class SettingsDialogViewModel : ViewModelBase
     [ObservableProperty] private bool _launchFullScreen;
 
     [RelayCommand]
-    private void SetLightTheme()
-    {
-        try
-        {
+    private void SetLightTheme() {
+        try {
             SukiTheme.GetInstance().ChangeBaseTheme(ThemeVariant.Light);
             ThemeIndex = 0;
         }
-        catch
-        {
+        catch {
             ThemeIndex = 0;
         }
     }
 
     [RelayCommand]
-    private void SetDarkTheme()
-    {
-        try
-        {
+    private void SetDarkTheme() {
+        try {
             SukiTheme.GetInstance().ChangeBaseTheme(ThemeVariant.Dark);
             ThemeIndex = 1;
         }
-        catch
-        {
+        catch {
             ThemeIndex = 1;
         }
     }
 
     [RelayCommand]
-    private void SetSystemTheme()
-    {
-        try
-        {
-            if (Application.Current != null)
-            {
+    private void SetSystemTheme() {
+        try {
+            if (Application.Current != null) {
                 Application.Current.RequestedThemeVariant = ThemeVariant.Default;
             }
 
             ThemeIndex = 2;
         }
-        catch
-        {
+        catch {
             ThemeIndex = 2;
         }
     }
 
     [RelayCommand]
-    private void BrowseLibraryLocation()
-    {
+    private void BrowseLibraryLocation() {
         // logic for folder picker could be added here
     }
 
     [RelayCommand]
-    private void CloseDialog()
-    {
+    private void CloseDialog() {
         MainWindow.DialogManager.DismissDialog();
     }
 }

@@ -7,19 +7,16 @@ using SukiUI.Toasts;
 
 namespace Main.ViewModels;
 
-public partial class StatusBarViewModel : ViewModelBase
-{
+public partial class StatusBarViewModel : ViewModelBase {
     public ISukiDialogManager DialogManager { get; } = new SukiDialogManager();
 
     [RelayCommand]
-    private void OpenSettings()
-    {
+    private void OpenSettings() {
         Debug.WriteLine("Settings Command Triggered!");
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new SettingsDialog())
             .WithTitle("Settings")
-            .WithActionButton("Save", (obj) =>
-            {
+            .WithActionButton("Save", (obj) => {
                 MainWindow.ToastManager.CreateToast()
                     .WithTitle("Settings")
                     .WithContent("Settings saved successfully!")

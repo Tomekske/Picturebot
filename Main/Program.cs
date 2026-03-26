@@ -11,11 +11,9 @@ using Serilog;
 
 namespace Main;
 
-sealed class Program
-{
+sealed class Program {
     [STAThread]
-    public static async Task Main(string[] args)
-    {
+    public static async Task Main(string[] args) {
         // Setup Configuration
         var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
         var configuration = new ConfigurationBuilder()
@@ -23,29 +21,26 @@ sealed class Program
             .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile($"appsettings.{env}.json", optional: true)
             .Build();
-        
-        var register = new FileSystemOrchestrator
-        {
+
+        var register = new FileSystemOrchestrator {
             Location = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             Name = "Picturebot",
             Environment = env
         };
-        
-        var response  = await register.ExecuteAsync(null);
-        
+
+        var response = await register.ExecuteAsync(null);
+
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .WriteTo.File(Path.Combine(response.Value, "Logs", "log-.txt"), rollingInterval: RollingInterval.Day)
             .CreateLogger();
-        
-        if (response.IsError)
-        {
+
+        if (response.IsError) {
             Log.Error("Failed to initialize FileSystem: {Error}", response.FirstError.Description);
             return;
         }
 
-        try 
-        {
+        try {
             Log.Information("Starting Picturebot in {Env} mode", env);
             Log.Debug("Application Directory: {AppDir}", response.Value);
 
@@ -55,24 +50,22 @@ sealed class Program
 
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
             optionsBuilder.UseSqlite(connectionString)
-                          .UseSnakeCaseNamingConvention()
-                          .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                .UseSnakeCaseNamingConvention()
+                .ConfigureWarnings(w =>
+                    w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 
-            using (var context = new ApplicationDbContext(optionsBuilder.Options))
-            {
+            using (var context = new ApplicationDbContext(optionsBuilder.Options)) {
                 await context.Database.MigrateAsync();
             }
 
             Log.Information("Database migrations applied successfully");
-            
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Log.Fatal(ex, "Application terminated unexpectedly");
         }
-        finally
-        {
+        finally {
             Log.CloseAndFlush();
         }
     }

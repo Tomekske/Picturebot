@@ -7,8 +7,7 @@ namespace Database.Domain.Entities;
 ///     Represents an album node which acts as a container for pictures and maintains a physical directory mapping.
 /// </summary>
 [Table("albums")]
-public class Album : Node
-{
+public class Album : Node {
     /// <summary>
     ///     A unique identifier used to map the album to its corresponding directory in the physical library.
     /// </summary>

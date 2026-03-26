@@ -2,10 +2,8 @@
 
 namespace Database.Infrastructure.Data;
 
-public static class DbPathProvider
-{
-    public static string GetConnectionString(IConfiguration configuration)
-    {
+public static class DbPathProvider {
+    public static string GetConnectionString(IConfiguration configuration) {
         var myDocumentsLocation = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var rootFolderName = configuration["Picturebot:AppDataPath"] ?? "Picturebot-Fallback";
         var rootFolder = Path.Combine(myDocumentsLocation, rootFolderName);

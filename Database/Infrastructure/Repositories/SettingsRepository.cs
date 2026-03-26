@@ -10,16 +10,13 @@ namespace Database.Infrastructure.Repositories;
 /// <summary>
 ///     Implements the data access logic for application settings using Entity Framework Core.
 /// </summary>
-public class SettingsRepository(ApplicationDbContext context) : ISettingsRepository
-{
+public class SettingsRepository(ApplicationDbContext context) : ISettingsRepository {
     private readonly SettingsMapper _mapper = new();
 
-    public async Task<SettingsModel> LoadAsync()
-    {
+    public async Task<SettingsModel> LoadAsync() {
         var entity = await context.Settings.FirstOrDefaultAsync(s => s.Id == 1);
 
-        if (entity != null)
-        {
+        if (entity != null) {
             return _mapper.EntityToModel(entity);
         }
 
@@ -30,8 +27,7 @@ public class SettingsRepository(ApplicationDbContext context) : ISettingsReposit
         return _mapper.EntityToModel(entity);
     }
 
-    public async Task UpdateAsync(SettingsModel updatedSettings)
-    {
+    public async Task UpdateAsync(SettingsModel updatedSettings) {
         // Re-fetch to ensure we are updating the tracked entity
         var currentSettings = await LoadAsync();
 

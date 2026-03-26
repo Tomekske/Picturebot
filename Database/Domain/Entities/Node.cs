@@ -14,8 +14,7 @@ namespace Database.Domain.Entities;
 [JsonDerivedType(typeof(Folder), "folder")]
 [JsonDerivedType(typeof(Picture), "picture")]
 [JsonDerivedType(typeof(Node), "node")] // Fallback if base is used
-public class Node
-{
+public class Node {
     /// <summary>
     ///     The unique identifier for the node.
     /// </summary>

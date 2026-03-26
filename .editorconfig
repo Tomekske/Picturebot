@@ -1,0 +1,8 @@
+[*]
+# Enforces a single empty line at the very end of the file
+insert_final_newline = true
+
+[*.cs]
+# Braces on the same line (K&R style)
+csharp_brace_style = end_of_line
+csharp_new_line_before_open_brace = none
