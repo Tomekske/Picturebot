@@ -22,22 +22,30 @@ public class FileSystemOrchestrator : IOrchestratorService
         _fileSystem = fileSystem;
     }
 
-    public Task<ErrorOr<string>> ExecuteAsync(object data)
+    public async Task<ErrorOr<string>> ExecuteAsync(object data)
     {
-        var appDirectory = Path.Combine(Location, Name, Environment, "Logs");
+        var appDirectory = Path.Combine(Location, Name, Environment);
+        var logsDirectory = Path.Combine(appDirectory, "Logs");
+
         try
         {
-            // The service's only job is to ensure this directory exists
+            // Ensure the main app directory exists
             if (!_fileSystem.Path.Exists(appDirectory))
             {
                 _fileSystem.Directory.CreateDirectory(appDirectory);
             }
 
-            return Task.FromResult<ErrorOr<string>>(appDirectory);
+            // Ensure the Logs subdirectory exists
+            if (!_fileSystem.Path.Exists(logsDirectory))
+            {
+                _fileSystem.Directory.CreateDirectory(logsDirectory);
+            }
+
+            return await Task.FromResult<ErrorOr<string>>(appDirectory);
         }
         catch (Exception e)
         {
-            return Task.FromResult<ErrorOr<string>>(Error.Failure(
+            return await Task.FromResult<ErrorOr<string>>(Error.Failure(
                 code: "FileSystem.Error",
                 description: e.Message));
         }

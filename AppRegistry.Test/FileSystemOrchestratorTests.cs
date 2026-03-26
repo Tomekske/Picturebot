@@ -19,7 +19,8 @@ public class FileSystemOrchestratorTests
     public async Task ExecuteAsync_WhenFolderMissing_ShouldCreateFolderAndReturnSuccess()
     {
         // 1. Arrange: Utilizing the new Primary Constructor
-        var expectedPath = @"C:\Local\Picturebot\Development\Logs";
+        var expectedPath = @"C:\Local\Picturebot\Development";
+        var logsPath = Path.Combine(expectedPath, "Logs");
         
         var orchestrator = new FileSystemOrchestrator(_mockFileSystem)
         {
@@ -38,8 +39,8 @@ public class FileSystemOrchestratorTests
             Assert.That(result.Value, Is.EqualTo(expectedPath), "Service should return a Success signal.");
             
             // Verify the physical side effect
-            bool folderExists = _mockFileSystem.Directory.Exists(expectedPath);
-            Assert.That(folderExists, Is.True, "The directory should be created in the file system.");
+            Assert.That(_mockFileSystem.Directory.Exists(expectedPath), Is.True, "The main directory should be created.");
+            Assert.That(_mockFileSystem.Directory.Exists(logsPath), Is.True, "The Logs directory should be created.");
         });
     }
     
@@ -47,8 +48,10 @@ public class FileSystemOrchestratorTests
     public async Task ExecuteAsync_WhenFolderAlreadyExists_ShouldStillReturnSuccess()
     {
         // 1. Arrange
-        var testPath = @"C:\Local\Picturebot\Development\Logs";
+        var testPath = @"C:\Local\Picturebot\Development";
+        var logsPath = Path.Combine(testPath, "Logs");
         _mockFileSystem.AddDirectory(testPath); 
+        _mockFileSystem.AddDirectory(logsPath);
     
         var orchestrator = new FileSystemOrchestrator(_mockFileSystem)
         {
@@ -67,8 +70,8 @@ public class FileSystemOrchestratorTests
             Assert.That(result.Value, Is.EqualTo(testPath), "Service should return a Success signal.");
             
             // Verify the physical side effect
-            bool folderExists = _mockFileSystem.Directory.Exists(testPath);
-            Assert.That(folderExists, Is.True, "The directory should be created in the file system.");
+            Assert.That(_mockFileSystem.Directory.Exists(testPath), Is.True, "The main directory should exist.");
+            Assert.That(_mockFileSystem.Directory.Exists(logsPath), Is.True, "The Logs directory should exist.");
         });
     }
 
@@ -78,10 +81,12 @@ public class FileSystemOrchestratorTests
         // 1. Arrange
         var baseLocation = @"C:\Local";
         var appName = "Picturebot";
-        var existingEnvPath = Path.Combine(baseLocation, appName, "Development", "Logs");
-        var existingFilePath = Path.Combine(existingEnvPath, "keep_me.txt");
+        var existingEnvPath = Path.Combine(baseLocation, appName, "Development");
+        var existingLogsPath = Path.Combine(existingEnvPath, "Logs");
+        var existingFilePath = Path.Combine(existingLogsPath, "keep_me.txt");
 
         _mockFileSystem.AddDirectory(existingEnvPath);
+        _mockFileSystem.AddDirectory(existingLogsPath);
         _mockFileSystem.AddFile(existingFilePath, new MockFileData("original content"));
 
         var orchestrator = new FileSystemOrchestrator(_mockFileSystem)
@@ -91,7 +96,7 @@ public class FileSystemOrchestratorTests
             Environment = AppEnvironment.Production
         };
     
-        var expectedProductionPath = Path.Combine(baseLocation, appName, "Production", "Logs");
+        var expectedProductionPath = Path.Combine(baseLocation, appName, "Production");
 
         // 2. Act
         var result = await orchestrator.ExecuteAsync(null);
@@ -101,6 +106,7 @@ public class FileSystemOrchestratorTests
         {
             Assert.That(result.IsError, Is.False);
             Assert.That(_mockFileSystem.Directory.Exists(expectedProductionPath), Is.True);
+            Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedProductionPath, "Logs")), Is.True);
 
             Assert.That(_mockFileSystem.File.Exists(existingFilePath), Is.True);
         });

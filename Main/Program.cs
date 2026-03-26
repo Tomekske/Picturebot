@@ -3,7 +3,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using AppRegistry.Infrastructure;
+using Database.Infrastructure.Data;
 using Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 
@@ -14,7 +16,7 @@ sealed class Program
     [STAThread]
     public static async Task Main(string[] args)
     {
-        // 1. Setup Configuration
+        // Setup Configuration
         var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
@@ -33,18 +35,35 @@ sealed class Program
         
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
-            .WriteTo.File(Path.Combine(response.Value, "log-.txt"), rollingInterval: RollingInterval.Day)
+            .WriteTo.File(Path.Combine(response.Value, "Logs", "log-.txt"), rollingInterval: RollingInterval.Day)
             .CreateLogger();
         
         if (response.IsError)
         {
             Log.Error("Failed to initialize FileSystem: {Error}", response.FirstError.Description);
+            return;
         }
 
-        try
+        try 
         {
             Log.Information("Starting Picturebot in {Env} mode", env);
             Log.Debug("Application Directory: {AppDir}", response.Value);
+
+            // Database Migrations
+            var connectionString = $"Data Source={Path.Combine(response.Value, "picturebot.db")}";
+            Log.Information("Applying database migrations at: {DbPath}", connectionString);
+
+            var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+            optionsBuilder.UseSqlite(connectionString)
+                          .UseSnakeCaseNamingConvention()
+                          .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+
+            using (var context = new ApplicationDbContext(optionsBuilder.Options))
+            {
+                await context.Database.MigrateAsync();
+            }
+
+            Log.Information("Database migrations applied successfully");
             
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
