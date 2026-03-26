@@ -1,46 +1,49 @@
 ﻿using Avalonia;
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using AppRegistry.Infrastructure;
+using Database.Infrastructure;
 using Database.Infrastructure.Data;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using Main.Services;
+using Domain.Interfaces;
 
 namespace Main;
 
 sealed class Program {
     [STAThread]
-    public static async Task Main(string[] args) {
-        // Setup Configuration
-        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: false)
-            .AddJsonFile($"appsettings.{env}.json", optional: true)
-            .Build();
-
-        var register = new FileSystemOrchestrator {
-            Location = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Name = "Picturebot",
-            Environment = env
-        };
-
-        var response = await register.ExecuteAsync(null);
-
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration)
-            .WriteTo.File(Path.Combine(response.Value, "Logs", "log-.txt"), rollingInterval: RollingInterval.Day)
-            .CreateLogger();
-
-        if (response.IsError) {
-            Log.Error("Failed to initialize FileSystem: {Error}", response.FirstError.Description);
-            return;
-        }
-
+    public static void Main(string[] args) {
         try {
+            // Setup Configuration
+            var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile($"appsettings.{env}.json", optional: true)
+                .Build();
+
+            var register = new FileSystemOrchestrator {
+                Location = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                Name = "Picturebot",
+                Environment = env
+            };
+
+            var response = register.ExecuteAsync(new object()).GetAwaiter().GetResult();
+
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(configuration)
+                .WriteTo.File(Path.Combine(response.Value, "Logs", "log-.txt"), rollingInterval: RollingInterval.Day)
+                .CreateLogger();
+
+            if (response.IsError) {
+                Log.Error("Failed to initialize FileSystem: {Error}", response.FirstError.Description);
+                return;
+            }
+
             Log.Information("Starting Picturebot in {Env} mode", env);
             Log.Debug("Application Directory: {AppDir}", response.Value);
 
@@ -48,14 +51,16 @@ sealed class Program {
             var connectionString = $"Data Source={Path.Combine(response.Value, "picturebot.db")}";
             Log.Information("Applying database migrations at: {DbPath}", connectionString);
 
-            var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-            optionsBuilder.UseSqlite(connectionString)
-                .UseSnakeCaseNamingConvention()
-                .ConfigureWarnings(w =>
-                    w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+            // Setup DI
+            var services = new ServiceCollection();
+            services.AddSingleton<IConfiguration>(configuration);
+            services.AddDatabaseLayer(connectionString);
+            services.AddSingleton<ISettingsService, SettingsService>();
+            App.Services = services.BuildServiceProvider();
 
-            using (var context = new ApplicationDbContext(optionsBuilder.Options)) {
-                await context.Database.MigrateAsync();
+            using (var scope = App.Services.CreateScope()) {
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                context.Database.Migrate(); // Use sync Migrate() if possible, or wait
             }
 
             Log.Information("Database migrations applied successfully");

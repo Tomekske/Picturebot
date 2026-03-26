@@ -85,6 +85,20 @@
                           FontSize="14" />
             </StackPanel>
 
+            <!-- ACTIONS Section -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,16,0,0">
+                <Button Command="{Binding CloseDialogCommand}"
+                        Content="Cancel"
+                        Classes.Accent="False"
+                        Width="100"
+                        Height="40" />
+                <Button Command="{Binding SaveSettingsCommand}"
+                        Content="Save"
+                        Classes.Accent="True"
+                        Width="100"
+                        Height="40" />
+            </StackPanel>
+
         </StackPanel>
     </Border>
 </UserControl>
