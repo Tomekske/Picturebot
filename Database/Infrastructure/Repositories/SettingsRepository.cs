@@ -28,14 +28,13 @@ public class SettingsRepository(ApplicationDbContext context) : ISettingsReposit
     }
 
     public async Task UpdateAsync(SettingsModel updatedSettings) {
-        // Re-fetch to ensure we are updating the tracked entity
-        var currentSettings = await LoadAsync();
+        var entity = await context.Settings.FirstOrDefaultAsync(s => s.Id == 1);
+        if (entity == null) {
+            entity = new Settings { Id = 1 };
+            context.Settings.Add(entity);
+        }
 
-        currentSettings.ThemeMode = updatedSettings.ThemeMode;
-        currentSettings.LibraryPath = updatedSettings.LibraryPath;
-        currentSettings.GroupingThreshold = updatedSettings.GroupingThreshold;
-        currentSettings.LaunchMaximized = updatedSettings.LaunchMaximized;
-
+        _mapper.UpdateEntityFromModel(updatedSettings, entity);
         await context.SaveChangesAsync();
     }
 }

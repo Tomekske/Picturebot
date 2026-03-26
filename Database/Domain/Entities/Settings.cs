@@ -26,7 +26,7 @@ public class Settings {
     ///     The absolute file system path to the root of the picture library.
     /// </summary>
     [Column("library_path")]
-    public string LibraryPath { get; set; }
+    public string LibraryPath { get; set; } = string.Empty;
 
     /// <summary>
     ///     The Hamming distance threshold used for grouping similar pictures.
