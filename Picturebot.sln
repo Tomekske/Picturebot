@@ -2,7 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main", "Main\Main.csproj", "{A317A613-3E52-4E69-94FC-527DBC13C580}"
 EndProject
-<<<<<<< HEAD
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Database.csproj", "{65D1FC0C-A0D3-4FC3-B3C3-09A6AABF9815}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{697B1AFD-094F-4F6C-A405-A19643DE0C74}"
@@ -15,8 +14,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppRegistry.Test", "AppRegi
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{EFA08C46-58F7-445F-8D5C-A29200BDAC55}"
 EndProject
-=======
->>>>>>> parent of 1932d41 (Merge pull request #2 from Tomekske/database-layer)
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,7 +24,6 @@ Global
 		{A317A613-3E52-4E69-94FC-527DBC13C580}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A317A613-3E52-4E69-94FC-527DBC13C580}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A317A613-3E52-4E69-94FC-527DBC13C580}.Release|Any CPU.Build.0 = Release|Any CPU
-<<<<<<< HEAD
 		{65D1FC0C-A0D3-4FC3-B3C3-09A6AABF9815}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{65D1FC0C-A0D3-4FC3-B3C3-09A6AABF9815}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65D1FC0C-A0D3-4FC3-B3C3-09A6AABF9815}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -52,7 +48,5 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{76BDEF4C-4257-4534-A2FE-11E79E010267} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}
 		{86B348C6-F97F-4719-A77A-7E28F36DE882} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}
-=======
->>>>>>> parent of 1932d41 (Merge pull request #2 from Tomekske/database-layer)
 	EndGlobalSection
 EndGlobal

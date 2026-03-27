@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 using System;
 using System.Linq;
-=======
->>>>>>> parent of 1932d41 (Merge pull request #2 from Tomekske/database-layer)
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
-using System.Linq;
 using Avalonia.Markup.Xaml;
 using Main.ViewModels;
 using Main.Views;
