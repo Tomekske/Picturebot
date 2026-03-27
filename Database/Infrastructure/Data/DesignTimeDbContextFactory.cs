@@ -4,15 +4,18 @@ using Microsoft.Extensions.Configuration;
 
 namespace Database.Infrastructure.Data;
 
-public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext> {
-    public ApplicationDbContext CreateDbContext(string[] args) {
+public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
+{
+    public ApplicationDbContext CreateDbContext(string[] args)
+    {
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"); // ?? "Development";
 
         var currentDir = Directory.GetCurrentDirectory();
         var configPath = Path.Combine(currentDir, "Main");
 
         // If the 'Main' folder is not found directly, try the parent folder (e.g., if running from the Database project folder)
-        if (!Directory.Exists(configPath)) {
+        if (!Directory.Exists(configPath))
+        {
             configPath = Path.Combine(currentDir, "..", "Main");
         }
 
@@ -30,7 +33,8 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
         var appDataPath = configuration["Picturebot:AppDataPath"];
         Console.WriteLine($"[EF Design-Time] Resolved AppDataPath: {appDataPath ?? "MISSING"}");
 
-        if (string.IsNullOrEmpty(appDataPath)) {
+        if (string.IsNullOrEmpty(appDataPath))
+        {
             throw new InvalidOperationException(
                 $"Configuration key 'Picturebot:AppDataPath' not found for environment '{environment}' in {Path.GetFullPath(configPath)}.");
         }

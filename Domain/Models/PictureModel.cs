@@ -2,8 +2,10 @@ using Domain.Enums;
 
 namespace Domain.Models;
 
-public class PictureModel : NodeModel {
-    public PictureModel() {
+public class PictureModel : NodeModel
+{
+    public PictureModel()
+    {
         Children = null;
     }
 

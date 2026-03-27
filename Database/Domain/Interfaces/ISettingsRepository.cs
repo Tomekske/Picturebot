@@ -5,7 +5,8 @@ namespace Database.Domain.Interfaces;
 /// <summary>
 ///     Defines the data access contract for managing application settings.
 /// </summary>
-public interface ISettingsRepository {
+public interface ISettingsRepository
+{
     Task<SettingsModel> LoadAsync();
 
     Task UpdateAsync(SettingsModel settings);

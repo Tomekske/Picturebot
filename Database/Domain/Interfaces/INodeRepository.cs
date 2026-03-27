@@ -6,7 +6,8 @@ namespace Database.Domain.Interfaces;
 /// <summary>
 ///     Defines the data access contract for managing nodes in the hierarchy.
 /// </summary>
-public interface INodeRepository {
+public interface INodeRepository
+{
     /// <summary>
     ///     Persists a new node to the data store.
     /// </summary>

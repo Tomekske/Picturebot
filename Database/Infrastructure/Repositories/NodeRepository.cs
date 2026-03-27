@@ -6,13 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Database.Infrastructure.Repositories;
 
-public class NodeRepository(ApplicationDbContext context) : INodeRepository {
-    public async Task CreateAsync(Node node) {
+public class NodeRepository(ApplicationDbContext context) : INodeRepository
+{
+    public async Task CreateAsync(Node node)
+    {
         context.Nodes.Add(node);
         await context.SaveChangesAsync();
     }
 
-    public async Task<List<Node>> FindAllAsync() {
+    public async Task<List<Node>> FindAllAsync()
+    {
         return await context.Nodes
             .AsNoTracking()
             .Include(n => (n as Picture)!.Metrics)
@@ -20,14 +23,16 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
             .ToListAsync();
     }
 
-    public async Task<Node?> FindByIdAsync(int id) {
+    public async Task<Node?> FindByIdAsync(int id)
+    {
         return await context.Nodes
             .Include(n => n.Parent)
             .Include(n => (n as Picture)!.Metrics)
             .FirstOrDefaultAsync(n => n.Id == id);
     }
 
-    public async Task<bool> FindDuplicateAsync(int? parentId, string name, NodeType type) {
+    public async Task<bool> FindDuplicateAsync(int? parentId, string name, NodeType type)
+    {
         var query = context.Nodes.AsQueryable();
 
         query = parentId == null
@@ -37,7 +42,8 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         return await query.AnyAsync(n => n.Name == name && n.Type == type);
     }
 
-    public async Task<List<Node>> FindNodesByTypeAsync(NodeType type) {
+    public async Task<List<Node>> FindNodesByTypeAsync(NodeType type)
+    {
         return await context.Nodes
             .AsNoTracking()
             .Include(n => n.Parent)
@@ -47,7 +53,8 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
             .ToListAsync();
     }
 
-    public async Task<List<Node>> FindChildrenAsync(int parentId) {
+    public async Task<List<Node>> FindChildrenAsync(int parentId)
+    {
         return await context.Nodes
             .Include(n => n.Parent)
             .Include(n => (n as Picture)!.Metrics)
@@ -57,7 +64,8 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     }
 
 
-    public async Task UpdateAsync(Node node) {
+    public async Task UpdateAsync(Node node)
+    {
         context.Nodes.Update(node);
         await context.SaveChangesAsync();
     }

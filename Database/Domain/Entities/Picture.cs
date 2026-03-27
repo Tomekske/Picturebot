@@ -7,11 +7,13 @@ namespace Database.Domain.Entities;
 ///     Represents a picture node containing metadata and analysis results.
 /// </summary>
 [Table("pictures")]
-public class Picture : Node {
+public class Picture : Node
+{
     /// <summary>
     ///     Initializes a new instance of the <see cref="Picture" /> class.
     /// </summary>
-    public Picture() {
+    public Picture()
+    {
         Children = null;
     }
 

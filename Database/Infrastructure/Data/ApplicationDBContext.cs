@@ -8,7 +8,8 @@ namespace Database.Infrastructure.Data;
 ///     The primary database context for the application, managing the persistence of settings and the node hierarchy.
 /// </summary>
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbContextOptions)
-    : DbContext(dbContextOptions) {
+    : DbContext(dbContextOptions)
+{
     /// <summary>
     ///     Gets or sets the collection of global application settings.
     /// </summary>
@@ -44,7 +45,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
     ///     Configures the Table-per-Type (TPT) inheritance mapping, property conversions (e.g., enums to strings,
     ///     ulong to long for SQLite compatibility), and seeds the initial application settings.
     /// </remarks>
-    protected override void OnModelCreating(ModelBuilder modelBuilder) {
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
         // TPT Configuration
         modelBuilder.Entity<Node>().ToTable("nodes");
         modelBuilder.Entity<Album>().ToTable("albums");
@@ -63,7 +65,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
 
         // Seed default Settings
         modelBuilder.Entity<Settings>().HasData(
-            new Settings {
+            new Settings
+            {
                 Id = 1,
                 ThemeMode = ThemeMode.System,
                 LibraryPath = "",

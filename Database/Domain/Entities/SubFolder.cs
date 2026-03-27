@@ -3,7 +3,8 @@ namespace Database.Domain.Entities;
 /// <summary>
 ///     Holds the absolute file system paths for the different versions of a picture.
 /// </summary>
-public class SubFolder {
+public class SubFolder
+{
     /// <summary>
     ///     The absolute path to the RAW version of the picture.
     /// </summary>

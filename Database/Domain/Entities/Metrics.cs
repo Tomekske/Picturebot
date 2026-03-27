@@ -8,7 +8,8 @@ namespace Database.Domain.Entities;
 ///     Represents analysis metrics for a specific picture.
 /// </summary>
 [Table("metrics")]
-public class Metrics {
+public class Metrics
+{
     /// <summary>
     ///     The unique identifier for the metrics, corresponding to the picture it belongs to.
     /// </summary>
