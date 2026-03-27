@@ -3,8 +3,7 @@ namespace Domain.Enums;
 /// <summary>
 ///     Defines the possible types of nodes within the hierarchy.
 /// </summary>
-public enum NodeType
-{
+public enum NodeType {
     /// <summary>
     ///     A logical organizational container.
     /// </summary>

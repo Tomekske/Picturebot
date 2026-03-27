@@ -2,8 +2,7 @@
 
 namespace Domain.Models;
 
-public class SettingsModel
-{
+public class SettingsModel {
     public ThemeMode ThemeMode { get; set; } = ThemeMode.System;
 
     public string? LibraryPath { get; set; }

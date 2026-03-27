@@ -1,13 +1,9 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
+﻿using Avalonia.Controls;
 
 namespace Main.Views;
 
-public partial class DetailsInspectorView : UserControl
-{
-    public DetailsInspectorView()
-    {
+public partial class DetailsInspectorView : UserControl {
+    public DetailsInspectorView() {
         InitializeComponent();
     }
 }

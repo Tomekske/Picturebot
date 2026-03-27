@@ -2,8 +2,7 @@
 
 namespace Domain.Models;
 
-public class NodeModel
-{
+public class NodeModel {
     public int Id { get; set; }
 
     public int? ParentId { get; set; }

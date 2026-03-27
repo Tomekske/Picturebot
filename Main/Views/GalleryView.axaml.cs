@@ -2,10 +2,8 @@
 
 namespace Main.Views;
 
-public partial class GalleryView : UserControl
-{
-    public GalleryView()
-    {
+public partial class GalleryView : UserControl {
+    public GalleryView() {
         InitializeComponent();
     }
 }

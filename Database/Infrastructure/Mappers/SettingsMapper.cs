@@ -5,8 +5,7 @@ using Riok.Mapperly.Abstractions;
 namespace Database.Infrastructure.Mappers;
 
 [Mapper]
-public partial class SettingsMapper
-{
+public partial class SettingsMapper {
     [MapperIgnoreSource(nameof(Settings.Id))]
     public partial SettingsModel EntityToModel(Settings entity);
 

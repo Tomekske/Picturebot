@@ -6,14 +6,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Database.Infrastructure;
 
-public static class DependencyInjection
-{
-    public static IServiceCollection AddDatabaseLayer(this IServiceCollection services, string connectionString)
-    {
+public static class DependencyInjection {
+    public static IServiceCollection AddDatabaseLayer(this IServiceCollection services, string connectionString) {
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite(connectionString)
                 .UseSnakeCaseNamingConvention()
-                .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
+                .ConfigureWarnings(w =>
+                    w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<INodeRepository, NodeRepository>();
