@@ -17,7 +17,7 @@ namespace Database.Domain.Entities;
 public class Node {
     /// <summary>
     ///     The unique identifier for the node.
-    /// </summary>
+    /// </summary>ghghj
     [Key]
     public int Id { get; set; }
 
