@@ -6,5 +6,4 @@ namespace Database.Domain.Entities;
 ///     Represents a logical folder node used for organizing other nodes within the hierarchy.
 /// </summary>
 [Table("folders")]
-public class Folder : Node {
-}
+public class Folder : Node;

@@ -58,8 +58,7 @@ public class SettingsService : ISettingsService {
 
                     break;
             }
-        }
-        catch {
+        } catch {
             // Log or ignore
         }
     }

@@ -1,20 +1,20 @@
-﻿using Avalonia;
-using System;
+﻿using System;
 using System.IO;
 using AppRegistry.Infrastructure;
+using Avalonia;
 using Database.Infrastructure;
 using Database.Infrastructure.Data;
 using Domain.Enums;
+using Domain.Interfaces;
+using Main.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using Main.Services;
-using Domain.Interfaces;
 
 namespace Main;
 
-sealed class Program {
+internal sealed class Program {
     [STAThread]
     public static void Main(string[] args) {
         try {
@@ -22,8 +22,8 @@ sealed class Program {
             var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .AddJsonFile($"appsettings.{env}.json", optional: true)
+                .AddJsonFile("appsettings.json", false)
+                .AddJsonFile($"appsettings.{env}.json", true)
                 .Build();
 
             var register = new FileSystemOrchestrator {
@@ -66,19 +66,18 @@ sealed class Program {
             Log.Information("Database migrations applied successfully");
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             Log.Fatal(ex, "Application terminated unexpectedly");
-        }
-        finally {
+        } finally {
             Log.CloseAndFlush();
         }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.
-    public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    public static AppBuilder BuildAvaloniaApp() {
+        return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+    }
 }

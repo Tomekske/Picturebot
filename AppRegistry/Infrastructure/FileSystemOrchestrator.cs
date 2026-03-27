@@ -35,8 +35,7 @@ public class FileSystemOrchestrator : IOrchestratorService {
             }
 
             return await Task.FromResult<ErrorOr<string>>(appDirectory);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return await Task.FromResult<ErrorOr<string>>(Error.Failure(
                 code: "FileSystem.Error",
                 description: e.Message));
