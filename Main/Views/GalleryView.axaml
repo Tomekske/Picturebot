@@ -15,12 +15,13 @@
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
     </UserControl.Resources>
 
-    <Grid>
-        <ScrollViewer Padding="20,20,20,20">
+    <Grid Margin="0,40,0,0">
+
+        <ScrollViewer Padding="20,10,20,20">
             <StackPanel>
 
                 <ItemsControl ItemsSource="{Binding Breadcrumbs}"
-                              Margin="6,0,0,20">
+                              Margin="4,0,0,20">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
