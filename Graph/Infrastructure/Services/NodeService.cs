@@ -36,6 +36,7 @@ public class NodeService(
             if (node.ParentId.HasValue && nodeMap.TryGetValue(node.ParentId.Value, out var parent)) {
                 parent.Children ??= new List<Node>();
                 parent.Children.Add(node);
+                node.Parent = parent; // Set the parent reference
             } else {
                 roots.Add(node);
             }

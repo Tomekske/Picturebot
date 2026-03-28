@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private ObservableCollection<Node> _items = new();
 
     [ObservableProperty]
-    private string _currentFolderName = "Library";
+    private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
 
     public GalleryViewModel(INodeService nodeService) {
         _nodeService = nodeService;
@@ -27,7 +28,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     private async Task LoadInitialItemsAsync() {
         var roots = await _nodeService.LoadHydratedTreeAsync();
-        UpdateGalleryItems("Library", roots);
+        UpdateGalleryItems(null, roots);
     }
 
     public void Receive(NodeSelectedMessage message) {
@@ -35,24 +36,62 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     }
 
     private void UpdateGallery(Node node) {
-        UpdateGalleryItems(node.Name, node.Children?.ToList());
+        UpdateGalleryItems(node, node.Children?.ToList());
     }
 
-    private void UpdateGalleryItems(string folderName, System.Collections.Generic.List<Node>? children) {
-        CurrentFolderName = folderName;
+    private void UpdateGalleryItems(Node? currentNode, List<Node>? children) {
         Items.Clear();
         if (children != null) {
             foreach (var child in children.Where(n => n is Folder || n is Album)) {
                 Items.Add(child);
             }
         }
+
+        UpdateBreadcrumbs(currentNode);
+    }
+
+    private void UpdateBreadcrumbs(Node? node) {
+        var path = new List<BreadcrumbItem>();
+        var current = node;
+
+        while (current != null) {
+            path.Insert(0, new BreadcrumbItem(current.Name, current));
+            current = current.Parent;
+        }
+
+        // Always add root "Library"
+        path.Insert(0, new BreadcrumbItem("Library", null));
+
+        // Mark the last one
+        if (path.Count > 0) {
+            path.Last().IsLast = true;
+        }
+
+        Breadcrumbs.Clear();
+        foreach (var item in path) {
+            Breadcrumbs.Add(item);
+        }
+    }
+
+    [RelayCommand]
+    private async Task NavigateToBreadcrumb(BreadcrumbItem breadcrumb) {
+        if (breadcrumb.Node == null) {
+            await LoadInitialItemsAsync();
+        } else {
+            UpdateGallery(breadcrumb.Node);
+            WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(breadcrumb.Node));
+        }
     }
 
     [RelayCommand]
     private void NavigateToChild(Node node) {
         UpdateGallery(node);
-        
-        // Notify other components that this node is now the focus
         WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(node));
     }
+}
+
+public class BreadcrumbItem(string name, Node? node) {
+    public string Name { get; } = name;
+    public Node? Node { get; } = node;
+    public bool IsLast { get; set; }
 }
