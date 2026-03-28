@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Graph.Domain.Interfaces;
+using Main.Messages;
 using Main.Views;
 using Serilog;
 using SukiUI.Dialogs;
@@ -26,6 +28,8 @@ public partial class GalleryViewModel : ViewModelBase {
                 // Refresh logic here
                 Log.Information("Folder created: {result}", result.Name);
                 RefreshGallery();
+
+                WeakReferenceMessenger.Default.Send(new FolderCreatedMessage(result));
 
                 MainWindow.ToastManager.CreateToast()
                     .WithTitle("Success")
