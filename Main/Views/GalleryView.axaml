@@ -3,10 +3,63 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Main.ViewModels"
+             xmlns:entities="using:Database.Domain.Entities"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             xmlns:converters="using:Main.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Main.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
 
-    <Grid>
+    <UserControl.Resources>
+        <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto, *">
+        <TextBlock Grid.Row="0" 
+                   Text="{Binding CurrentFolderName}" 
+                   Classes="h2" 
+                   Margin="10,0,0,20" 
+                   FontWeight="Bold"/>
+
+        <ScrollViewer Grid.Row="1">
+            <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="entities:Node">
+                        <Button Classes="Basic" 
+                                Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToChildCommand}"
+                                CommandParameter="{Binding}"
+                                Margin="10"
+                                Padding="0"
+                                CornerRadius="12"
+                                Cursor="Hand">
+                            <suki:GlassCard Width="160" Height="140">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                    <Panel Width="48" Height="48">
+                                        <icons:MaterialIcon Kind="Folder" 
+                                                           IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}" 
+                                                           Width="48" Height="48" Foreground="#FFD700"/>
+                                        <icons:MaterialIcon Kind="ImageAlbum" 
+                                                           IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Album}" 
+                                                           Width="48" Height="48" Foreground="#87CEEB"/>
+                                    </Panel>
+                                    <TextBlock Text="{Binding Name}" 
+                                               HorizontalAlignment="Center" 
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </UserControl>
