@@ -7,7 +7,8 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Main.Views.NavigationPaneView"
              x:DataType="vm:NavigationPaneViewModel">
-    <Grid RowDefinitions="Auto, *">
+    
+    <Grid RowDefinitions="Auto, *" Margin="0,40,0,0">
         <TextBlock Text="Library" 
                    Classes="h3" 
                    Margin="15,10" 
