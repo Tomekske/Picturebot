@@ -1,13 +1,14 @@
-﻿namespace Main.ViewModels;
+namespace Main.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase {
-    public MainWindowViewModel(GalleryViewModel galleryViewModel, GalleryViewModel galleryVM) {
-        GalleryViewModel = galleryViewModel;
+    public MainWindowViewModel(GalleryViewModel galleryVM, NavigationPaneViewModel navigationPaneVM) {
         GalleryVM = galleryVM;
+        NavigationPaneVM = navigationPaneVM;
     }
-
-    public GalleryViewModel GalleryViewModel { get; }
 
     // Expose the Gallery ViewModel as a property
     public GalleryViewModel GalleryVM { get; }
+    
+    // Expose the NavigationPane ViewModel as a property
+    public NavigationPaneViewModel NavigationPaneVM { get; }
 }

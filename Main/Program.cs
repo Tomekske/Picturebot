@@ -71,6 +71,7 @@ internal sealed class Program {
             // ViewModels
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<GalleryViewModel>();
+            services.AddTransient<NavigationPaneViewModel>();
 
             App.Services = services.BuildServiceProvider();
 

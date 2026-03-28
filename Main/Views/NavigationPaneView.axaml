@@ -1,8 +1,43 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Main.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="Main.Views.NavigationPaneView">
-    Welcome to Avalonia!
+             x:Class="Main.Views.NavigationPaneView"
+             x:DataType="vm:NavigationPaneViewModel">
+    <Grid RowDefinitions="Auto, *">
+        <TextBlock Text="Library" 
+                   Classes="h3" 
+                   Margin="15,10" 
+                   FontWeight="Bold"/>
+        
+        <TreeView Grid.Row="1" 
+                  ItemsSource="{Binding Folders}"
+                  Background="Transparent"
+                  BorderThickness="0">
+            <TreeView.Styles>
+                <Style Selector="TreeViewItem" x:DataType="vm:NavigationNodeViewModel">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:NavigationNodeViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Panel Width="18" Height="18">
+                            <icons:MaterialIcon Kind="Folder" 
+                                               IsVisible="{Binding IsFolder}" 
+                                               Foreground="#FFD700"/>
+                            <icons:MaterialIcon Kind="ImageAlbum" 
+                                               IsVisible="{Binding IsAlbum}" 
+                                               Foreground="#87CEEB"/>
+                        </Panel>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
 </UserControl>
