@@ -18,13 +18,11 @@ public class Picture : Node {
     /// <summary>
     ///     The analysis results for the picture, including sharpness and perceptual hash.
     /// </summary>
-    [Column("metrics")]
     public Metrics? Metrics { get; set; }
 
     /// <summary>
     ///     The current curation state of the picture (e.g., Flagged, Rejected).
     /// </summary>
-    [Column("curation_status")]
     public CurationStatus CurationStatus { get; set; } = CurationStatus.Unflagged;
 
     /// <summary>
