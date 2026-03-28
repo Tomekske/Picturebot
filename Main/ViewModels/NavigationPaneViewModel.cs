@@ -1,9 +1,7 @@
-using Avalonia.Threading;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -11,14 +9,15 @@ using Database.Domain.Entities;
 using Graph.Domain.Interfaces;
 using Main.Messages;
 using Main.Views;
+using Serilog;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 namespace Main.ViewModels;
 
-public partial class NavigationPaneViewModel : ViewModelBase {
-    private readonly INodeService _nodeService;
+public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<FolderCreatedMessage> {
     private readonly IFolderService _folderService;
+    private readonly INodeService _nodeService;
 
     [ObservableProperty]
     private ObservableCollection<NavigationNodeViewModel> _folders = new();
@@ -28,8 +27,12 @@ public partial class NavigationPaneViewModel : ViewModelBase {
         _folderService = folderService;
         _ = LoadFoldersAsync();
 
-        WeakReferenceMessenger.Default.Register<NavigationPaneViewModel, FolderCreatedMessage>(this,
-            (r, m) => _ = r.LoadFoldersAsync());
+        WeakReferenceMessenger.Default.Register(this);
+    }
+
+    public void Receive(FolderCreatedMessage message) {
+        // Refresh the navigation pane
+        _ = LoadFoldersAsync();
     }
 
     [RelayCommand]
@@ -38,8 +41,8 @@ public partial class NavigationPaneViewModel : ViewModelBase {
 
         var vm = new CreateFolderDialogViewModel(_folderService, result => {
             if (result != null) {
-                Serilog.Log.Information("Folder created: {result}", result.Name);
-                
+                Log.Information("Folder created: {result}", result.Name);
+
                 // Broadcast creation to refresh the tree
                 WeakReferenceMessenger.Default.Send(new FolderCreatedMessage(result));
 
@@ -54,11 +57,6 @@ public partial class NavigationPaneViewModel : ViewModelBase {
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new CreateFolderDialog { DataContext = vm })
             .TryShow();
-    }
-
-    public void Receive(FolderCreatedMessage message) {
-        // Refresh the navigation pane
-        _ = LoadFoldersAsync();
     }
 
     public async Task LoadFoldersAsync() {
