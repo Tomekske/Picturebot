@@ -5,7 +5,9 @@ using CommunityToolkit.Mvvm.Input;
 using Database.Domain.Entities;
 using Graph.Domain.Interfaces;
 using Main.Views;
+using Serilog;
 using SukiUI.Dialogs;
+using SukiUI.Toasts;
 
 namespace Main.ViewModels;
 
@@ -20,18 +22,26 @@ public partial class GalleryViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task OpenCreateFolderDialogAsync() {
+        // Log.Information("Create Folder Dialog Triggered!");
         // 1. Fetch existing folders for the parent selection list
-        var allNodes = await _nodeService.LoadHydratedTreeAsync();
-        var folders = FlattenFolders(allNodes);
+        // var allNodes = await _nodeService.LoadHydratedTreeAsync();
+        // var folders = FlattenFolders(allNodes);
 
         // 2. Initialize the ViewModel
         var vm = new CreateFolderDialogViewModel(_folderService, result => {
             if (result != null) {
                 // Refresh logic here
-                Console.WriteLine($"Folder created: {result.Name}");
+                Log.Information($"Folder created: {result.Name}");
                 RefreshGallery();
+
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Success")
+                    .WithContent($"Folder '{result.Name}' has been created.")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
             }
-        }, folders);
+        });
+        // }, folders);
 
         // 3. Trigger SukiDialog
         MainWindow.DialogManager.CreateDialog()

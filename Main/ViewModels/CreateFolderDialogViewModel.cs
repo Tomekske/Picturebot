@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,17 +20,17 @@ public partial class CreateFolderDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private LocationItem? _selectedParent;
 
-    public CreateFolderDialogViewModel(IFolderService folderService, Action<Folder?> onResult,
-        List<Folder> existingFolders) {
+    // public CreateFolderDialogViewModel(IFolderService folderService, Action<Folder?> onResult, List<Folder> existingFolders) {
+    public CreateFolderDialogViewModel(IFolderService folderService, Action<Folder?> onResult) {
         _folderService = folderService;
         _onResult = onResult;
 
-        Parents.Add(new LocationItem { Name = "Library", Id = null });
-        foreach (var f in existingFolders) {
-            Parents.Add(new LocationItem { Name = f.Name, Id = f.Id });
-        }
-
-        SelectedParent = Parents[0];
+        // Parents.Add(new LocationItem { Name = "Library", Id = null });
+        // foreach (var f in existingFolders) {
+        //     Parents.Add(new LocationItem { Name = f.Name, Id = f.Id });
+        // }
+        //
+        // SelectedParent = Parents[0];
     }
 
     public ObservableCollection<LocationItem> Parents { get; } = new();

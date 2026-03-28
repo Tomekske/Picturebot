@@ -6,6 +6,10 @@ using Database.Infrastructure;
 using Database.Infrastructure.Data;
 using Domain.Enums;
 using Domain.Interfaces;
+using Graph.Domain.Interfaces;
+using Graph.Domain.Strategies;
+using Graph.Infrastructure.Services;
+using Main.ViewModels;
 using Main.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -56,6 +60,18 @@ internal sealed class Program {
             services.AddSingleton<IConfiguration>(configuration);
             services.AddDatabaseLayer(connectionString);
             services.AddSingleton<ISettingsService, SettingsService>();
+
+            // Graph Services
+            services.AddScoped<INodeService, NodeService>();
+            services.AddScoped<IFolderService, FolderService>();
+            services.AddScoped<NodeStrategyFactory>();
+            services.AddScoped<FolderCreationStrategy>();
+            services.AddScoped<AlbumCreationStrategy>();
+
+            // ViewModels
+            services.AddTransient<MainWindowViewModel>();
+            services.AddTransient<GalleryViewModel>();
+
             App.Services = services.BuildServiceProvider();
 
             using (var scope = App.Services.CreateScope()) {

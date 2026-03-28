@@ -1,5 +1,13 @@
 ﻿namespace Main.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase {
-    public string Greeting { get; } = "Welcome to Avalonia!";
+public class MainWindowViewModel : ViewModelBase {
+    public MainWindowViewModel(GalleryViewModel galleryViewModel, GalleryViewModel galleryVM) {
+        GalleryViewModel = galleryViewModel;
+        GalleryVM = galleryVM;
+    }
+
+    public GalleryViewModel GalleryViewModel { get; }
+
+    // Expose the Gallery ViewModel as a property
+    public GalleryViewModel GalleryVM { get; }
 }
