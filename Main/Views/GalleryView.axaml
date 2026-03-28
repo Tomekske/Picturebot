@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,10 +8,5 @@
              x:DataType="vm:GalleryViewModel">
 
     <Grid>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
-            <Button Content="Create New Folder"
-                    Padding="20,10"
-                    Command="{Binding OpenCreateFolderDialogCommand}" />
-        </StackPanel>
     </Grid>
 </UserControl>
