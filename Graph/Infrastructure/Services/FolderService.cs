@@ -15,4 +15,10 @@ public class FolderService(INodeService nodeService) : IFolderService {
         await nodeService.CreateNodeAsync(folder);
         return folder;
     }
+
+    public async Task<List<Folder>> FindAllAsync() {
+        var allNodes = await nodeService.GetAllNodesAsync();
+
+        return allNodes.OfType<Folder>().ToList();
+    }
 }

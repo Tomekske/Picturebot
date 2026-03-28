@@ -43,4 +43,8 @@ public class NodeService(
 
         return roots;
     }
+
+    public async Task<List<Node>> GetAllNodesAsync() {
+        return await nodeRepository.FindAllAsync();
+    }
 }

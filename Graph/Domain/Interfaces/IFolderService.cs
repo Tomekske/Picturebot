@@ -13,4 +13,6 @@ public interface IFolderService {
     /// <param name="folderName">The name of the new folder.</param>
     /// <returns>A Task that returns the created Folder entity.</returns>
     Task<Folder> CreateAsync(int? parentId, string folderName);
+
+    Task<List<Folder>> FindAllAsync();
 }

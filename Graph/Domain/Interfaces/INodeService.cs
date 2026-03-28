@@ -18,4 +18,6 @@ public interface INodeService {
     /// </summary>
     /// <returns>A Task that returns the root nodes of the hydrated tree.</returns>
     Task<List<Node>> LoadHydratedTreeAsync();
+
+    Task<List<Node>> GetAllNodesAsync();
 }
