@@ -29,6 +29,7 @@ public class SettingsRepository(ApplicationDbContext context) : ISettingsReposit
 
     public async Task UpdateAsync(SettingsModel updatedSettings) {
         var entity = await context.Settings.FirstOrDefaultAsync(s => s.Id == 1);
+        
         if (entity == null) {
             entity = new Settings { Id = 1 };
             context.Settings.Add(entity);

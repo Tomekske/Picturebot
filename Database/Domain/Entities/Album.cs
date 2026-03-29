@@ -12,6 +12,5 @@ public class Album : Node {
     ///     A unique identifier used to map the album to its corresponding directory in the physical library.
     /// </summary>
     [MaxLength(36)]
-    [Column("uuid")]
     public string? Uuid { get; set; }
 }

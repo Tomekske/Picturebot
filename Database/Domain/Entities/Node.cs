@@ -50,6 +50,5 @@ public class Node {
     /// <summary>
     ///     A collection of immediate child nodes.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ICollection<Node>? Children { get; set; } = new List<Node>();
 }

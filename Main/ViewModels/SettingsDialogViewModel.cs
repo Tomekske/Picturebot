@@ -1,16 +1,16 @@
+using System;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Main.Views;
-using Avalonia;
-using Domain.Models;
 using Domain.Enums;
 using Domain.Interfaces;
+using Domain.Models;
+using Main.Views;
 using SukiUI.Toasts;
-using System.Threading.Tasks;
-using System;
-using Avalonia.Controls;
-using Avalonia.Platform.Storage;
-using Avalonia.Controls.ApplicationLifetimes;
 
 namespace Main.ViewModels;
 
@@ -18,23 +18,19 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLightActive))]
-    [NotifyPropertyChangedFor(nameof(IsDarkActive))]
-    [NotifyPropertyChangedFor(nameof(IsSystemActive))]
-    private int _themeIndex = 0;
+    private int _clusterThreshold = 10;
 
-    public bool IsLightActive => ThemeIndex == 0;
-    public bool IsDarkActive => ThemeIndex == 1;
-    public bool IsSystemActive => ThemeIndex == 2;
+    [ObservableProperty]
+    private bool _launchFullScreen;
 
     [ObservableProperty]
     private string _libraryLocation = string.Empty;
 
     [ObservableProperty]
-    private int _clusterThreshold = 10;
-
-    [ObservableProperty]
-    private bool _launchFullScreen;
+    [NotifyPropertyChangedFor(nameof(IsLightActive))]
+    [NotifyPropertyChangedFor(nameof(IsDarkActive))]
+    [NotifyPropertyChangedFor(nameof(IsSystemActive))]
+    private int _themeIndex;
 
     public SettingsDialogViewModel(ISettingsService settingsService) {
         _settingsService = settingsService;
@@ -46,8 +42,14 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         _settingsService = null!;
     }
 
+    public bool IsLightActive => ThemeIndex == 0;
+    public bool IsDarkActive => ThemeIndex == 1;
+    public bool IsSystemActive => ThemeIndex == 2;
+
     private void LoadSettings() {
-        if (_settingsService == null) return;
+        if (_settingsService == null) {
+            return;
+        }
 
         var settings = _settingsService.Current;
         LibraryLocation = settings.LibraryPath ?? string.Empty;
@@ -78,7 +80,10 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private async Task BrowseLibraryLocation() {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow is not Window window) return;
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+            desktop.MainWindow is not Window window) {
+            return;
+        }
 
         var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
             Title = "Select Library Location",
@@ -92,7 +97,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private async Task SaveSettings() {
-        if (_settingsService == null) return;
+        if (_settingsService == null) {
+            return;
+        }
 
         var settings = new SettingsModel {
             LibraryPath = LibraryLocation,

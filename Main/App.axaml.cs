@@ -30,7 +30,7 @@ public partial class App : Application {
             DisableAvaloniaDataAnnotationValidation();
 
             var mainWindow = new MainWindow {
-                DataContext = new MainWindowViewModel(),
+                DataContext = Services?.GetRequiredService<MainWindowViewModel>(),
             };
 
             if (settingsService?.Current.LaunchMaximized == true) {
