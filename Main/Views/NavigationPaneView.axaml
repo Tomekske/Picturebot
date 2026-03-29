@@ -35,14 +35,6 @@
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
                     <Setter Property="MinHeight" Value="32"/>
                 </Style>
-                
-                <Style Selector="TreeViewItem Grid#NodeContainer Button.HoverButton">
-                    <Setter Property="IsVisible" Value="False" />
-                </Style>
-                
-                <Style Selector="TreeViewItem:pointerover Grid#NodeContainer Button.HoverButton">
-                    <Setter Property="IsVisible" Value="True" />
-                </Style>
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:NavigationNodeViewModel">
@@ -63,13 +55,17 @@
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                         </StackPanel>
                         
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="10,0,0,0">
-                            <Button Classes="Basic HoverButton" 
+                        <StackPanel Grid.Column="2" 
+                                    Orientation="Horizontal" 
+                                    Spacing="4" 
+                                    Margin="10,0,0,0"
+                                    IsVisible="{Binding IsSelected}">
+                            <Button Classes="Basic" 
                                     Padding="4" 
                                     ToolTip.Tip="Edit">
                                 <icons:MaterialIcon Kind="Pencil" Width="14" Height="14" Foreground="{DynamicResource SukiText}" />
                             </Button>
-                            <Button Classes="Basic HoverButton" 
+                            <Button Classes="Basic" 
                                     Padding="4" 
                                     ToolTip.Tip="Delete">
                                 <icons:MaterialIcon Kind="Delete" Width="14" Height="14" Foreground="{DynamicResource SukiText}" />
