@@ -21,7 +21,7 @@
             <StackPanel>
 
                 <ItemsControl ItemsSource="{Binding Breadcrumbs}"
-                              Margin="4,0,0,20">
+                              Margin="4,0,0,10">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
@@ -54,6 +54,18 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10" 
+                            Margin="0,0,4,16">
+                    <Button Classes="Basic" ToolTip.Tip="Edit">
+                        <icons:MaterialIcon Kind="Pencil" Width="18" Height="18" Foreground="{DynamicResource SukiText}" />
+                    </Button>
+                    <Button Classes="Basic" ToolTip.Tip="Delete">
+                        <icons:MaterialIcon Kind="Delete" Width="18" Height="18" Foreground="{DynamicResource SukiText}" />
+                    </Button>
+                </StackPanel>
 
                 <ItemsControl ItemsSource="{Binding Items}">
                     <ItemsControl.ItemsPanel>

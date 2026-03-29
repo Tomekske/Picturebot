@@ -35,10 +35,22 @@
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
                     <Setter Property="MinHeight" Value="32"/>
                 </Style>
+                
+                <Style Selector="TreeViewItem StackPanel#NodeContainer Button.HoverButton">
+                    <Setter Property="IsVisible" Value="False" />
+                </Style>
+                
+                <Style Selector="TreeViewItem:pointerover StackPanel#NodeContainer Button.HoverButton">
+                    <Setter Property="IsVisible" Value="True" />
+                </Style>
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:NavigationNodeViewModel">
-                    <StackPanel Orientation="Horizontal" Spacing="8" Height="32" VerticalAlignment="Center">
+                    <StackPanel Name="NodeContainer" 
+                                Orientation="Horizontal" 
+                                Spacing="8" 
+                                Height="32" 
+                                VerticalAlignment="Center">
                         <Panel Width="18" Height="18" VerticalAlignment="Center">
                             <icons:MaterialIcon Kind="Folder" 
                                                IsVisible="{Binding IsFolder}" 
@@ -47,7 +59,20 @@
                                                IsVisible="{Binding IsAlbum}" 
                                                Foreground="#87CEEB"/>
                         </Panel>
-                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="4" Margin="10,0,0,0">
+                            <Button Classes="Basic HoverButton" 
+                                    Padding="4" 
+                                    ToolTip.Tip="Edit">
+                                <icons:MaterialIcon Kind="Pencil" Width="14" Height="14" Foreground="{DynamicResource SukiText}" />
+                            </Button>
+                            <Button Classes="Basic HoverButton" 
+                                    Padding="4" 
+                                    ToolTip.Tip="Delete">
+                                <icons:MaterialIcon Kind="Delete" Width="14" Height="14" Foreground="{DynamicResource SukiText}" />
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
