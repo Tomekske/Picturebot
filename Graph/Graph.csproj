@@ -16,6 +16,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="System.IO.Abstractions" Version="22.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\Database\Database.csproj" />
         <ProjectReference Include="..\Domain\Domain.csproj"/>
     </ItemGroup>

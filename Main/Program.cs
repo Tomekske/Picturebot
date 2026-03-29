@@ -6,6 +6,7 @@ using Database.Infrastructure;
 using Database.Infrastructure.Data;
 using Domain.Enums;
 using Domain.Interfaces;
+using System.IO.Abstractions;
 using Graph.Domain.Interfaces;
 using Graph.Domain.Strategies;
 using Graph.Infrastructure.Services;
@@ -60,10 +61,12 @@ internal sealed class Program {
             services.AddSingleton<IConfiguration>(configuration);
             services.AddDatabaseLayer(connectionString);
             services.AddSingleton<ISettingsService, SettingsService>();
+            services.AddSingleton<IFileSystem, FileSystem>();
 
             // Graph Services
             services.AddScoped<INodeService, NodeService>();
             services.AddScoped<IFolderService, FolderService>();
+            services.AddScoped<IAlbumService, AlbumService>();
             services.AddScoped<NodeStrategyFactory>();
             services.AddScoped<FolderCreationStrategy>();
             services.AddScoped<AlbumCreationStrategy>();
