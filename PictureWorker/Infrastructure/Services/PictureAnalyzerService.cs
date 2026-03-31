@@ -1,5 +1,8 @@
-﻿using CoenM.ImageHash.HashAlgorithms;
+﻿using System.Globalization;
+using CoenM.ImageHash.HashAlgorithms;
 using ErrorOr;
+using MetadataExtractor;
+using MetadataExtractor.Formats.Exif;
 using OpenCvSharp;
 using PictureWorker.Domain.Interfaces;
 using SixLabors.ImageSharp;
@@ -88,5 +91,57 @@ public class PictureAnalyzerService : IPictureAnalyzer {
                 "Picture.ProcessingFailed",
                 "An unexpected error occurred while calculating sharpness.");
         }
+    }
+
+    public async Task<ErrorOr<DateTime>> ExtractTimestamp(string filePath) {
+        // Check existence before starting I/O
+        if (!File.Exists(filePath)) {
+            return Error.NotFound(
+                "Picture.NotFound",
+                $"The file was not found at path: {filePath}");
+        }
+
+        try {
+            // Offload metadata reading to a background thread as it involves synchronous I/O
+            return await Task.Run<ErrorOr<DateTime>>(() => {
+                var directories = ImageMetadataReader.ReadMetadata(filePath);
+
+                // 1. Prioritize ExifSubIfdDirectory for Date/Time Original
+                var subIfdDirectory = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
+                var dateTimeOriginal = subIfdDirectory?.GetDescription(ExifDirectoryBase.TagDateTimeOriginal);
+
+                if (TryParseMetadataDate(dateTimeOriginal, out var result)) {
+                    return result;
+                }
+
+                // 2. Fallback to ExifIfd0Directory
+                var ifd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
+                var dateTime = ifd0Directory?.GetDescription(ExifDirectoryBase.TagDateTime);
+
+                if (TryParseMetadataDate(dateTime, out var result2)) {
+                    return result2;
+                }
+
+                // If no metadata tags are found, return a specific error
+                return Error.NotFound(
+                    "Picture.MetadataNotFound",
+                    "Could not find a valid creation timestamp in the image metadata.");
+            });
+        } catch (Exception e) {
+            // Log the error here if you have a logger injected
+            return Error.Failure(
+                "Picture.MetadataExtractionFailed",
+                "An unexpected error occurred while extracting metadata.");
+        }
+    }
+
+    // Helper method to keep the logic clean
+    private bool TryParseMetadataDate(string? dateString, out DateTime result) {
+        return DateTime.TryParseExact(
+            dateString,
+            "yyyy:MM:dd HH:mm:ss",
+            null,
+            DateTimeStyles.None,
+            out result);
     }
 }
