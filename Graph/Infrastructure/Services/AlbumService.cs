@@ -24,6 +24,11 @@ public class AlbumService(INodeService nodeService, IFileSystem fileSystem) : IA
         var albumPath = fileSystem.Path.Combine(path, album.Uuid);
         fileSystem.Directory.CreateDirectory(albumPath);
 
+        // Create the standard subdirectories
+        fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "RAWs"));
+        fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "JPGs"));
+        fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "Thumbnails"));
+
         return album;
     }
 }

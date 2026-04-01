@@ -56,6 +56,13 @@ public class AlbumServiceTests {
             var expectedPath = Path.Combine(basePath, result.Uuid!);
             Assert.That(_mockFileSystem.Directory.Exists(expectedPath), Is.True, "The album directory should be created with the UUID as name.");
             
+            // Verify standard subdirectories
+            Assert.Multiple(() => {
+                Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "RAWs")), Is.True, "The RAWs directory should be created.");
+                Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "JPGs")), Is.True, "The JPGs directory should be created.");
+                Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "Thumbnails")), Is.True, "The Thumbnails directory should be created.");
+            });
+
             // Verify node service call
             _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Album>(a => 
                 a.Name == albumName && 
