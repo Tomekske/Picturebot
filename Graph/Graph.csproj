@@ -8,19 +8,17 @@
 
     <ItemGroup>
         <Folder Include="Domain\DTOs\"/>
-        <Folder Include="Domain\Interfaces\" />
-        <Folder Include="Domain\Models\" />
-        <Folder Include="Domain\Strategies\" />
+        <Folder Include="Domain\Models\"/>
+        <Folder Include="Domain\Strategies\"/>
         <Folder Include="Infrastructure\Mappers\"/>
-        <Folder Include="Infrastructure\Services\" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.IO.Abstractions" Version="22.1.0" />
+        <PackageReference Include="System.IO.Abstractions" Version="22.1.0"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Database\Database.csproj" />
+        <ProjectReference Include="..\Database\Database.csproj"/>
         <ProjectReference Include="..\Domain\Domain.csproj"/>
     </ItemGroup>
 

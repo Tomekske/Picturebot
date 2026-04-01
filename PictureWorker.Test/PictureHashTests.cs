@@ -27,7 +27,6 @@ public class PictureHashTests {
         _missingPicturesPath = Path.Combine(baseDir, "Resources", "ghost_pictures.jpg");
     }
 
-
     [Test]
     public async Task CalculateHashAsync_WhenFileDoesNotExist_ShouldReturnNotFoundError() {
         var result = await _analyzer.CalculateHashAsync(_missingPicturesPath);
@@ -43,6 +42,7 @@ public class PictureHashTests {
     public async Task CalculateHashAsync_WhenFileIsNotAPictures_ShouldReturnValidationError() {
         var result = await _analyzer.CalculateHashAsync(_invalidPicturesPath);
 
+        // 2. Act
         Assert.Multiple(() => {
             Assert.That(result.IsError, Is.True);
             Assert.That(result.FirstError.Type, Is.EqualTo(ErrorType.Validation));
