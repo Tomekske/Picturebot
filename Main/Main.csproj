@@ -53,5 +53,6 @@
         <ProjectReference Include="..\Database\Database.csproj"/>
         <ProjectReference Include="..\Domain\Domain.csproj"/>
         <ProjectReference Include="..\Graph\Graph.csproj"/>
+        <ProjectReference Include="..\PictureWorker\PictureWorker.csproj"/>
     </ItemGroup>
 </Project>

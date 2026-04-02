@@ -14,15 +14,25 @@
                        FontWeight="Bold"
                        VerticalAlignment="Center"/>
             
-            <Button Grid.Column="1"
-                    Command="{Binding OpenCreateFolderDialogCommand}"
-                    Classes="Basic"
-                    ToolTip.Tip="Create New Folder"
-                    Cursor="Hand"
-                    Padding="6"
-                    CornerRadius="8">
-                <icons:MaterialIcon Kind="FolderPlus" Width="22" Height="22" Foreground="#FFD700" />
-            </Button>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Command="{Binding OpenCreateFolderDialogCommand}"
+                        Classes="Basic"
+                        ToolTip.Tip="Create New Folder"
+                        Cursor="Hand"
+                        Padding="6"
+                        CornerRadius="8">
+                    <icons:MaterialIcon Kind="FolderPlus" Width="22" Height="22" Foreground="#FFD700" />
+                </Button>
+
+                <Button Command="{Binding OpenAddAlbumDialogCommand}"
+                        Classes="Basic"
+                        ToolTip.Tip="Add New Album"
+                        Cursor="Hand"
+                        Padding="6"
+                        CornerRadius="8">
+                    <icons:MaterialIcon Kind="ImageAlbum" Width="22" Height="22" Foreground="#87CEEB" />
+                </Button>
+            </StackPanel>
         </Grid>
         
         <TreeView Grid.Row="1" 

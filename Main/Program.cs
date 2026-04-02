@@ -9,9 +9,12 @@ using Domain.Interfaces;
 using System.IO.Abstractions;
 using Graph.Domain.Interfaces;
 using Graph.Domain.Strategies;
+using Graph.Infrastructure.Commands;
 using Graph.Infrastructure.Services;
 using Main.ViewModels;
 using Main.Services;
+using PictureWorker.Domain.Interfaces;
+using PictureWorker.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,11 +65,14 @@ internal sealed class Program {
             services.AddDatabaseLayer(connectionString);
             services.AddSingleton<ISettingsService, SettingsService>();
             services.AddSingleton<IFileSystem, FileSystem>();
+            services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
+            services.AddSingleton<IPictureProcessor, PictureProcessorService>();
 
             // Graph Services
             services.AddScoped<INodeService, NodeService>();
             services.AddScoped<IFolderService, FolderService>();
             services.AddScoped<IAlbumService, AlbumService>();
+            services.AddTransient<ImportPicturesCommand>();
             services.AddScoped<NodeStrategyFactory>();
             services.AddScoped<FolderCreationStrategy>();
             services.AddScoped<AlbumCreationStrategy>();
