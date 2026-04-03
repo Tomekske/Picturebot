@@ -8,6 +8,8 @@ using CommunityToolkit.Mvvm.Messaging;
 using Database.Domain.Entities;
 using Graph.Domain.Interfaces;
 using Main.Messages;
+using Main.Views;
+using SukiUI.Dialogs;
 
 namespace Main.ViewModels;
 
@@ -30,11 +32,23 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
+    private bool _canPlayCarousel;
+
     public GalleryViewModel(INodeService nodeService, IPathService pathService) {
         _nodeService = nodeService;
         _pathService = pathService;
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private void PlayCarousel() {
+        var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService);
+        Views.MainWindow.DialogManager.CreateDialog()
+            .WithContent(new Views.CarouselDialogView { DataContext = carouselVm })
+            .TryShow();
     }
 
     partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
@@ -65,6 +79,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         PicturesList.Clear();
         
         IsShowingAlbum = currentNode is Album;
+        CanPlayCarousel = IsShowingAlbum && children?.OfType<Picture>().Any() == true;
 
         if (children != null) {
             if (IsShowingAlbum) {

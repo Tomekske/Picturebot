@@ -15,7 +15,7 @@
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
     </UserControl.Resources>
 
-    <Grid Margin="0,40,0,0" RowDefinitions="Auto,*">
+    <Grid Margin="0,40,0,0" RowDefinitions="Auto,Auto,*">
         <!-- Breadcrumbs at the top -->
         <ItemsControl Grid.Row="0" ItemsSource="{Binding Breadcrumbs}"
                       Margin="24,0,0,10">
@@ -50,8 +50,44 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <!-- Command Bar -->
+        <Border Grid.Row="1" 
+                Margin="20,0,20,15"
+                Padding="8,4"
+                Background="{DynamicResource SukiGlassCardBackground}"
+                BorderBrush="{DynamicResource SukiBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="Basic" ToolTip.Tip="Play Carousel" 
+                            Command="{Binding PlayCarouselCommand}"
+                            IsEnabled="{Binding CanPlayCarousel}">
+                        <icons:MaterialIcon Kind="Play" Width="20" Height="20" />
+                    </Button>
+                    <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
+                    <Button Classes="Basic" ToolTip.Tip="Add Picture">
+                        <icons:MaterialIcon Kind="Plus" Width="20" Height="20" />
+                    </Button>
+                    <Button Classes="Basic" ToolTip.Tip="Group">
+                        <icons:MaterialIcon Kind="LayersOutline" Width="20" Height="20" />
+                    </Button>
+                    <Button Classes="Basic" ToolTip.Tip="Filter">
+                        <icons:MaterialIcon Kind="FilterVariant" Width="20" Height="20" />
+                    </Button>
+                    <Button Classes="Basic" ToolTip.Tip="Sort">
+                        <icons:MaterialIcon Kind="SortVariant" Width="20" Height="20" />
+                    </Button>
+                </StackPanel>
+                
+                <Button Grid.Column="1" Classes="Basic" ToolTip.Tip="Delete" Foreground="Red">
+                    <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
+                </Button>
+            </Grid>
+        </Border>
+
         <!-- Content Area -->
-        <Panel Grid.Row="1">
+        <Panel Grid.Row="2">
             
             <!-- Navigation Grid (Folders/Albums) -->
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
