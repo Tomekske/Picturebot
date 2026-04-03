@@ -65,6 +65,7 @@ internal sealed class Program {
             services.AddDatabaseLayer(connectionString);
             services.AddSingleton<ISettingsService, SettingsService>();
             services.AddSingleton<IFileSystem, FileSystem>();
+            services.AddScoped<IPathService, PathService>();
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();
 

@@ -13,6 +13,7 @@
 
     <UserControl.Resources>
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
+        <converters:BitmapValueConverter x:Key="BitmapValueConverter" />
     </UserControl.Resources>
 
     <Grid Margin="0,40,0,0">
@@ -55,7 +56,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <ItemsControl ItemsSource="{Binding Items}">
+                <!-- Navigation Grid (Folders/Albums) -->
+                <ItemsControl ItemsSource="{Binding Items}" IsVisible="{Binding !IsShowingAlbum}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
@@ -93,6 +95,41 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <!-- Picture Gallery (Pictures in Album) -->
+                <ListBox ItemsSource="{Binding PicturesList}"
+                         IsVisible="{Binding IsShowingAlbum}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="entities:Picture">
+                            <suki:GlassCard Width="180" Height="180" Margin="5" Padding="0">
+                                <Grid>
+                                    <Image Source="{Binding SubFolder.Thumbnail, Converter={StaticResource BitmapValueConverter}}"
+                                           Stretch="UniformToFill"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center" />
+                                    
+                                    <Border VerticalAlignment="Bottom" 
+                                            Background="#AA000000" 
+                                            Padding="5,2">
+                                        <TextBlock Text="{Binding Name}" 
+                                                   FontSize="11" 
+                                                   Foreground="White"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Border>
+                                </Grid>
+                            </suki:GlassCard>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
 
             </StackPanel>
         </ScrollViewer>
