@@ -16,11 +16,15 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private Bitmap? _thumbnail;
 
+    [ObservableProperty]
+    private Domain.Enums.CurationStatus _curationStatus;
+
     public Picture Picture => _picture;
     public string Name => _picture.Name;
 
     public PictureItemViewModel(Picture picture) {
         _picture = picture;
+        _curationStatus = picture.CurationStatus;
     }
 
     public async Task LoadThumbnailAsync(int width) {

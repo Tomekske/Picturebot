@@ -83,6 +83,7 @@ internal sealed class Program {
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<GalleryViewModel>();
             services.AddTransient<NavigationPaneViewModel>();
+            services.AddTransient<DetailsInspectorViewModel>();
 
             App.Services = services.BuildServiceProvider();
 

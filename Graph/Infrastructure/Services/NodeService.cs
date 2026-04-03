@@ -48,4 +48,8 @@ public class NodeService(
     public async Task<List<Node>> GetAllNodesAsync() {
         return await nodeRepository.FindAllAsync();
     }
+
+    public async Task UpdateNodeAsync(Node node) {
+        await nodeRepository.UpdateAsync(node);
+    }
 }

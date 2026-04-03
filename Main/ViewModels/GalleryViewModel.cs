@@ -27,11 +27,20 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [ObservableProperty]
     private bool _isShowingAlbum;
 
+    [ObservableProperty]
+    private PictureItemViewModel? _selectedPicture;
+
     public GalleryViewModel(INodeService nodeService, IPathService pathService) {
         _nodeService = nodeService;
         _pathService = pathService;
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
+    }
+
+    partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
+        if (value != null) {
+            WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
+        }
     }
 
     private async Task LoadInitialItemsAsync() {

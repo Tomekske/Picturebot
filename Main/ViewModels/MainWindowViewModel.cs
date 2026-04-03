@@ -1,9 +1,10 @@
 namespace Main.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase {
-    public MainWindowViewModel(GalleryViewModel galleryVM, NavigationPaneViewModel navigationPaneVM) {
+    public MainWindowViewModel(GalleryViewModel galleryVM, NavigationPaneViewModel navigationPaneVM, DetailsInspectorViewModel detailsInspectorVM) {
         GalleryVM = galleryVM;
         NavigationPaneVM = navigationPaneVM;
+        DetailsInspectorVM = detailsInspectorVM;
     }
 
     // Expose the Gallery ViewModel as a property
@@ -11,4 +12,7 @@ public class MainWindowViewModel : ViewModelBase {
     
     // Expose the NavigationPane ViewModel as a property
     public NavigationPaneViewModel NavigationPaneVM { get; }
+
+    // Expose the DetailsInspector ViewModel as a property
+    public DetailsInspectorViewModel DetailsInspectorVM { get; }
 }

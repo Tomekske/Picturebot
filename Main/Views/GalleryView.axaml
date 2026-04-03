@@ -98,6 +98,7 @@
             <!-- Picture Gallery (Pictures in Album) -->
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
                 <ListBox ItemsSource="{Binding PicturesList}"
+                         SelectedItem="{Binding SelectedPicture}"
                          Background="Transparent"
                          BorderThickness="0"
                          Padding="0">
