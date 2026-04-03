@@ -11,6 +11,7 @@ using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Commands;
 using Main.Views;
+using Serilog;
 using SukiUI.Dialogs;
 
 namespace Main.ViewModels;
@@ -55,16 +56,20 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private async Task SelectSourcePathAsync() {
-        var topLevel = MainWindow.Instance;
-        if (topLevel == null) return;
+        try {
+            var topLevel = MainWindow.Instance;
+            if (topLevel == null) return;
 
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions {
-            Title = "Select Source Directory",
-            AllowMultiple = false
-        });
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions {
+                Title = "Select Source Directory",
+                AllowMultiple = false
+            });
 
-        if (folders.Any()) {
-            SourcePath = folders[0].Path.LocalPath;
+            if (folders.Any()) {
+                SourcePath = folders[0].Path.LocalPath;
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Error selecting source path");
         }
     }
 

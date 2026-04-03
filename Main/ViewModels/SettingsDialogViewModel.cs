@@ -10,6 +10,7 @@ using Domain.Enums;
 using Domain.Interfaces;
 using Domain.Models;
 using Main.Views;
+using Serilog;
 using SukiUI.Toasts;
 
 namespace Main.ViewModels;
@@ -80,18 +81,22 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private async Task BrowseLibraryLocation() {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
-            desktop.MainWindow is not Window window) {
-            return;
-        }
+        try {
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+                desktop.MainWindow is not Window window) {
+                return;
+            }
 
-        var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
-            Title = "Select Library Location",
-            AllowMultiple = false
-        });
+            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
+                Title = "Select Library Location",
+                AllowMultiple = false
+            });
 
-        if (folders.Count > 0) {
-            LibraryLocation = folders[0].Path.LocalPath;
+            if (folders.Count > 0) {
+                LibraryLocation = folders[0].Path.LocalPath;
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Error browsing library location");
         }
     }
 

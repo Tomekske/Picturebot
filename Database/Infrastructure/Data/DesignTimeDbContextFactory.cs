@@ -36,7 +36,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
         }
 
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-        optionsBuilder.UseSqlite(DbPathProvider.GetConnectionString(configuration));
+        optionsBuilder.UseSqlite(DbPathProvider.GetConnectionString(configuration, environment));
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }

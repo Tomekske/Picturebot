@@ -76,6 +76,7 @@ internal sealed class Program {
             services.AddScoped<NodeStrategyFactory>();
             services.AddScoped<FolderCreationStrategy>();
             services.AddScoped<AlbumCreationStrategy>();
+            services.AddScoped<PictureCreationStrategy>();
 
             // ViewModels
             services.AddTransient<MainWindowViewModel>();
