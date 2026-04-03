@@ -1,0 +1,124 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Main.ViewModels"
+        xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:converters="using:Main.Converters"
+        xmlns:enums="using:Domain.Enums"
+        mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
+        x:Class="Main.Views.CarouselWindow"
+        x:DataType="vm:CarouselDialogViewModel"
+        Title="Carousel"
+        Background="Black"
+        SystemDecorations="None"
+        WindowState="FullScreen"
+        WindowStartupLocation="CenterScreen"
+        Topmost="True"
+        Focusable="True">
+
+    <Window.Resources>
+        <converters:CurationStatusToBrushConverter x:Key="CurationStatusToBrushConverter" />
+    </Window.Resources>
+
+    <Grid>
+        <!-- Background Layer (Pure Black) -->
+        <Canvas Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Main Image (Contained with aspect ratio) -->
+        <Image Source="{Binding PreviewImage}"
+               Stretch="Uniform"
+               VerticalAlignment="Stretch"
+               HorizontalAlignment="Stretch" />
+
+        <!-- Top-Left: Close Button -->
+        <Button HorizontalAlignment="Left" VerticalAlignment="Top" 
+                Classes="Basic" Margin="30"
+                Command="{Binding CloseCommand}"
+                Foreground="White"
+                ZIndex="100">
+            <icons:MaterialIcon Kind="Close" Width="40" Height="40" />
+        </Button>
+
+        <!-- Top-Right: Counter & Info -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" 
+                    Margin="30" Spacing="10" ZIndex="100">
+            <Border Background="#CC000000" CornerRadius="20" Padding="20,10" BorderBrush="#33FFFFFF" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <TextBlock Text="{Binding CounterText}" 
+                               FontSize="18"
+                               Foreground="White" FontWeight="Bold" />
+                    <Separator Width="1" Height="20" Background="#66FFFFFF" />
+                    <TextBlock Text="{Binding Sharpness, StringFormat='Sharpness: {0}'}" 
+                               FontSize="18"
+                               Foreground="White" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Navigation Arrows (Pinned to absolute edges) -->
+        <Button HorizontalAlignment="Left" VerticalAlignment="Center" 
+                Classes="Basic" Margin="20,0,0,0"
+                Command="{Binding PreviousCommand}"
+                Foreground="#88FFFFFF"
+                ZIndex="100">
+            <icons:MaterialIcon Kind="ChevronLeft" Width="80" Height="80" />
+        </Button>
+
+        <Button HorizontalAlignment="Right" VerticalAlignment="Center" 
+                Classes="Basic" Margin="0,0,20,0"
+                Command="{Binding NextCommand}"
+                Foreground="#88FFFFFF"
+                ZIndex="100">
+            <icons:MaterialIcon Kind="ChevronRight" Width="80" Height="80" />
+        </Button>
+
+        <!-- Bottom-Center: Curation Overlay -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,50"
+                Background="#EE151515" 
+                CornerRadius="30"
+                Padding="15,10"
+                BorderBrush="#44FFFFFF"
+                BorderThickness="1"
+                ZIndex="100">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <!-- Flagged -->
+                <Button Classes="Basic"
+                        Command="{Binding SetCurationStatusCommand}"
+                        CommandParameter="{x:Static enums:CurationStatus.Flagged}"
+                        Padding="20,15">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <icons:MaterialIcon Kind="Flag" Width="36" Height="36"
+                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Flagged}" />
+                        <TextBlock Text="Flagged" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Unflagged -->
+                <Button Classes="Basic"
+                        Command="{Binding SetCurationStatusCommand}"
+                        CommandParameter="{x:Static enums:CurationStatus.Unflagged}"
+                        Padding="20,15">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <icons:MaterialIcon Kind="CircleOutline" Width="36" Height="36"
+                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Unflagged}" />
+                        <TextBlock Text="Neutral" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Rejected -->
+                <Button Classes="Basic"
+                        Command="{Binding SetCurationStatusCommand}"
+                        CommandParameter="{x:Static enums:CurationStatus.Rejected}"
+                        Padding="20,15">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <icons:MaterialIcon Kind="Close" Width="36" Height="36"
+                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Rejected}" />
+                        <TextBlock Text="Rejected" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

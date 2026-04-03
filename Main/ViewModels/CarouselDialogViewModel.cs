@@ -32,8 +32,11 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private int _sharpness;
 
-    public CarouselDialogViewModel(IEnumerable<PictureItemViewModel> pictures, PictureItemViewModel? selectedPicture, INodeService nodeService) {
+    private readonly Action? _closeAction;
+
+    public CarouselDialogViewModel(IEnumerable<PictureItemViewModel> pictures, PictureItemViewModel? selectedPicture, INodeService nodeService, Action? closeAction = null) {
         _nodeService = nodeService;
+        _closeAction = closeAction;
         _pictures = pictures.ToList();
         
         var initial = selectedPicture ?? _pictures.FirstOrDefault();
@@ -103,6 +106,10 @@ public partial class CarouselDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private void Close() {
-        MainWindow.DialogManager.DismissDialog();
+        if (_closeAction != null) {
+            _closeAction.Invoke();
+        } else {
+            MainWindow.DialogManager.DismissDialog();
+        }
     }
 }

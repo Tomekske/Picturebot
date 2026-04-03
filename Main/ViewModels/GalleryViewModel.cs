@@ -45,10 +45,15 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
     private void PlayCarousel() {
-        var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService);
-        Views.MainWindow.DialogManager.CreateDialog()
-            .WithContent(new Views.CarouselDialogView { DataContext = carouselVm })
-            .TryShow();
+        var window = new CarouselWindow();
+        var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, window.Close);
+        window.DataContext = carouselVm;
+        
+        if (Views.MainWindow.Instance != null) {
+            window.Show(Views.MainWindow.Instance);
+        } else {
+            window.Show();
+        }
     }
 
     partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
