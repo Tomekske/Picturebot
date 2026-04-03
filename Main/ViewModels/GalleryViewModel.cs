@@ -19,7 +19,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private ObservableCollection<Node> _items = new();
 
     [ObservableProperty]
-    private ObservableCollection<Picture> _picturesList = new();
+    private ObservableCollection<PictureItemViewModel> _picturesList = new();
 
     [ObservableProperty]
     private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
@@ -50,6 +50,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private void UpdateGalleryItems(Node? currentNode, List<Node>? children) {
         // Clear both collections to prevent ghosting
         Items.Clear();
+        foreach (var picVm in PicturesList) {
+            picVm.Dispose();
+        }
         PicturesList.Clear();
         
         IsShowingAlbum = currentNode is Album;
@@ -59,7 +62,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                 var pics = children.OfType<Picture>().ToList();
                 _pathService.PopulatePaths(pics);
                 foreach (var pic in pics) {
-                    PicturesList.Add(pic);
+                    var picVm = new PictureItemViewModel(pic);
+                    PicturesList.Add(picVm);
+                    _ = picVm.LoadThumbnailAsync(180); // Load thumbnail with target width
                 }
             } else {
                 foreach (var child in children.Where(n => n is Folder || n is Album)) {
