@@ -176,20 +176,26 @@
                                         <DataTemplate x:DataType="vm:PictureItemViewModel">
                                             <suki:GlassCard Height="250" Margin="4" Padding="0"
                                                             CornerRadius="8" ClipToBounds="True">
-                                                <Grid>
+                                                <Grid Background="{DynamicResource SukiControlTouchBackground}">
+                                                    <!-- 
+                                                    Transition moved into the Style block for better reliability.
+                                                    The 'loaded' class triggers the opacity change.
+                                                -->
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="Uniform"
                                                            VerticalAlignment="Stretch"
                                                            HorizontalAlignment="Stretch"
                                                            Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                        <Image.Transitions>
-                                                            <Transitions>
-                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.5" />
-                                                            </Transitions>
-                                                        </Image.Transitions>
                                                         <Image.Styles>
                                                             <Style Selector="Image">
                                                                 <Setter Property="Opacity" Value="0" />
+                                                                <Setter Property="Transitions">
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="Opacity"
+                                                                                Duration="0:0:0.6"
+                                                                                Easing="QuadraticEaseOut" />
+                                                                    </Transitions>
+                                                                </Setter>
                                                             </Style>
                                                             <Style Selector="Image.loaded">
                                                                 <Setter Property="Opacity" Value="1" />
@@ -220,4 +226,5 @@
 
         </Panel>
     </Grid>
+
 </UserControl>

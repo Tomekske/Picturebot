@@ -30,17 +30,36 @@
                 <!-- Preview Box -->
                 <suki:GlassCard Padding="0" ClipToBounds="True">
                     <Panel Background="#151515" MinHeight="200">
+                        <!-- Fade-in Image Logic -->
                         <Image Source="{Binding PreviewImage}"
                                Stretch="Uniform"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Center" />
-                        
+                               HorizontalAlignment="Center"
+                               Classes.loaded="{Binding PreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Image.Styles>
+                                <Style Selector="Image">
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Setter Property="Transitions">
+                                        <Transitions>
+                                            <DoubleTransition Property="Opacity"
+                                                              Duration="0:0:0.6"
+                                                              Easing="QuadraticEaseOut" />
+                                        </Transitions>
+                                    </Setter>
+                                </Style>
+                                <Style Selector="Image.loaded">
+                                    <Setter Property="Opacity" Value="1" />
+                                </Style>
+                            </Image.Styles>
+                        </Image>
+
                         <!-- Empty State -->
                         <StackPanel IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNull}}"
                                     VerticalAlignment="Center"
                                     HorizontalAlignment="Center"
                                     Spacing="10">
-                            <icons:MaterialIcon Kind="ImageOutline" Width="48" Height="48" Foreground="{DynamicResource SukiLowText}" />
+                            <icons:MaterialIcon Kind="ImageOutline" Width="48" Height="48"
+                                                Foreground="{DynamicResource SukiLowText}" />
                             <TextBlock Text="Select an asset to view details"
                                        Foreground="{DynamicResource SukiLowText}"
                                        FontSize="12" />
@@ -49,7 +68,8 @@
                 </suki:GlassCard>
 
                 <!-- Curation Section -->
-                <StackPanel Spacing="15" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Spacing="15"
+                            IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <TextBlock Text="Curation Status"
                                FontSize="16"
                                FontWeight="SemiBold"
@@ -108,7 +128,7 @@
                     <TextBlock Text="Edit" FontWeight="SemiBold" />
                 </StackPanel>
             </Button>
-            
+
             <Button Classes="Accent"
                     Command="{Binding DeleteAssetCommand}"
                     HorizontalAlignment="Stretch"

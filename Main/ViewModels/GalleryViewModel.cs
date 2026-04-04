@@ -9,7 +9,6 @@ using Database.Domain.Entities;
 using Graph.Domain.Interfaces;
 using Main.Messages;
 using Main.Views;
-using SukiUI.Dialogs;
 
 namespace Main.ViewModels;
 
@@ -18,26 +17,26 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private readonly IPathService _pathService;
 
     [ObservableProperty]
+    private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
+    private bool _canPlayCarousel;
+
+    [ObservableProperty]
+    private ObservableCollection<PictureGroupViewModel> _groupedPictures = new();
+
+    [ObservableProperty]
+    private bool _isShowingAlbum;
+
+    [ObservableProperty]
     private ObservableCollection<Node> _items = new();
 
     [ObservableProperty]
     private ObservableCollection<PictureItemViewModel> _picturesList = new();
 
     [ObservableProperty]
-    private ObservableCollection<PictureGroupViewModel> _groupedPictures = new();
-
-    [ObservableProperty]
-    private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
-
-    [ObservableProperty]
-    private bool _isShowingAlbum;
-
-    [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
-    private bool _canPlayCarousel;
 
     public GalleryViewModel(INodeService nodeService, IPathService pathService) {
         _nodeService = nodeService;
@@ -46,14 +45,18 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         _ = LoadInitialItemsAsync();
     }
 
+    public void Receive(NodeSelectedMessage message) {
+        UpdateGallery(message.Value);
+    }
+
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
     private void PlayCarousel() {
         var window = new CarouselWindow();
         var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, window.Close);
         window.DataContext = carouselVm;
-        
-        if (Views.MainWindow.Instance != null) {
-            window.Show(Views.MainWindow.Instance);
+
+        if (MainWindow.Instance != null) {
+            window.Show(MainWindow.Instance);
         } else {
             window.Show();
         }
@@ -63,6 +66,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         foreach (var pic in PicturesList) {
             pic.IsSelected = pic == value;
         }
+
         if (value != null) {
             WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
         }
@@ -71,10 +75,6 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private async Task LoadInitialItemsAsync() {
         var roots = await _nodeService.LoadHydratedTreeAsync();
         UpdateGalleryItems(null, roots);
-    }
-
-    public void Receive(NodeSelectedMessage message) {
-        UpdateGallery(message.Value);
     }
 
     private void UpdateGallery(Node node) {
@@ -87,9 +87,10 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         foreach (var picVm in PicturesList) {
             picVm.Dispose();
         }
+
         PicturesList.Clear();
         GroupedPictures.Clear();
-        
+
         IsShowingAlbum = currentNode is Album;
         CanPlayCarousel = IsShowingAlbum && children?.OfType<Picture>().Any() == true;
 
@@ -98,13 +99,13 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                 var pics = children.OfType<Picture>()
                     .OrderByDescending(p => p.CapturedAt)
                     .ToList();
-                
+
                 _pathService.PopulatePaths(pics);
-                
+
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
                     PicturesList.Add(picVm);
-                    _ = picVm.LoadThumbnailAsync(180); // Load thumbnail with target height
+                    _ = picVm.LoadThumbnailAsync(250);
                 }
 
                 // Group by date
@@ -115,7 +116,8 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                     var dateStr = group.Key.ToString("yyyy-MM-dd");
                     var count = group.Count();
                     var header = $"{dateStr} ({count})";
-                    var groupVm = new PictureGroupViewModel(dateStr, header, new ObservableCollection<PictureItemViewModel>(group));
+                    var groupVm = new PictureGroupViewModel(dateStr, header,
+                        new ObservableCollection<PictureItemViewModel>(group));
                     GroupedPictures.Add(groupVm);
                 }
             } else {
