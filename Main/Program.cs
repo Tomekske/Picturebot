@@ -61,6 +61,7 @@ internal sealed class Program {
 
             // Setup DI
             var services = new ServiceCollection();
+            services.AddLogging(builder => builder.AddSerilog());
             services.AddSingleton<IConfiguration>(configuration);
             services.AddDatabaseLayer(connectionString);
             services.AddSingleton<ISettingsService, SettingsService>();

@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Database.Domain.Entities;
+using Database.Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Main.Messages;
 using Main.Views;
@@ -15,12 +16,14 @@ namespace Main.ViewModels;
 public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage> {
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
+    private readonly IPictureGroupingService _groupingService;
 
     [ObservableProperty]
     private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GroupSimilarPicturesCommand))]
     private bool _canPlayCarousel;
 
     [ObservableProperty]
@@ -28,6 +31,8 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     [ObservableProperty]
     private bool _isShowingAlbum;
+
+    private Node? _currentNode;
 
     [ObservableProperty]
     private ObservableCollection<Node> _items = new();
@@ -38,15 +43,64 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
-    public GalleryViewModel(INodeService nodeService, IPathService pathService) {
+    public GalleryViewModel(INodeService nodeService, IPathService pathService, IPictureGroupingService groupingService) {
         _nodeService = nodeService;
         _pathService = pathService;
+        _groupingService = groupingService;
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
     }
 
     public void Receive(NodeSelectedMessage message) {
         UpdateGallery(message.Value);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private async Task GroupSimilarPictures() {
+        if (_currentNode == null) {
+            Serilog.Log.Warning("GroupSimilarPictures called but _currentNode is null");
+            return;
+        }
+
+        Serilog.Log.Information("GroupSimilarPictures requested for Album {AlbumName} (Id: {Id})", _currentNode.Name, _currentNode.Id);
+        
+        var groups = await _groupingService.GroupSimilarPicturesAsync(_currentNode.Id, 10); // Increased threshold to 10 for better visibility of grouping
+        
+        GroupedPictures.Clear();
+        
+        if (groups.Count == 0) {
+            Serilog.Log.Warning("No groups formed by service. This usually means no pictures in this album have pHash metrics.");
+            // Re-populate with date grouping if service failed to group anything
+            UpdateGallery(_currentNode);
+            return;
+        }
+
+        int groupIndex = 1;
+        var groupedIds = new HashSet<int>();
+
+        foreach (var group in groups) {
+            var picVms = group.Select(p => {
+                var vm = PicturesList.FirstOrDefault(vm => vm.Picture.Id == p.Id);
+                if (vm != null) groupedIds.Add(p.Id);
+                return vm;
+            }).Where(vm => vm != null).Cast<PictureItemViewModel>().ToList();
+
+            if (picVms.Count == 0) continue;
+
+            var header = $"Similar Group {groupIndex++} ({picVms.Count})";
+            var groupVm = new PictureGroupViewModel(header, header, new ObservableCollection<PictureItemViewModel>(picVms));
+            GroupedPictures.Add(groupVm);
+        }
+
+        // Add pictures that were not grouped (e.g. no pHash) to an "Unclassified" group
+        var unclassified = PicturesList.Where(vm => !groupedIds.Contains(vm.Picture.Id)).ToList();
+        if (unclassified.Count > 0) {
+            var header = $"Unclassified ({unclassified.Count})";
+            var groupVm = new PictureGroupViewModel("Unclassified", header, new ObservableCollection<PictureItemViewModel>(unclassified));
+            GroupedPictures.Add(groupVm);
+        }
+        
+        Serilog.Log.Information("UI updated with {Count} groups (including unclassified)", GroupedPictures.Count);
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
@@ -82,6 +136,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     }
 
     private void UpdateGalleryItems(Node? currentNode, List<Node>? children) {
+        _currentNode = currentNode;
         // Clear both collections to prevent ghosting
         Items.Clear();
         foreach (var picVm in PicturesList) {
