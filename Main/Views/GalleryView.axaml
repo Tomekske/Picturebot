@@ -7,7 +7,6 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:converters="using:Main.Converters"
-             xmlns:labs="clr-namespace:Avalonia.Labs.Panels;assembly=Avalonia.Labs.Panels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Main.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
@@ -164,6 +163,7 @@
                                             <Setter Property="Background" Value="Transparent" />
                                             <Setter Property="VerticalAlignment" Value="Top" />
                                             <Setter Property="HorizontalAlignment" Value="Left" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Left" />
                                         </Style>
                                     </ListBox.Styles>
                                     <ListBox.ItemsPanel>
@@ -174,13 +174,13 @@
 
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PictureItemViewModel">
-                                            <suki:GlassCard Height="180" Margin="4" Padding="0"
+                                            <suki:GlassCard Height="250" Margin="4" Padding="0"
                                                             CornerRadius="8" ClipToBounds="True">
                                                 <Grid>
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="Uniform"
-                                                           VerticalAlignment="Center"
-                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Stretch"
+                                                           HorizontalAlignment="Stretch"
                                                            Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                         <Image.Transitions>
                                                             <Transitions>
@@ -198,6 +198,7 @@
                                                     </Image>
 
                                                     <Border VerticalAlignment="Bottom"
+                                                            HorizontalAlignment="Stretch"
                                                             Background="#99000000"
                                                             Padding="8,6">
                                                         <TextBlock Text="{Binding Name}"
