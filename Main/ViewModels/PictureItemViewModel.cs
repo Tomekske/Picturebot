@@ -17,6 +17,9 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     private Bitmap? _thumbnail;
 
     [ObservableProperty]
+    private bool _isSelected;
+
+    [ObservableProperty]
     private Domain.Enums.CurationStatus _curationStatus;
 
     public Picture Picture => _picture;

@@ -133,39 +133,67 @@
 
             <!-- Picture Gallery (Pictures in Album) -->
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
-                <ListBox ItemsSource="{Binding PicturesList}"
-                         SelectedItem="{Binding SelectedPicture}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Padding="0">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PictureItemViewModel">
-                            <suki:GlassCard Width="180" Height="180" Margin="5" Padding="0">
-                                <Grid>
-                                    <Image Source="{Binding Thumbnail}"
-                                           Stretch="UniformToFill"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Center" />
-                                    
-                                    <Border VerticalAlignment="Bottom" 
-                                            Background="#AA000000" 
-                                            Padding="5,2">
-                                        <TextBlock Text="{Binding Name}" 
-                                                   FontSize="11" 
-                                                   Foreground="White"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </Border>
-                                </Grid>
-                            </suki:GlassCard>
+                <ItemsControl ItemsSource="{Binding GroupedPictures}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PictureGroupViewModel">
+                            <StackPanel Spacing="10" Margin="0,0,0,30">
+                                <!-- Group Header -->
+                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
+                                    <icons:MaterialIcon Kind="CalendarToday" 
+                                                        Width="20" Height="20" 
+                                                        Foreground="{DynamicResource SukiPrimaryColor}" />
+                                    <TextBlock Text="{Binding Header}" 
+                                               FontSize="18" 
+                                               FontWeight="Bold" 
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SukiText}" />
+                                </StackPanel>
+
+                                <!-- Pictures Grid -->
+                                <ListBox ItemsSource="{Binding Pictures}"
+                                         SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Padding="0">
+                                    <ListBox.Styles>
+                                        <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
+                                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                        </Style>
+                                    </ListBox.Styles>
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="4" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PictureItemViewModel">
+                                            <suki:GlassCard Margin="5" Padding="0" Height="200">
+                                                <Grid>
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="UniformToFill"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Center" />
+
+                                                    <Border VerticalAlignment="Bottom" 
+                                                            Background="#AA000000" 
+                                                            Padding="8,4">
+                                                        <TextBlock Text="{Binding Name}" 
+                                                                   FontSize="12" 
+                                                                   Foreground="White"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </Border>
+                                                </Grid>
+                                            </suki:GlassCard>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </ScrollViewer>
             
         </Panel>

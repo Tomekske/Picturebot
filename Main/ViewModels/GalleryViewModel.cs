@@ -24,6 +24,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private ObservableCollection<PictureItemViewModel> _picturesList = new();
 
     [ObservableProperty]
+    private ObservableCollection<PictureGroupViewModel> _groupedPictures = new();
+
+    [ObservableProperty]
     private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
 
     [ObservableProperty]
@@ -57,6 +60,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     }
 
     partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
+        foreach (var pic in PicturesList) {
+            pic.IsSelected = pic == value;
+        }
         if (value != null) {
             WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
         }
@@ -82,18 +88,35 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             picVm.Dispose();
         }
         PicturesList.Clear();
+        GroupedPictures.Clear();
         
         IsShowingAlbum = currentNode is Album;
         CanPlayCarousel = IsShowingAlbum && children?.OfType<Picture>().Any() == true;
 
         if (children != null) {
             if (IsShowingAlbum) {
-                var pics = children.OfType<Picture>().ToList();
+                var pics = children.OfType<Picture>()
+                    .OrderByDescending(p => p.CapturedAt)
+                    .ToList();
+                
                 _pathService.PopulatePaths(pics);
+                
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
                     PicturesList.Add(picVm);
                     _ = picVm.LoadThumbnailAsync(180); // Load thumbnail with target width
+                }
+
+                // Group by date
+                var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
+                    .OrderByDescending(g => g.Key);
+
+                foreach (var group in groups) {
+                    var dateStr = group.Key.ToString("yyyy-MM-dd");
+                    var count = group.Count();
+                    var header = $"{dateStr} ({count})";
+                    var groupVm = new PictureGroupViewModel(dateStr, header, new ObservableCollection<PictureItemViewModel>(group));
+                    GroupedPictures.Add(groupVm);
                 }
             } else {
                 foreach (var child in children.Where(n => n is Folder || n is Album)) {
