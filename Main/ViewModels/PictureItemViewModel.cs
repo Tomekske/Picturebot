@@ -30,7 +30,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         _curationStatus = picture.CurationStatus;
     }
 
-    public async Task LoadThumbnailAsync(int width) {
+    public async Task LoadThumbnailAsync(int targetHeight) {
         if (string.IsNullOrEmpty(_picture.SubFolder?.Thumbnail) || !File.Exists(_picture.SubFolder.Thumbnail)) {
             return;
         }
@@ -40,7 +40,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
         try {
             var path = _picture.SubFolder.Thumbnail;
-            Thumbnail = await Utilities.ImageHelper.LoadAndOrientAsync(path, width);
+            Thumbnail = await Utilities.ImageHelper.LoadAndOrientAsync(path, targetHeight);
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {

@@ -104,7 +104,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
                     PicturesList.Add(picVm);
-                    _ = picVm.LoadThumbnailAsync(180); // Load thumbnail with target width
+                    _ = picVm.LoadThumbnailAsync(180); // Load thumbnail with target height
                 }
 
                 // Group by date

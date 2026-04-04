@@ -11,19 +11,19 @@ namespace Main.Utilities;
 
 public static class ImageHelper {
     /// <summary>
-    /// Loads an image, applies EXIF orientation, and decodes it to a specific width while maintaining aspect ratio.
+    /// Loads an image, applies EXIF orientation, and decodes it to a specific height while maintaining aspect ratio.
     /// This ensures portrait images are vertical and not distorted.
     /// </summary>
-    public static async Task<Bitmap> LoadAndOrientAsync(string path, int targetWidth) {
+    public static async Task<Bitmap> LoadAndOrientAsync(string path, int targetHeight) {
         return await Task.Run(() => {
             using var image = Image.Load(path);
             
             // 1. Correct the orientation based on EXIF
             image.Mutate(x => x.AutoOrient());
 
-            // 2. Resize if necessary
-            if (image.Width > targetWidth) {
-                image.Mutate(x => x.Resize(targetWidth, 0));
+            // 2. Resize if necessary (based on height for justified layout)
+            if (image.Height > targetHeight) {
+                image.Mutate(x => x.Resize(0, targetHeight));
             }
 
             // 3. Convert to Avalonia Bitmap

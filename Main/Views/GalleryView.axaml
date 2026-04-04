@@ -160,8 +160,10 @@
                                         <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
                                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                                             <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Margin" Value="0" />
                                             <Setter Property="Background" Value="Transparent" />
                                             <Setter Property="VerticalAlignment" Value="Top" />
+                                            <Setter Property="HorizontalAlignment" Value="Left" />
                                         </Style>
                                     </ListBox.Styles>
                                     <ListBox.ItemsPanel>
@@ -172,11 +174,12 @@
 
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PictureItemViewModel">
-                                            <suki:GlassCard Width="240" Margin="8" Padding="0"
+                                            <suki:GlassCard Height="180" Margin="4" Padding="0"
                                                             CornerRadius="8" ClipToBounds="True">
                                                 <Grid>
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="Uniform"
+                                                           VerticalAlignment="Center"
                                                            HorizontalAlignment="Center"
                                                            Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                         <Image.Transitions>
