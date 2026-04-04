@@ -1,4 +1,4 @@
-﻿using System.IO.Abstractions;
+using System.IO.Abstractions;
 using PictureWorker.Infrastructure.Services;
 using SixLabors.ImageSharp;
 
@@ -23,13 +23,13 @@ public class ThumbnailServiceTests {
     }
 
     [Test]
-    public async Task GenerateThumbnailAsync_ResultShouldBeSmallerInBytesThanOriginal() {
+    public async Task GenerateProcessedImageAsync_ResultShouldBeSmallerInBytesThanOriginal() {
         // Arrange
         var originalFileInfo = _fileSystem.FileInfo.New(_largePicturePath);
         var originalSizeBytes = originalFileInfo.Length;
 
         // Act
-        var result = await _service.GenerateThumbnailAsync(_largePicturePath);
+        var result = await _service.GenerateProcessedImageAsync(_largePicturePath, 400, 400);
 
         // Assert
         Assert.That(result.IsError, Is.False);
@@ -42,16 +42,16 @@ public class ThumbnailServiceTests {
         var thumbnailSizeBytes = ms.Length;
 
         Assert.That(thumbnailSizeBytes, Is.LessThan(originalSizeBytes),
-            $"Thumbnail ({thumbnailSizeBytes} bytes) should be smaller than original ({originalSizeBytes} bytes).");
+            $"Processed image ({thumbnailSizeBytes} bytes) should be smaller than original ({originalSizeBytes} bytes).");
     }
 
     [Test]
-    public async Task GenerateThumbnailAsync_WhenFileDoesNotExist_ShouldReturnError() {
+    public async Task GenerateProcessedImageAsync_WhenFileDoesNotExist_ShouldReturnError() {
         // Arrange
         var missingPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Resources", "missing.jpg");
 
         // Act
-        var result = await _service.GenerateThumbnailAsync(missingPath);
+        var result = await _service.GenerateProcessedImageAsync(missingPath, 400, 400);
 
         // Assert
         Assert.Multiple(() => {
@@ -61,25 +61,25 @@ public class ThumbnailServiceTests {
     }
 
     [Test]
-    public async Task GenerateThumbnailAsync_WhenImageIsLarge_ShouldDownscaleToThreshold() {
+    public async Task GenerateProcessedImageAsync_WhenImageIsLarge_ShouldDownscaleToThreshold() {
         // Arrange
-        const int maxDimension = 960;
+        const int maxDimension = 400;
 
         // Act
-        var result = await _service.GenerateThumbnailAsync(_largePicturePath);
+        var result = await _service.GenerateProcessedImageAsync(_largePicturePath, maxDimension, maxDimension);
 
         // Assert
         Assert.Multiple(() => {
-            Assert.That(result.IsError, Is.False, "Thumbnail generation should not fail.");
+            Assert.That(result.IsError, Is.False, "Image processing should not fail.");
 
             using var image = result.Value;
 
-            // Check if dimensions are within the 960x960 threshold
+            // Check if dimensions are within the 400x400 threshold
             Assert.That(image.Width, Is.LessThanOrEqualTo(maxDimension), "Width should be scaled down.");
             Assert.That(image.Height, Is.LessThanOrEqualTo(maxDimension), "Height should be scaled down.");
 
             // Check that at least one dimension matches the maximum threshold (Mode = Max)
-            // This assumes the source image was actually larger than 960 in at least one direction
+            // This assumes the source image was actually larger than 400 in at least one direction
             Assert.That(image.Width == maxDimension || image.Height == maxDimension, Is.True,
                 "Image should be scaled to the maximum allowed dimension while maintaining aspect ratio.");
         });

@@ -55,13 +55,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         _cts = new CancellationTokenSource();
 
         try {
-            var bitmap = await Task.Run(() => {
-                using var stream = File.OpenRead(previewPath);
-                // We decode to a reasonable width for the details pane, e.g., 600px
-                return Bitmap.DecodeToWidth(stream, 600);
-            }, _cts.Token);
-
-            PreviewImage = bitmap;
+            PreviewImage = await Utilities.ImageHelper.LoadAndOrientAsync(previewPath, 600);
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {

@@ -65,12 +65,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         _cts = new CancellationTokenSource();
 
         try {
-            var bitmap = await Task.Run(() => {
-                using var stream = File.OpenRead(previewPath);
-                return Bitmap.DecodeToWidth(stream, 1200); // Larger preview for carousel
-            }, _cts.Token);
-
-            PreviewImage = bitmap;
+            PreviewImage = await Utilities.ImageHelper.LoadAndOrientAsync(previewPath, 1200);
         } catch (OperationCanceledException) {
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load carousel preview for {Name}", picVm.Name);

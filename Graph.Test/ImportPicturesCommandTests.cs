@@ -67,7 +67,7 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(80);
 
         var mockImage = new Image<Rgba32>(1, 1);
-        _mockPictureProcessor.Setup(p => p.GenerateThumbnailAsync(photo1Path))
+        _mockPictureProcessor.Setup(p => p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(mockImage);
 
         // Act
@@ -127,7 +127,7 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(0UL);
         _mockPictureAnalyzer.Setup(a => a.CalculateSharpnessAsync(photoPath))
             .ReturnsAsync(0);
-        _mockPictureProcessor.Setup(p => p.GenerateThumbnailAsync(photoPath))
+        _mockPictureProcessor.Setup(p => p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(new Image<Rgba32>(1, 1));
 
         // Act

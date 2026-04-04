@@ -71,11 +71,6 @@ public class ImportPicturesCommand {
             string? importedJpgPath = null;
             string? importedRawPath = null;
             
-            if (jpgFile != null) {
-                importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
-                _fileSystem.File.Copy(jpgFile, importedJpgPath);
-            }
-            
             if (rawFile != null) {
                 var extension = _fileSystem.Path.GetExtension(rawFile);
                 importedRawPath = _fileSystem.Path.Combine(rawsPath, finalFileName + extension);
@@ -89,8 +84,21 @@ public class ImportPicturesCommand {
             var hashResult = await _pictureAnalyzer.CalculateHashAsync(analysisFile);
             var sharpnessResult = await _pictureAnalyzer.CalculateSharpnessAsync(analysisFile);
             
-            // Task 3: IPictureProcessor to generate a thumbnail
-            var thumbnailResult = await _pictureProcessor.GenerateThumbnailAsync(analysisFile);
+            // Task 3: IPictureProcessor to generate a preview (auto-oriented)
+            // We use a max dimension of 2400 for previews to keep them high-quality but manageable
+            var previewResult = await _pictureProcessor.GenerateProcessedImageAsync(analysisFile, 2400, 2400);
+            if (previewResult is { IsError: false }) {
+                importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
+                using var stream = _fileSystem.File.OpenWrite(importedJpgPath);
+                await previewResult.Value.SaveAsJpegAsync(stream);
+            } else if (jpgFile != null) {
+                // Fallback to simple copy if processing fails and we have a JPG
+                importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
+                _fileSystem.File.Copy(jpgFile, importedJpgPath);
+            }
+            
+            // Task 3: IPictureProcessor to generate a thumbnail (auto-oriented)
+            var thumbnailResult = await _pictureProcessor.GenerateProcessedImageAsync(analysisFile, 400, 400);
             if (thumbnailResult is { IsError: false }) {
                 var thumbnailFile = _fileSystem.Path.Combine(thumbnailsPath, finalFileName + ".jpg");
                 using var stream = _fileSystem.File.OpenWrite(thumbnailFile);

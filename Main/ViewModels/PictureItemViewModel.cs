@@ -40,12 +40,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
         try {
             var path = _picture.SubFolder.Thumbnail;
-            var bitmap = await Task.Run(() => {
-                using var stream = File.OpenRead(path);
-                return Bitmap.DecodeToWidth(stream, width);
-            }, _cts.Token);
-
-            Thumbnail = bitmap;
+            Thumbnail = await Utilities.ImageHelper.LoadAndOrientAsync(path, width);
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {

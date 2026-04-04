@@ -4,5 +4,5 @@ using SixLabors.ImageSharp;
 namespace PictureWorker.Domain.Interfaces;
 
 public interface IPictureProcessor {
-    Task<ErrorOr<Image>> GenerateThumbnailAsync(string filePath);
+    Task<ErrorOr<Image>> GenerateProcessedImageAsync(string filePath, int maxWidth, int maxHeight);
 }

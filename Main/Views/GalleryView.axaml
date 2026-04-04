@@ -7,6 +7,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:converters="using:Main.Converters"
+             xmlns:labs="clr-namespace:Avalonia.Labs.Panels;assembly=Avalonia.Labs.Panels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Main.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
@@ -51,7 +52,7 @@
         </ItemsControl>
 
         <!-- Command Bar -->
-        <Border Grid.Row="1" 
+        <Border Grid.Row="1"
                 Margin="20,0,20,15"
                 Padding="8,4"
                 Background="{DynamicResource SukiGlassCardBackground}"
@@ -60,7 +61,7 @@
                 CornerRadius="8">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                    <Button Classes="Basic" ToolTip.Tip="Play Carousel" 
+                    <Button Classes="Basic" ToolTip.Tip="Play Carousel"
                             Command="{Binding PlayCarouselCommand}"
                             IsEnabled="{Binding CanPlayCarousel}">
                         <icons:MaterialIcon Kind="Play" Width="20" Height="20" />
@@ -79,7 +80,7 @@
                         <icons:MaterialIcon Kind="SortVariant" Width="20" Height="20" />
                     </Button>
                 </StackPanel>
-                
+
                 <Button Grid.Column="1" Classes="Basic" ToolTip.Tip="Delete" Foreground="Red">
                     <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
                 </Button>
@@ -88,7 +89,7 @@
 
         <!-- Content Area -->
         <Panel Grid.Row="2">
-            
+
             <!-- Navigation Grid (Folders/Albums) -->
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
                 <ItemsControl ItemsSource="{Binding Items}">
@@ -139,12 +140,12 @@
                             <StackPanel Spacing="10" Margin="0,0,0,30">
                                 <!-- Group Header -->
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
-                                    <icons:MaterialIcon Kind="CalendarToday" 
-                                                        Width="20" Height="20" 
+                                    <icons:MaterialIcon Kind="CalendarToday"
+                                                        Width="20" Height="20"
                                                         Foreground="{DynamicResource SukiPrimaryColor}" />
-                                    <TextBlock Text="{Binding Header}" 
-                                               FontSize="18" 
-                                               FontWeight="Bold" 
+                                    <TextBlock Text="{Binding Header}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource SukiText}" />
                                 </StackPanel>
@@ -160,30 +161,47 @@
                                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                                             <Setter Property="Padding" Value="0" />
                                             <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="VerticalAlignment" Value="Top" />
                                         </Style>
                                     </ListBox.Styles>
                                     <ListBox.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <UniformGrid Columns="4" />
+                                            <WrapPanel Orientation="Horizontal" />
                                         </ItemsPanelTemplate>
                                     </ListBox.ItemsPanel>
 
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PictureItemViewModel">
-                                            <suki:GlassCard Margin="5" Padding="0" Height="200">
+                                            <suki:GlassCard Width="240" Margin="8" Padding="0"
+                                                            CornerRadius="8" ClipToBounds="True">
                                                 <Grid>
                                                     <Image Source="{Binding Thumbnail}"
-                                                           Stretch="UniformToFill"
-                                                           VerticalAlignment="Center"
-                                                           HorizontalAlignment="Center" />
+                                                           Stretch="Uniform"
+                                                           HorizontalAlignment="Center"
+                                                           Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                        <Image.Transitions>
+                                                            <Transitions>
+                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.5" />
+                                                            </Transitions>
+                                                        </Image.Transitions>
+                                                        <Image.Styles>
+                                                            <Style Selector="Image">
+                                                                <Setter Property="Opacity" Value="0" />
+                                                            </Style>
+                                                            <Style Selector="Image.loaded">
+                                                                <Setter Property="Opacity" Value="1" />
+                                                            </Style>
+                                                        </Image.Styles>
+                                                    </Image>
 
-                                                    <Border VerticalAlignment="Bottom" 
-                                                            Background="#AA000000" 
-                                                            Padding="8,4">
-                                                        <TextBlock Text="{Binding Name}" 
-                                                                   FontSize="12" 
+                                                    <Border VerticalAlignment="Bottom"
+                                                            Background="#99000000"
+                                                            Padding="8,6">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="12"
+                                                                   FontWeight="Medium"
                                                                    Foreground="White"
-                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                   TextTrimming="CharacterEllipsis" />
                                                     </Border>
                                                 </Grid>
                                             </suki:GlassCard>
@@ -195,7 +213,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-            
+
         </Panel>
     </Grid>
 </UserControl>
