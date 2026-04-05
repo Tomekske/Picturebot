@@ -69,11 +69,20 @@
                     <Button Classes="Basic" ToolTip.Tip="Add Picture">
                         <icons:MaterialIcon Kind="Plus" Width="20" Height="20" />
                     </Button>
-                    <Button Classes="Basic" ToolTip.Tip="Group"
-                            Command="{Binding GroupSimilarPicturesCommand}"
-                            IsEnabled="{Binding CanPlayCarousel}">
-                        <icons:MaterialIcon Kind="LayersOutline" Width="20" Height="20" />
-                    </Button>
+                    <ToggleButton Classes="Basic" 
+                                  ToolTip.Tip="Toggle Burst Grouping"
+                                  IsChecked="{Binding IsBurstViewEnabled, Mode=OneWay}"
+                                  Command="{Binding ToggleGroupingModeCommand}"
+                                  IsEnabled="{Binding CanPlayCarousel}">
+                        <Panel>
+                            <icons:MaterialIcon Kind="CalendarMonth" 
+                                                IsVisible="{Binding IsBurstViewEnabled}" 
+                                                Width="20" Height="20" />
+                            <icons:MaterialIcon Kind="LayersOutline" 
+                                                IsVisible="{Binding !IsBurstViewEnabled}" 
+                                                Width="20" Height="20" />
+                        </Panel>
+                    </ToggleButton>
                     <Button Classes="Basic" ToolTip.Tip="Filter">
                         <icons:MaterialIcon Kind="FilterVariant" Width="20" Height="20" />
                     </Button>

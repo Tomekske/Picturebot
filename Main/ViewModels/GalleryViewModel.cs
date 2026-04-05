@@ -27,6 +27,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private bool _canPlayCarousel;
 
     [ObservableProperty]
+    private bool _isBurstViewEnabled;
+
+    [ObservableProperty]
     private ObservableCollection<PictureGroupViewModel> _groupedPictures = new();
 
     [ObservableProperty]
@@ -55,25 +58,47 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         UpdateGallery(message.Value);
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
-    private async Task GroupSimilarPictures() {
-        if (_currentNode == null) {
-            Serilog.Log.Warning("GroupSimilarPictures called but _currentNode is null");
-            return;
-        }
+    [RelayCommand]
+    private async Task ToggleGroupingMode() {
+        IsBurstViewEnabled = !IsBurstViewEnabled;
+        await RefreshGalleryGrouping();
+    }
 
-        Serilog.Log.Information("GroupSimilarPictures requested for Album {AlbumName} (Id: {Id})", _currentNode.Name, _currentNode.Id);
-        
-        // Threshold 6 for > 90% similarity (64 * 0.1 = 6.4)
-        var groups = await _groupingService.GroupSimilarPicturesAsync(_currentNode.Id, 6); 
-        
+    private async Task RefreshGalleryGrouping() {
+        if (!IsShowingAlbum || _currentNode == null) return;
+
         GroupedPictures.Clear();
         foreach (var pic in PicturesList) pic.IsBest = false;
+
+        if (IsBurstViewEnabled) {
+            await ApplyBurstGrouping();
+        } else {
+            ApplyDateGrouping();
+        }
+    }
+
+    private void ApplyDateGrouping() {
+        var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
+            .OrderByDescending(g => g.Key);
+
+        foreach (var group in groups) {
+            var dateStr = group.Key.ToString("yyyy-MM-dd");
+            var count = group.Count();
+            var header = $"{dateStr} ({count})";
+            var groupVm = new PictureGroupViewModel(dateStr, header,
+                new ObservableCollection<PictureItemViewModel>(group), false);
+            GroupedPictures.Add(groupVm);
+        }
+    }
+
+    private async Task ApplyBurstGrouping() {
+        if (_currentNode == null) return;
+
+        // Threshold 6 for > 90% similarity
+        var groups = await _groupingService.GroupSimilarPicturesAsync(_currentNode.Id, 6);
         
         if (groups.Count == 0) {
-            Serilog.Log.Warning("No groups formed by service. This usually means no pictures in this album have pHash metrics.");
-            // Re-populate with date grouping if service failed to group anything
-            UpdateGallery(_currentNode);
+            ApplyDateGrouping();
             return;
         }
 
@@ -81,7 +106,6 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         var groupedIds = new HashSet<int>();
 
         foreach (var group in groups) {
-            // Only treat as a burst if there is more than one picture
             if (group.Count <= 1) continue;
 
             var picVms = group.Select(p => {
@@ -92,26 +116,26 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
             if (picVms.Count == 0) continue;
 
-            // Select Best: sharpest image in the group
             var bestPic = picVms.OrderByDescending(vm => vm.Picture.Sharpness).FirstOrDefault();
-            if (bestPic != null) {
-                bestPic.IsBest = true;
-            }
+            if (bestPic != null) bestPic.IsBest = true;
 
             var header = $"Burst Group {groupIndex++} ({picVms.Count})";
             var groupVm = new PictureGroupViewModel(header, header, new ObservableCollection<PictureItemViewModel>(picVms), true);
             GroupedPictures.Add(groupVm);
         }
 
-        // Add pictures that were not grouped (e.g. no pHash or were singletons) to an "Unclassified" group
         var unclassified = PicturesList.Where(vm => !groupedIds.Contains(vm.Picture.Id)).ToList();
         if (unclassified.Count > 0) {
             var header = $"Unclassified ({unclassified.Count})";
             var groupVm = new PictureGroupViewModel("Unclassified", header, new ObservableCollection<PictureItemViewModel>(unclassified), false);
             GroupedPictures.Add(groupVm);
         }
-        
-        Serilog.Log.Information("UI updated with {Count} groups (including unclassified)", GroupedPictures.Count);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private async Task GroupSimilarPictures() {
+        IsBurstViewEnabled = true;
+        await RefreshGalleryGrouping();
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
@@ -174,18 +198,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                     _ = picVm.LoadThumbnailAsync(250);
                 }
 
-                // Group by date
-                var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
-                    .OrderByDescending(g => g.Key);
-
-                foreach (var group in groups) {
-                    var dateStr = group.Key.ToString("yyyy-MM-dd");
-                    var count = group.Count();
-                    var header = $"{dateStr} ({count})";
-                    var groupVm = new PictureGroupViewModel(dateStr, header,
-                        new ObservableCollection<PictureItemViewModel>(group));
-                    GroupedPictures.Add(groupVm);
-                }
+                _ = RefreshGalleryGrouping();
             } else {
                 foreach (var child in children.Where(n => n is Folder || n is Album)) {
                     Items.Add(child);
