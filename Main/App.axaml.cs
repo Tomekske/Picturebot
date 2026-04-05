@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -7,16 +9,30 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Main.ViewModels;
 using Main.Views;
+using Domain.Enums;
 using Domain.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Main;
 
 public partial class App : Application {
     public static IServiceProvider? Services { get; set; }
+    public static IConfiguration? Configuration { get; private set; }
 
     public override void Initialize() {
         AvaloniaXamlLoader.Load(this);
+
+        // Setup Configuration (can also be called from Program.cs)
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
+        
+        Configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", false)
+            .AddJsonFile($"appsettings.{env}.json", true)
+            .AddEnvironmentVariables()
+            .AddInMemoryCollection(new Dictionary<string, string?> { { "Environment", env } })
+            .Build();
     }
 
     public override void OnFrameworkInitializationCompleted() {

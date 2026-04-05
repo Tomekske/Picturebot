@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using AppRegistry.Infrastructure;
 using Avalonia;
@@ -32,6 +33,7 @@ internal sealed class Program {
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", false)
                 .AddJsonFile($"appsettings.{env}.json", true)
+                .AddInMemoryCollection(new Dictionary<string, string?> { { "Environment", env } })
                 .Build();
 
             var register = new FileSystemOrchestrator {
@@ -85,6 +87,7 @@ internal sealed class Program {
             services.AddTransient<GalleryViewModel>();
             services.AddTransient<NavigationPaneViewModel>();
             services.AddTransient<DetailsInspectorViewModel>();
+            services.AddTransient<StatusBarViewModel>();
 
             App.Services = services.BuildServiceProvider();
 

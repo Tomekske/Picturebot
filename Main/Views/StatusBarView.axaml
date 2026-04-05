@@ -8,19 +8,53 @@
              xmlns:vm="using:Main.ViewModels"
              x:DataType="vm:StatusBarViewModel">
 
-    <Grid>
-        <Button Command="{Binding OpenSettingsCommand}"
+    <Grid ColumnDefinitions="Auto, *">
+        <!-- Settings Button on the left -->
+        <Button Grid.Column="0" 
+                Command="{Binding OpenSettingsCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 Margin="5,0,0,0"
                 Background="Transparent"
                 BorderThickness="0"
-                Width="36" 
-                Height="36"
-                ToolTip.Tip="Settings Page"
-                CornerRadius="6"
+                Width="24" 
+                Height="24"
+                ToolTip.Tip="Settings"
+                CornerRadius="4"
                 Padding="0">
-            <ic:SymbolIcon Symbol="Settings" FontSize="18" />
+            <ic:SymbolIcon Symbol="Settings" FontSize="14" Foreground="#888888" />
         </Button>
+
+        <!-- Status items aligned to the bottom-right -->
+        <StackPanel Grid.Column="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    VerticalAlignment="Center" 
+                    Spacing="8" 
+                    Margin="0,0,10,0">
+            
+            <!-- DEV Badge (Visible only in non-Production environments) -->
+            <Border IsVisible="{Binding ShowDevBadge}"
+                    Background="#e67e22"
+                    CornerRadius="3"
+                    Padding="6,2">
+                <TextBlock Text="DEV"
+                           FontSize="10"
+                           FontWeight="Black"
+                           Foreground="White" />
+            </Border>
+
+            <!-- Version Indicator -->
+            <Border Background="#1e1e1e"
+                    BorderBrush="#3f3f3f"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Padding="8,2">
+                <TextBlock Text="{Binding AppVersion}"
+                           FontSize="11"
+                           FontFamily="Consolas, Monospace"
+                           Foreground="#cccccc" />
+            </Border>
+        </StackPanel>
     </Grid>
 </UserControl>

@@ -11,50 +11,30 @@
 
 
     <suki:SukiWindow.Hosts>
-        <Grid ColumnDefinitions="350, *, 350" RowDefinitions="*, 40">
-
-            <Border Grid.Column="0" Grid.Row="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
-                <views:NavigationPaneView DataContext="{Binding NavigationPaneVM}" />
-            </Border>
-
-            <views:GalleryView Grid.Column="1" Grid.Row="0" Margin="10" DataContext="{Binding GalleryVM}" />
-
-            <Border Grid.Column="2" Grid.Row="0" BorderBrush="#333333" BorderThickness="1,0,0,0">
-                <views:DetailsInspectorView DataContext="{Binding DetailsInspectorVM}" />
-            </Border>
-
-            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+        <DockPanel LastChildFill="True">
+            <!-- Status Bar at the bottom -->
+            <Border DockPanel.Dock="Bottom" 
+                    Height="30"
+                    Background="#252525"
                     BorderBrush="#333333"
                     BorderThickness="0,1,0,0">
-                <views:StatusBarView />
+                <views:StatusBarView DataContext="{Binding StatusBarVM}" />
             </Border>
 
-        </Grid>
+            <!-- Main Content Area -->
+            <Grid ColumnDefinitions="350, *, 350">
+                <Border Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
+                    <views:NavigationPaneView DataContext="{Binding NavigationPaneVM}" />
+                </Border>
+
+                <views:GalleryView Grid.Column="1" Margin="10" DataContext="{Binding GalleryVM}" />
+
+                <Border Grid.Column="2" BorderBrush="#333333" BorderThickness="1,0,0,0">
+                    <views:DetailsInspectorView DataContext="{Binding DetailsInspectorVM}" />
+                </Border>
+            </Grid>
+        </DockPanel>
         <suki:SukiDialogHost Name="DialogHost" />
         <suki:SukiToastHost Name="ToastHost" />
-        <!-- <suki:SukiWindow.Hosts> -->
-        <!--     <suki:SukiDialogHost Manager="{Binding DialogManager}"/> -->
-        <!-- </suki:SukiWindow.Hosts> -->
-        <!-- <Grid ColumnDefinitions="250, *, 300" RowDefinitions="*, 40" Background="#1E1E1E"> -->
-        <!-- -->
-        <!--     <Border Grid.Column="0" Grid.Row="0" BorderBrush="#333333" BorderThickness="0,0,1,0"> -->
-        <!--         <views:NavigationPaneView /> -->
-        <!--     </Border> -->
-        <!-- -->
-        <!--     <views:GalleryView Grid.Column="1" Grid.Row="0" Margin="10" /> -->
-        <!-- -->
-        <!--     <Border Grid.Column="2" Grid.Row="0" BorderBrush="#333333" BorderThickness="1,0,0,0"> -->
-        <!--         <views:DetailsInspectorView /> -->
-        <!--     </Border> -->
-        <!-- -->
-        <!--     <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Background="#252525" -->
-        <!--             BorderBrush="#333333" -->
-        <!--             BorderThickness="0,1,0,0"> -->
-        <!--         <views:StatusBarView /> -->
-        <!--     </Border> -->
-        <!-- -->
-        <!-- </Grid> -->
-
-        <!-- </suki:SukiDialogHost> -->
     </suki:SukiWindow.Hosts>
 </suki:SukiWindow>
