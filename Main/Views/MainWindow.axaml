@@ -6,6 +6,7 @@
                  x:Class="Main.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
                  Title="Picturebot"
+                 Icon="/Assets/icon.ico"
                  Width="1200" Height="800">
 
 

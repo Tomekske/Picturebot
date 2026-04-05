@@ -10,6 +10,7 @@
         x:Class="Main.Views.CarouselWindow"
         x:DataType="vm:CarouselDialogViewModel"
         Title="Carousel"
+        Icon="/Assets/icon.ico"
         Background="Black"
         SystemDecorations="None"
         WindowState="FullScreen"
