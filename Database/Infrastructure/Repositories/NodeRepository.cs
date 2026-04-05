@@ -58,6 +58,11 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
 
 
     public async Task UpdateAsync(Node node) {
+        var trackedEntity = context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
+        if (trackedEntity != null) {
+            context.Entry(trackedEntity).State = EntityState.Detached;
+        }
+        
         context.Nodes.Update(node);
         await context.SaveChangesAsync();
     }

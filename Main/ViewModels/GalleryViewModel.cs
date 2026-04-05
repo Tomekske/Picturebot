@@ -59,6 +59,30 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     }
 
     [RelayCommand]
+    private async Task AutoFlagBestPictures() {
+        if (!IsBurstViewEnabled) return;
+
+        var burstGroups = GroupedPictures.Where(g => g.IsBurstGroup).ToList();
+        var bestPictures = burstGroups
+            .SelectMany(g => g.Pictures)
+            .Where(p => p.IsBest)
+            .ToList();
+
+        if (!bestPictures.Any()) return;
+
+        foreach (var picVm in bestPictures) {
+            // Update to Flagged status
+            picVm.CurationStatus = Domain.Enums.CurationStatus.Flagged;
+            picVm.Picture.CurationStatus = Domain.Enums.CurationStatus.Flagged;
+            
+            // Persist to database (sequentially for stability)
+            await _nodeService.UpdateNodeAsync(picVm.Picture);
+        }
+        
+        Serilog.Log.Information("Auto-flagged {Count} best shots across burst groups", bestPictures.Count);
+    }
+
+    [RelayCommand]
     private async Task ToggleGroupingMode() {
         IsBurstViewEnabled = !IsBurstViewEnabled;
         await RefreshGalleryGrouping();
