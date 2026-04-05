@@ -20,6 +20,9 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     private bool _isSelected;
 
     [ObservableProperty]
+    private bool _isBest;
+
+    [ObservableProperty]
     private Domain.Enums.CurationStatus _curationStatus;
 
     public Picture Picture => _picture;

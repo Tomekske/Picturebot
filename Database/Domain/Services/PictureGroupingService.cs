@@ -16,11 +16,11 @@ public class PictureGroupingService(IPictureRepository repository, ILogger<Pictu
         var groups = new List<List<Picture>>();
 
         foreach (var picture in pictures) {
-            if (picture.Metrics?.PHash == null) {
+            if (picture.Hash == 0) {
                 continue;
             }
 
-            ulong currentHash = picture.Metrics.PHash.Value;
+            ulong currentHash = picture.Hash;
             bool addedToGroup = false;
 
             foreach (var group in groups) {
@@ -42,8 +42,7 @@ public class PictureGroupingService(IPictureRepository repository, ILogger<Pictu
 
     private bool IsSimilarToAllMembers(ulong hash, List<Picture> group, int threshold) {
         foreach (var member in group) {
-            // Member must have pHash here since they are in a group
-            if (HammingDistance(hash, member.Metrics!.PHash!.Value) > threshold) {
+            if (HammingDistance(hash, member.Hash) > threshold) {
                 return false;
             }
         }

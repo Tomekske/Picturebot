@@ -64,9 +64,11 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
         Serilog.Log.Information("GroupSimilarPictures requested for Album {AlbumName} (Id: {Id})", _currentNode.Name, _currentNode.Id);
         
-        var groups = await _groupingService.GroupSimilarPicturesAsync(_currentNode.Id, 10); // Increased threshold to 10 for better visibility of grouping
+        // Threshold 6 for > 90% similarity (64 * 0.1 = 6.4)
+        var groups = await _groupingService.GroupSimilarPicturesAsync(_currentNode.Id, 6); 
         
         GroupedPictures.Clear();
+        foreach (var pic in PicturesList) pic.IsBest = false;
         
         if (groups.Count == 0) {
             Serilog.Log.Warning("No groups formed by service. This usually means no pictures in this album have pHash metrics.");
@@ -79,6 +81,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         var groupedIds = new HashSet<int>();
 
         foreach (var group in groups) {
+            // Only treat as a burst if there is more than one picture
+            if (group.Count <= 1) continue;
+
             var picVms = group.Select(p => {
                 var vm = PicturesList.FirstOrDefault(vm => vm.Picture.Id == p.Id);
                 if (vm != null) groupedIds.Add(p.Id);
@@ -87,16 +92,22 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
             if (picVms.Count == 0) continue;
 
-            var header = $"Similar Group {groupIndex++} ({picVms.Count})";
-            var groupVm = new PictureGroupViewModel(header, header, new ObservableCollection<PictureItemViewModel>(picVms));
+            // Select Best: sharpest image in the group
+            var bestPic = picVms.OrderByDescending(vm => vm.Picture.Sharpness).FirstOrDefault();
+            if (bestPic != null) {
+                bestPic.IsBest = true;
+            }
+
+            var header = $"Burst Group {groupIndex++} ({picVms.Count})";
+            var groupVm = new PictureGroupViewModel(header, header, new ObservableCollection<PictureItemViewModel>(picVms), true);
             GroupedPictures.Add(groupVm);
         }
 
-        // Add pictures that were not grouped (e.g. no pHash) to an "Unclassified" group
+        // Add pictures that were not grouped (e.g. no pHash or were singletons) to an "Unclassified" group
         var unclassified = PicturesList.Where(vm => !groupedIds.Contains(vm.Picture.Id)).ToList();
         if (unclassified.Count > 0) {
             var header = $"Unclassified ({unclassified.Count})";
-            var groupVm = new PictureGroupViewModel("Unclassified", header, new ObservableCollection<PictureItemViewModel>(unclassified));
+            var groupVm = new PictureGroupViewModel("Unclassified", header, new ObservableCollection<PictureItemViewModel>(unclassified), false);
             GroupedPictures.Add(groupVm);
         }
         
