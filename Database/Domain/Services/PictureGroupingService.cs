@@ -1,17 +1,14 @@
+using System.Numerics;
 using Database.Domain.Entities;
 using Database.Domain.Interfaces;
-using Microsoft.Extensions.Logging;
-using System.Numerics;
 
 namespace Database.Domain.Services;
 
 /// <summary>
 ///     Implements perceptual hash grouping logic using Hamming distance.
 /// </summary>
-public class PictureGroupingService(IPictureRepository repository, ILogger<PictureGroupingService> logger) : IPictureGroupingService {
+public class PictureGroupingService(IPictureRepository repository) : IPictureGroupingService {
     public async Task<List<List<Picture>>> GroupSimilarPicturesAsync(int hierarchyId, int threshold) {
-        logger.LogInformation("Grouping pictures for hierarchy {HierarchyId} with threshold {Threshold}", hierarchyId, threshold);
-        
         var pictures = await repository.FindByHierarchyIdAsync(hierarchyId);
         var groups = new List<List<Picture>>();
 
@@ -20,8 +17,8 @@ public class PictureGroupingService(IPictureRepository repository, ILogger<Pictu
                 continue;
             }
 
-            ulong currentHash = picture.Hash;
-            bool addedToGroup = false;
+            var currentHash = picture.Hash;
+            var addedToGroup = false;
 
             foreach (var group in groups) {
                 if (IsSimilarToAllMembers(currentHash, group, threshold)) {
@@ -36,7 +33,6 @@ public class PictureGroupingService(IPictureRepository repository, ILogger<Pictu
             }
         }
 
-        logger.LogInformation("Formed {GroupCount} groups for hierarchy {HierarchyId}", groups.Count, hierarchyId);
         return groups;
     }
 
@@ -46,6 +42,7 @@ public class PictureGroupingService(IPictureRepository repository, ILogger<Pictu
                 return false;
             }
         }
+
         return true;
     }
 
