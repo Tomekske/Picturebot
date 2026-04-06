@@ -20,4 +20,11 @@ public interface INodeService {
     Task<List<Node>> LoadHydratedTreeAsync();
 
     Task<List<Node>> GetAllNodesAsync();
+
+    /// <summary>
+    ///     Updates an existing node's information within the hierarchy.
+    /// </summary>
+    /// <param name="node">The node entity with updated values.</param>
+    /// <returns>A Task representing the asynchronous update operation.</returns>
+    Task UpdateNodeAsync(Node node);
 }

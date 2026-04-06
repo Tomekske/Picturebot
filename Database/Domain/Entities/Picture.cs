@@ -16,6 +16,21 @@ public class Picture : Node {
     }
 
     /// <summary>
+    ///     The date and time the picture was captured.
+    /// </summary>
+    public DateTime CapturedAt { get; set; }
+
+    /// <summary>
+    ///     The perceptual hash of the picture.
+    /// </summary>
+    public ulong Hash { get; set; }
+
+    /// <summary>
+    ///     The sharpness score of the picture.
+    /// </summary>
+    public int Sharpness { get; set; }
+
+    /// <summary>
     ///     The analysis results for the picture, including sharpness and perceptual hash.
     /// </summary>
     public Metrics? Metrics { get; set; }

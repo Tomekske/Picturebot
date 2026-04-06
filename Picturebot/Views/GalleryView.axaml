@@ -1,0 +1,296 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Picturebot.ViewModels;assembly=Picturebot"
+             xmlns:entities="using:Database.Domain.Entities"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             xmlns:converters="using:Picturebot.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Picturebot.Views.GalleryView"
+             x:DataType="vm:GalleryViewModel">
+
+    <UserControl.Resources>
+        <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
+        <converters:CurationStatusToBooleanConverter x:Key="CurationStatusToBooleanConverter" />
+    </UserControl.Resources>
+
+    <Grid Margin="0,40,0,0" RowDefinitions="Auto,Auto,*">
+        <!-- Breadcrumbs at the top -->
+        <ItemsControl Grid.Row="0" ItemsSource="{Binding Breadcrumbs}"
+                      Margin="24,0,0,10">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BreadcrumbItem">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Classes="Basic"
+                                Padding="6,4"
+                                CornerRadius="6"
+                                Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToBreadcrumbCommand}"
+                                CommandParameter="{Binding}"
+                                Cursor="Hand">
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource SukiText}" />
+                        </Button>
+
+                        <icons:MaterialIcon Kind="ChevronRight"
+                                            IsVisible="{Binding !IsLast}"
+                                            VerticalAlignment="Center"
+                                            Margin="2,0"
+                                            Width="18" Height="18"
+                                            Foreground="{DynamicResource SukiLowText}" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Command Bar -->
+        <Border Grid.Row="1"
+                Margin="20,0,20,15"
+                Padding="8,4"
+                Background="{DynamicResource SukiGlassCardBackground}"
+                BorderBrush="{DynamicResource SukiBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="Basic" ToolTip.Tip="Play Carousel"
+                            Command="{Binding PlayCarouselCommand}"
+                            IsEnabled="{Binding CanPlayCarousel}">
+                        <icons:MaterialIcon Kind="Play" Width="20" Height="20" />
+                    </Button>
+                    <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
+                    <Button Classes="Basic" ToolTip.Tip="Add Picture">
+                        <icons:MaterialIcon Kind="Plus" Width="20" Height="20" />
+                    </Button>
+                    <ToggleButton Classes="Basic"
+                                  ToolTip.Tip="Toggle Burst Grouping"
+                                  IsChecked="{Binding IsBurstViewEnabled, Mode=OneWay}"
+                                  Command="{Binding ToggleGroupingModeCommand}"
+                                  IsEnabled="{Binding CanPlayCarousel}">
+                        <Panel>
+                            <icons:MaterialIcon Kind="CalendarMonth"
+                                                IsVisible="{Binding IsBurstViewEnabled}"
+                                                Width="20" Height="20" />
+                            <icons:MaterialIcon Kind="LayersOutline"
+                                                IsVisible="{Binding !IsBurstViewEnabled}"
+                                                Width="20" Height="20" />
+                        </Panel>
+                    </ToggleButton>
+                    <Separator Width="1" Height="20"
+                               IsVisible="{Binding IsBurstViewEnabled}"
+                               Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
+
+                    <Button Classes="Basic" ToolTip.Tip="Auto Flag Picture"
+                            IsVisible="{Binding IsBurstViewEnabled}"
+                            Command="{Binding AutoFlagBestPicturesCommand}">
+                        <icons:MaterialIcon Kind="AutoFix" Width="20" Height="20"
+                                            Foreground="{DynamicResource SukiPrimaryColor}" />
+                    </Button>
+
+                    <Button Classes="Basic" ToolTip.Tip="Filter">
+                        <icons:MaterialIcon Kind="FilterVariant" Width="20" Height="20" />
+                    </Button>
+                    <Button Classes="Basic" ToolTip.Tip="Sort">
+                        <icons:MaterialIcon Kind="SortVariant" Width="20" Height="20" />
+                    </Button>
+                </StackPanel>
+
+                <Button Grid.Column="1" Classes="Basic" ToolTip.Tip="Delete" Foreground="Red">
+                    <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Content Area -->
+        <Panel Grid.Row="2">
+
+            <!-- Navigation Grid (Folders/Albums) -->
+            <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
+                <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="entities:Node">
+                            <Button Classes="Basic"
+                                    Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToChildCommand}"
+                                    CommandParameter="{Binding}"
+                                    Margin="10"
+                                    Padding="0"
+                                    CornerRadius="12"
+                                    Cursor="Hand">
+                                <suki:GlassCard Width="160" Height="140">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                        <Panel Width="48" Height="48">
+                                            <icons:MaterialIcon Kind="Folder"
+                                                                IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}"
+                                                                Width="48" Height="48" Foreground="#FFD700" />
+                                            <icons:MaterialIcon Kind="ImageAlbum"
+                                                                IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Album}"
+                                                                Width="48" Height="48" Foreground="#87CEEB" />
+                                        </Panel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   HorizontalAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   TextAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SukiText}" />
+                                    </StackPanel>
+                                </suki:GlassCard>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Picture Gallery (Pictures in Album) -->
+            <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
+                <ItemsControl ItemsSource="{Binding GroupedPictures}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PictureGroupViewModel">
+                            <StackPanel Spacing="10" Margin="0,0,0,30">
+                                <!-- Group Header -->
+                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
+                                    <icons:MaterialIcon Kind="BurstMode"
+                                                        IsVisible="{Binding IsBurstGroup}"
+                                                        Width="20" Height="20"
+                                                        Foreground="{DynamicResource SukiPrimaryColor}" />
+                                    <icons:MaterialIcon Kind="CalendarToday"
+                                                        IsVisible="{Binding !IsBurstGroup}"
+                                                        Width="20" Height="20"
+                                                        Foreground="{DynamicResource SukiLowText}" />
+                                    <TextBlock Text="{Binding Header}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SukiText}" />
+                                </StackPanel>
+
+                                <!-- Pictures Grid -->
+                                <ListBox ItemsSource="{Binding Pictures}"
+                                         SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Padding="0">
+                                    <ListBox.Styles>
+                                        <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
+                                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Margin" Value="0" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="VerticalAlignment" Value="Top" />
+                                            <Setter Property="HorizontalAlignment" Value="Left" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Left" />
+                                        </Style>
+                                    </ListBox.Styles>
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PictureItemViewModel">
+                                            <suki:GlassCard Height="250" Margin="4" Padding="0"
+                                                            CornerRadius="8" ClipToBounds="True">
+                                                <Grid Background="{DynamicResource SukiControlTouchBackground}">
+                                                    <!-- 
+                                                    Transition moved into the Style block for better reliability.
+                                                    The 'loaded' class triggers the opacity change.
+                                                -->
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="Uniform"
+                                                           VerticalAlignment="Stretch"
+                                                           HorizontalAlignment="Stretch"
+                                                           Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                        <Image.Styles>
+                                                            <Style Selector="Image">
+                                                                <Setter Property="Opacity" Value="0" />
+                                                                <Setter Property="Transitions">
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="Opacity"
+                                                                                Duration="0:0:0.6"
+                                                                                Easing="QuadraticEaseOut" />
+                                                                    </Transitions>
+                                                                </Setter>
+                                                            </Style>
+                                                            <Style Selector="Image.loaded">
+                                                                <Setter Property="Opacity" Value="1" />
+                                                            </Style>
+                                                        </Image.Styles>
+                                                    </Image>
+
+                                                    <Border VerticalAlignment="Bottom"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="#99000000"
+                                                            Padding="8,6">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="12"
+                                                                   FontWeight="Medium"
+                                                                   Foreground="White"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </Border>
+
+                                                    <!-- Best Badge -->
+                                                    <Border VerticalAlignment="Top"
+                                                            HorizontalAlignment="Right"
+                                                            Margin="8"
+                                                            Padding="6,3"
+                                                            IsVisible="{Binding IsBest}"
+                                                            Background="{DynamicResource SukiPrimaryColor}"
+                                                            CornerRadius="4"
+                                                            BoxShadow="0 2 6 0 #40000000">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <icons:MaterialIcon Kind="Star" Width="12" Height="12"
+                                                                    Foreground="White" />
+                                                            <TextBlock Text="Best"
+                                                                       FontSize="11"
+                                                                       FontWeight="Heavy"
+                                                                       Foreground="White" />
+                                                        </StackPanel>
+                                                    </Border>
+
+                                                    <!-- Flagged Badge -->
+                                                    <Border VerticalAlignment="Top"
+                                                            HorizontalAlignment="Left"
+                                                            Margin="8"
+                                                            Padding="6,3"
+                                                            IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}"
+                                                            Background="Orange"
+                                                            CornerRadius="4"
+                                                            BoxShadow="0 2 6 0 #40000000">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <icons:MaterialIcon Kind="Flag" Width="12" Height="12"
+                                                                    Foreground="White" />
+                                                            <TextBlock Text="Flagged"
+                                                                       FontSize="11"
+                                                                       FontWeight="Heavy"
+                                                                       Foreground="White" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Grid>
+                                            </suki:GlassCard>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+        </Panel>
+    </Grid>
+
+</UserControl>

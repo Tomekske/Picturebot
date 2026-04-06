@@ -1,4 +1,5 @@
 ﻿using Database.Domain.Interfaces;
+using Database.Domain.Services;
 using Database.Infrastructure.Data;
 using Database.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,8 @@ public static class DependencyInjection {
 
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<INodeRepository, NodeRepository>();
+        services.AddScoped<IPictureRepository, PictureRepository>();
+        services.AddTransient<IPictureGroupingService, PictureGroupingService>();
 
         return services;
     }

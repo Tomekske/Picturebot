@@ -15,7 +15,8 @@ public class NodeServiceTests {
 
         var folderStrategy = new FolderCreationStrategy();
         var albumStrategy = new AlbumCreationStrategy();
-        _strategyFactory = new NodeStrategyFactory(folderStrategy, albumStrategy);
+        var pictureStrategy = new PictureCreationStrategy();
+        _strategyFactory = new NodeStrategyFactory(folderStrategy, albumStrategy, pictureStrategy);
 
         _nodeService = new NodeService(_nodeRepositoryMock.Object, _strategyFactory);
     }
@@ -115,5 +116,43 @@ public class NodeServiceTests {
         // Act & Assert
         await _nodeService.CreateNodeAsync(childFolder);
         _nodeRepositoryMock.Verify(r => r.CreateAsync(childFolder), Times.Once);
+    }
+
+    [Test]
+    public async Task CreateNodeAsync_Picture_MustHaveParent() {
+        // Arrange
+        var picture = new Picture { Name = "IMG_001", Type = NodeType.Picture };
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () => await _nodeService.CreateNodeAsync(picture));
+        Assert.That(ex.Message, Is.EqualTo("Picture nodes must have a parent."));
+    }
+
+    [Test]
+    public async Task CreateNodeAsync_Picture_ParentMustBeAlbum() {
+        // Arrange
+        var parentFolder = new Folder { Id = 1, Name = "Parent Folder", Type = NodeType.Folder };
+        _nodeRepositoryMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(parentFolder);
+
+        var picture = new Picture { Name = "IMG_001", Type = NodeType.Picture, ParentId = 1 };
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () => await _nodeService.CreateNodeAsync(picture));
+        Assert.That(ex.Message, Is.EqualTo("Branching: Pictures can only be children of Album nodes."));
+    }
+
+    [Test]
+    public async Task CreateNodeAsync_Picture_ValidCreation_ShouldSucceed() {
+        // Arrange
+        var parentAlbum = new Album { Id = 1, Name = "Parent Album", Type = NodeType.Album };
+        _nodeRepositoryMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(parentAlbum);
+
+        var picture = new Picture { Name = "IMG_001", Type = NodeType.Picture, ParentId = 1 };
+
+        // Act
+        await _nodeService.CreateNodeAsync(picture);
+
+        // Assert
+        _nodeRepositoryMock.Verify(r => r.CreateAsync(picture), Times.Once);
     }
 }

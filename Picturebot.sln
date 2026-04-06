@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main", "Main\Main.csproj", "{A317A613-3E52-4E69-94FC-527DBC13C580}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Picturebot", "Picturebot\Picturebot.csproj", "{A317A613-3E52-4E69-94FC-527DBC13C580}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Database.csproj", "{65D1FC0C-A0D3-4FC3-B3C3-09A6AABF9815}"
 EndProject
@@ -17,6 +17,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Graph", "Graph\Graph.csproj", "{63A71F5F-588B-4EC0-A7B6-59431D022AEE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Graph.Test", "Graph.Test\Graph.Test.csproj", "{87CC8054-F0E7-4C30-8612-BF0D2FE63BFD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PictureWorker", "PictureWorker\PictureWorker.csproj", "{F9441AAD-518F-4A22-B138-C43CE032B34C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PictureWorker.Test", "PictureWorker.Test\PictureWorker.Test.csproj", "{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,10 +60,19 @@ Global
 		{87CC8054-F0E7-4C30-8612-BF0D2FE63BFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87CC8054-F0E7-4C30-8612-BF0D2FE63BFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87CC8054-F0E7-4C30-8612-BF0D2FE63BFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9441AAD-518F-4A22-B138-C43CE032B34C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9441AAD-518F-4A22-B138-C43CE032B34C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9441AAD-518F-4A22-B138-C43CE032B34C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9441AAD-518F-4A22-B138-C43CE032B34C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{76BDEF4C-4257-4534-A2FE-11E79E010267} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}
 		{86B348C6-F97F-4719-A77A-7E28F36DE882} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}
 		{87CC8054-F0E7-4C30-8612-BF0D2FE63BFD} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}
+		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}
 	EndGlobalSection
 EndGlobal

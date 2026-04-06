@@ -1,3 +1,5 @@
+root = true
+
 [*]
 # Enforces a single empty line at the very end of the file
 insert_final_newline = true
@@ -31,3 +33,7 @@ csharp_braces_for_foreach = required
 csharp_braces_for_while = required
 csharp_braces_for_dowhile = required
 csharp_braces_for_fixed = required
+
+# Disable automatic reordering of fields and methods
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false

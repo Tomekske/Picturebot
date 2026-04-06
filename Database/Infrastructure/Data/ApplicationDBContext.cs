@@ -81,5 +81,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
         modelBuilder.Entity<Metrics>()
             .Property(p => p.PHash)
             .HasConversion<long>();
+
+        modelBuilder.Entity<Picture>()
+            .Property(p => p.Hash)
+            .HasConversion<long>();
     }
 }
