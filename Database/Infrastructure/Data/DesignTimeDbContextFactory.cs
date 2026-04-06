@@ -9,11 +9,11 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"); // ?? "Development";
 
         var currentDir = Directory.GetCurrentDirectory();
-        var configPath = Path.Combine(currentDir, "Main");
+        var configPath = Path.Combine(currentDir, "Picturebot");
 
-        // If the 'Main' folder is not found directly, try the parent folder (e.g., if running from the Database project folder)
+        // If the 'Picturebot' folder is not found directly, try the parent folder (e.g., if running from the Database project folder)
         if (!Directory.Exists(configPath)) {
-            configPath = Path.Combine(currentDir, "..", "Main");
+            configPath = Path.Combine(currentDir, "..", "Picturebot");
         }
 
         Console.WriteLine($"[EF Design-Time] Execution Directory: {currentDir}");

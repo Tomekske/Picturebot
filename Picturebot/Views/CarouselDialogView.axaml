@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Picturebot.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:converters="using:Picturebot.Converters"
+             xmlns:enums="using:Domain.Enums"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="Picturebot.Views.CarouselDialogView"
+             x:DataType="vm:CarouselDialogViewModel"
+             Background="Black"
+             Focusable="True">
+
+    <UserControl.Resources>
+        <converters:CurationStatusToBrushConverter x:Key="CurationStatusToBrushConverter" />
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Main Image -->
+        <Image Source="{Binding PreviewImage}"
+               Stretch="Uniform"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center" />
+
+        <!-- Top Controls: Close (Left) and Info (Right) -->
+        <Grid VerticalAlignment="Top" Margin="20" ColumnDefinitions="Auto, *, Auto">
+            <!-- Close Button (Top Left) -->
+            <Button Grid.Column="0" Classes="Basic"
+                    Command="{Binding CloseCommand}"
+                    Padding="10"
+                    Foreground="White">
+                <icons:MaterialIcon Kind="Close" Width="32" Height="32" />
+            </Button>
+
+            <!-- Asset Info (Top Right) -->
+            <StackPanel Grid.Column="2" Spacing="5" HorizontalAlignment="Right">
+                <Border Background="#AA000000" CornerRadius="15" Padding="15,8">
+                    <StackPanel Orientation="Horizontal" Spacing="15">
+                        <TextBlock Text="{Binding CounterText}"
+                                   Foreground="White" FontWeight="Bold" />
+                        <Separator Width="1" Height="15" Background="Gray" />
+                        <TextBlock Text="{Binding Sharpness, StringFormat='Sharpness: {0}'}"
+                                   Foreground="White" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Navigation Arrows (Overlaying edges) -->
+        <Button HorizontalAlignment="Left" VerticalAlignment="Center"
+                Classes="Basic" Margin="10"
+                Command="{Binding PreviousCommand}"
+                Foreground="#AAFFFFFF">
+            <icons:MaterialIcon Kind="ChevronLeft" Width="64" Height="64" />
+        </Button>
+
+        <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                Classes="Basic" Margin="10"
+                Command="{Binding NextCommand}"
+                Foreground="#AAFFFFFF">
+            <icons:MaterialIcon Kind="ChevronRight" Width="64" Height="64" />
+        </Button>
+
+        <!-- Curation Overlay (Bottom) -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,30"
+                Background="#EE151515"
+                CornerRadius="25"
+                Padding="10,5"
+                BorderBrush="#33FFFFFF"
+                BorderThickness="1">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <!-- Flagged -->
+                <Button Classes="Basic"
+                        Command="{Binding SetCurationStatusCommand}"
+                        CommandParameter="{x:Static enums:CurationStatus.Flagged}"
+                        Padding="15,10">
+                    <StackPanel Spacing="5" HorizontalAlignment="Center">
+                        <icons:MaterialIcon Kind="Flag" Width="28" Height="28"
+                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Flagged}" />
+                        <TextBlock Text="Flagged" FontSize="10" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Unflagged -->
+                <Button Classes="Basic"
+                        Command="{Binding SetCurationStatusCommand}"
+                        CommandParameter="{x:Static enums:CurationStatus.Unflagged}"
+                        Padding="15,10">
+                    <StackPanel Spacing="5" HorizontalAlignment="Center">
+                        <icons:MaterialIcon Kind="CircleOutline" Width="28" Height="28"
+                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Unflagged}" />
+                        <TextBlock Text="Neutral" FontSize="10" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Rejected -->
+                <Button Classes="Basic"
+                        Command="{Binding SetCurationStatusCommand}"
+                        CommandParameter="{x:Static enums:CurationStatus.Rejected}"
+                        Padding="15,10">
+                    <StackPanel Spacing="5" HorizontalAlignment="Center">
+                        <icons:MaterialIcon Kind="Close" Width="28" Height="28"
+                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Rejected}" />
+                        <TextBlock Text="Rejected" FontSize="10" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

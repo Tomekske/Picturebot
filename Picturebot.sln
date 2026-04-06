@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main", "Main\Main.csproj", "{A317A613-3E52-4E69-94FC-527DBC13C580}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Picturebot", "Picturebot\Picturebot.csproj", "{A317A613-3E52-4E69-94FC-527DBC13C580}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Database.csproj", "{65D1FC0C-A0D3-4FC3-B3C3-09A6AABF9815}"
 EndProject
