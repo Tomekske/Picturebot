@@ -12,7 +12,7 @@ public class CurationStatusToBrushConverter : IValueConverter {
             Enum.TryParse<CurationStatus>(targetStr, out var targetStatus)) {
             if (status == targetStatus) {
                 return targetStatus switch {
-                    CurationStatus.Flagged => Brushes.Orange,
+                    CurationStatus.Flagged => Brushes.ForestGreen, 
                     CurationStatus.Unflagged => Brushes.SkyBlue,
                     CurationStatus.Rejected => Brushes.Red,
                     _ => Brushes.Gray
