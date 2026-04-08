@@ -33,19 +33,6 @@
                 </ComboBox>
             </StackPanel>
 
-            <!-- Album Name -->
-            <StackPanel Spacing="10">
-                <TextBlock Text="ALBUM NAME"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SukiLowText}"
-                           LetterSpacing="1" />
-                <TextBox Text="{Binding AlbumName}"
-                         Watermark="e.g. Wedding 2024"
-                         Height="40"
-                         VerticalContentAlignment="Center" />
-            </StackPanel>
-
             <!-- Source Directory -->
             <StackPanel Spacing="10">
                 <TextBlock Text="SOURCE DIRECTORY (Images to import)"
@@ -68,6 +55,19 @@
                         <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
                     </Button>
                 </Grid>
+            </StackPanel>
+
+            <!-- Album Name -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="ALBUM NAME"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource SukiLowText}"
+                           LetterSpacing="1" />
+                <TextBox Text="{Binding AlbumName}"
+                         Watermark="e.g. Wedding 2024"
+                         Height="40"
+                         VerticalContentAlignment="Center" />
             </StackPanel>
 
             <!-- Buttons -->
