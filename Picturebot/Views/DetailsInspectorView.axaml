@@ -15,17 +15,20 @@
         <converters:CurationStatusToBrushConverter x:Key="CurationStatusToBrushConverter" />
     </UserControl.Resources>
 
-    <Grid RowDefinitions="Auto, *, Auto" Margin="15">
+    <Grid RowDefinitions="Auto, *, Auto" Margin="0,40,0,0">
         <!-- Header -->
-        <TextBlock Grid.Row="0"
-                   Text="Details"
-                   FontSize="22"
-                   FontWeight="Bold"
-                   Margin="0,0,0,20"
-                   Foreground="{DynamicResource SukiText}" />
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,10">
+            <TextBlock Text="Details"
+                       Classes="h3"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource SukiText}" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" />
+        </Grid>
 
         <!-- Main Content (Preview + Curation) -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="15,0">
             <StackPanel Spacing="25">
                 <!-- Preview Box -->
                 <suki:GlassCard Padding="0" ClipToBounds="True">
@@ -117,7 +120,7 @@
         </ScrollViewer>
 
         <!-- Footer Actions -->
-        <StackPanel Grid.Row="2" Spacing="10" Margin="0,20,0,0"
+        <StackPanel Grid.Row="2" Spacing="10" Margin="15,20,15,15"
                     IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
             <Button Classes="Primary"
                     Command="{Binding EditMetadataCommand}"
