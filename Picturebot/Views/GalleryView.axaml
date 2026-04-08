@@ -193,6 +193,19 @@
                                             <Setter Property="HorizontalAlignment" Value="Left" />
                                             <Setter Property="HorizontalContentAlignment" Value="Left" />
                                         </Style>
+
+                                        <!-- Hover effect for the caption -->
+                                        <Style Selector="ListBoxItem Border.Caption">
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Setter Property="Transitions">
+                                                <Transitions>
+                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                                                </Transitions>
+                                            </Setter>
+                                        </Style>
+                                        <Style Selector="ListBoxItem:pointerover Border.Caption">
+                                            <Setter Property="Opacity" Value="1" />
+                                        </Style>
                                     </ListBox.Styles>
                                     <ListBox.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -231,7 +244,8 @@
                                                         </Image.Styles>
                                                     </Image>
 
-                                                    <Border VerticalAlignment="Bottom"
+                                                    <Border Classes="Caption"
+                                                            VerticalAlignment="Bottom"
                                                             HorizontalAlignment="Stretch"
                                                             Background="#99000000"
                                                             Padding="8,6">
