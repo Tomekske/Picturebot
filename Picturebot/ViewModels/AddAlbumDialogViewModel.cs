@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
@@ -69,7 +70,23 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
             });
 
             if (folders.Any()) {
-                SourcePath = folders[0].Path.LocalPath;
+                var selectedPath = folders[0].Path.LocalPath;
+                SourcePath = selectedPath;
+
+                // Auto-populate Album Name if it is currently blank.
+                if (string.IsNullOrWhiteSpace(AlbumName)) {
+                    // Trim trailing slashes to ensure GetFileName safely extracts the leaf folder
+                    var cleanPath = selectedPath.TrimEnd(
+                        Path.DirectorySeparatorChar,
+                        Path.AltDirectorySeparatorChar
+                    );
+
+                    var suggestedName = Path.GetFileName(cleanPath);
+
+                    if (!string.IsNullOrWhiteSpace(suggestedName)) {
+                        AlbumName = suggestedName;
+                    }
+                }
             }
         } catch (Exception ex) {
             Log.Error(ex, "Error selecting source path");
