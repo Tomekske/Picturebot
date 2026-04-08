@@ -279,19 +279,13 @@
                                                     <Border VerticalAlignment="Top"
                                                             HorizontalAlignment="Left"
                                                             Margin="8"
-                                                            Padding="6,3"
+                                                            Padding="4"
                                                             IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}"
-                                                            Background="Orange"
-                                                            CornerRadius="4"
+                                                            Background="#228B22"
+                                                            CornerRadius="12"
                                                             BoxShadow="0 2 6 0 #40000000">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <icons:MaterialIcon Kind="Flag" Width="12" Height="12"
-                                                                    Foreground="White" />
-                                                            <TextBlock Text="Flagged"
-                                                                       FontSize="11"
-                                                                       FontWeight="Heavy"
-                                                                       Foreground="White" />
-                                                        </StackPanel>
+                                                        <icons:MaterialIcon Kind="Flag" Width="14" Height="14"
+                                                                Foreground="White" />
                                                     </Border>
                                                 </Grid>
                                             </suki:GlassCard>
