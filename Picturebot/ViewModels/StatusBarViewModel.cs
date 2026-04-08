@@ -29,7 +29,6 @@ public partial class StatusBarViewModel : ViewModelBase {
         Debug.WriteLine("Settings Command Triggered!");
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new SettingsDialog())
-            .WithTitle("Settings")
             .TryShow();
     }
 }
