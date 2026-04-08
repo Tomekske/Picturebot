@@ -5,84 +5,80 @@
              x:DataType="vm:AddAlbumDialogViewModel"
              x:Class="Picturebot.Views.AddAlbumDialog"
              Width="520">
-    <Border Background="{DynamicResource SukiBackground}"
-            CornerRadius="12"
-            BoxShadow="0 4 20 0 #22000000"
-            Padding="32">
-        <StackPanel Spacing="24">
-            <TextBlock Text="New Album"
-                       FontSize="18"
-                       FontWeight="SemiBold" />
 
-            <!-- Parent Location -->
-            <StackPanel Spacing="10">
-                <TextBlock Text="PARENT LOCATION"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SukiLowText}"
-                           LetterSpacing="1" />
-                <ComboBox ItemsSource="{Binding Parents}"
-                          SelectedItem="{Binding SelectedParent}"
-                          HorizontalAlignment="Stretch"
-                          Height="40">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:LocationItem">
-                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-            </StackPanel>
+    <StackPanel Spacing="24">
 
-            <!-- Source Directory -->
-            <StackPanel Spacing="10">
-                <TextBlock Text="SOURCE DIRECTORY (Images to import)"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SukiLowText}"
-                           LetterSpacing="1" />
-                <Grid ColumnDefinitions="*, Auto">
-                    <TextBox Text="{Binding SourcePath}"
-                             Watermark="Select folder on HDD..."
-                             IsReadOnly="True"
-                             Height="40"
-                             VerticalContentAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Command="{Binding SelectSourcePathCommand}"
-                            Classes="Basic"
-                            Margin="8,0,0,0"
-                            Padding="8"
-                            ToolTip.Tip="Select Folder">
-                        <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
-                    </Button>
-                </Grid>
-            </StackPanel>
+        <TextBlock Text="New Album"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,8" />
 
-            <!-- Album Name -->
-            <StackPanel Spacing="10">
-                <TextBlock Text="ALBUM NAME"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SukiLowText}"
-                           LetterSpacing="1" />
-                <TextBox Text="{Binding AlbumName}"
-                         Watermark="e.g. Wedding 2024"
+        <StackPanel Spacing="10">
+            <TextBlock Text="PARENT LOCATION"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource SukiLowText}"
+                       LetterSpacing="1" />
+            <ComboBox ItemsSource="{Binding Parents}"
+                      SelectedItem="{Binding SelectedParent}"
+                      HorizontalAlignment="Stretch"
+                      Height="40">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LocationItem">
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+            <TextBlock Text="SOURCE DIRECTORY (Images to import)"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource SukiLowText}"
+                       LetterSpacing="1" />
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBox Text="{Binding SourcePath}"
+                         Watermark="Select folder on HDD..."
+                         IsReadOnly="True"
                          Height="40"
                          VerticalContentAlignment="Center" />
-            </StackPanel>
-
-            <!-- Buttons -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,16,0,0">
-                <Button Command="{Binding CancelCommand}"
-                        Content="Cancel"
-                        Classes.Accent="False"
-                        Width="100"
-                        Height="40" />
-                <Button Command="{Binding CreateAlbumCommand}"
-                        Content="Create Album"
-                        Classes.Accent="True"
-                        Width="140"
-                        Height="40" />
-            </StackPanel>
+                <Button Grid.Column="1"
+                        Command="{Binding SelectSourcePathCommand}"
+                        Classes="Basic"
+                        Margin="8,0,0,0"
+                        Padding="8"
+                        ToolTip.Tip="Select Folder">
+                    <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
+                </Button>
+            </Grid>
         </StackPanel>
-    </Border>
+
+        <StackPanel Spacing="10">
+            <TextBlock Text="ALBUM NAME"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource SukiLowText}"
+                       LetterSpacing="1" />
+            <TextBox Text="{Binding AlbumName}"
+                     Watermark="e.g. Wedding 2024"
+                     Height="40"
+                     VerticalContentAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,16,0,0">
+            <Button Command="{Binding CancelCommand}"
+                    Content="Cancel"
+                    Classes.Accent="False"
+                    Width="100"
+                    Height="40" />
+            <Button Command="{Binding CreateAlbumCommand}"
+                    Content="Create Album"
+                    Classes.Accent="True"
+                    Width="140"
+                    Height="40" />
+        </StackPanel>
+
+    </StackPanel>
 </UserControl>
