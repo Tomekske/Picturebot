@@ -17,7 +17,6 @@
     </UserControl.Resources>
 
     <Grid Margin="0,40,0,0" RowDefinitions="Auto,Auto,*">
-        <!-- Breadcrumbs at the top -->
         <ItemsControl Grid.Row="0" ItemsSource="{Binding Breadcrumbs}"
                       Margin="24,0,0,10">
             <ItemsControl.ItemsPanel>
@@ -51,7 +50,6 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Command Bar -->
         <Border Grid.Row="1"
                 Margin="20,0,20,15"
                 Padding="8,4"
@@ -109,10 +107,8 @@
             </Grid>
         </Border>
 
-        <!-- Content Area -->
         <Panel Grid.Row="2">
 
-            <!-- Navigation Grid (Folders/Albums) -->
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
                 <ItemsControl ItemsSource="{Binding Items}">
                     <ItemsControl.ItemsPanel>
@@ -154,13 +150,11 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <!-- Picture Gallery (Pictures in Album) -->
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
                 <ItemsControl ItemsSource="{Binding GroupedPictures}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:PictureGroupViewModel">
                             <StackPanel Spacing="10" Margin="0,0,0,30">
-                                <!-- Group Header -->
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
                                     <icons:MaterialIcon Kind="BurstMode"
                                                         IsVisible="{Binding IsBurstGroup}"
@@ -177,7 +171,6 @@
                                                Foreground="{DynamicResource SukiText}" />
                                 </StackPanel>
 
-                                <!-- Pictures Grid -->
                                 <ListBox ItemsSource="{Binding Pictures}"
                                          SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture}"
                                          Background="Transparent"
@@ -188,13 +181,34 @@
                                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                                             <Setter Property="Padding" Value="0" />
                                             <Setter Property="Margin" Value="0" />
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="VerticalAlignment" Value="Top" />
-                                            <Setter Property="HorizontalAlignment" Value="Left" />
-                                            <Setter Property="HorizontalContentAlignment" Value="Left" />
+
+                                            <Setter Property="Template">
+                                                <ControlTemplate>
+                                                    <Panel>
+                                                        <Border Name="SelectionHighlight"
+                                                                Background="{DynamicResource SukiPrimaryColor}"
+                                                                Opacity="0"
+                                                                CornerRadius="12" />
+
+                                                        <ContentPresenter Name="PART_ContentPresenter"
+                                                                          Content="{TemplateBinding Content}"
+                                                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                                                    </Panel>
+                                                </ControlTemplate>
+                                            </Setter>
                                         </Style>
 
-                                        <!-- Hover effect for the caption -->
+                                        <Style Selector="ListBoxItem:pointerover /template/ Border#SelectionHighlight">
+                                            <Setter Property="Opacity" Value="0.1" />
+                                        </Style>
+                                        <Style Selector="ListBoxItem:selected /template/ Border#SelectionHighlight">
+                                            <Setter Property="Opacity" Value="0.3" />
+                                        </Style>
+                                        <Style
+                                            Selector="ListBoxItem:selected:pointerover /template/ Border#SelectionHighlight">
+                                            <Setter Property="Opacity" Value="0.4" />
+                                        </Style>
+
                                         <Style Selector="ListBoxItem Border.Caption">
                                             <Setter Property="Opacity" Value="0" />
                                             <Setter Property="Transitions">
@@ -218,10 +232,6 @@
                                             <suki:GlassCard Height="250" Margin="4" Padding="0"
                                                             CornerRadius="8" ClipToBounds="True">
                                                 <Grid Background="{DynamicResource SukiControlTouchBackground}">
-                                                    <!-- 
-                                                    Transition moved into the Style block for better reliability.
-                                                    The 'loaded' class triggers the opacity change.
-                                                -->
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="Uniform"
                                                            VerticalAlignment="Stretch"
@@ -256,7 +266,6 @@
                                                                    TextTrimming="CharacterEllipsis" />
                                                     </Border>
 
-                                                    <!-- Best Badge -->
                                                     <Border VerticalAlignment="Top"
                                                             HorizontalAlignment="Right"
                                                             Margin="8"
@@ -275,7 +284,6 @@
                                                         </StackPanel>
                                                     </Border>
 
-                                                    <!-- Flagged Badge -->
                                                     <Border VerticalAlignment="Top"
                                                             HorizontalAlignment="Left"
                                                             Margin="8"
@@ -285,7 +293,7 @@
                                                             CornerRadius="12"
                                                             BoxShadow="0 2 6 0 #40000000">
                                                         <icons:MaterialIcon Kind="Flag" Width="14" Height="14"
-                                                                Foreground="White" />
+                                                                            Foreground="White" />
                                                     </Border>
                                                 </Grid>
                                             </suki:GlassCard>
