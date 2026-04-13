@@ -109,6 +109,34 @@
 
         <Panel Grid.Row="2">
 
+            <!-- Empty State for Folders -->
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="10">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="!IsShowingAlbum" />
+                        <Binding Path="!Items.Count" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <icons:MaterialIcon Kind="FolderOpen" Width="64" Height="64" Foreground="{DynamicResource SukiLowText}" />
+                <TextBlock Text="This folder is empty" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource SukiLowText}" />
+            </StackPanel>
+
+            <!-- Empty State for Albums -->
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="10">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="IsShowingAlbum" />
+                        <Binding Path="!PicturesList.Count" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <icons:MaterialIcon Kind="ImageAlbum" Width="64" Height="64" Foreground="{DynamicResource SukiLowText}" />
+                <TextBlock Text="This album is empty" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource SukiLowText}" />
+            </StackPanel>
+
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
                 <ItemsControl ItemsSource="{Binding Items}">
                     <ItemsControl.ItemsPanel>
