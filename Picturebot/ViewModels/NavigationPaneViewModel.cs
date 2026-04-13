@@ -83,6 +83,9 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
                 // Broadcast creation to refresh the tree
                 WeakReferenceMessenger.Default.Send(new NodeCreatedMessage(result));
 
+                // Automatically navigate to the new album
+                WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(result));
+
                 MainWindow.ToastManager.CreateToast()
                     .WithTitle("Success")
                     .WithContent($"Album '{result.Name}' import has completed.")

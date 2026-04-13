@@ -34,7 +34,7 @@ public class ImportPicturesCommand {
         _fileGrouper = new FileGrouper(fileSystem, pictureAnalyzer);
     }
 
-    public async Task ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath, IProgress<ImportProgress>? progress = null) {
+    public async Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath, IProgress<ImportProgress>? progress = null) {
         // Task 1: Create the Album (Sub-folders are created by modified AlbumService)
         var album = await _albumService.CreateAsync(parentId, albumName, libraryPath);
         var albumPath = _fileSystem.Path.Combine(libraryPath, album.Uuid);
@@ -47,6 +47,8 @@ public class ImportPicturesCommand {
         var groups = await _fileGrouper.GroupFilesAsync(sourcePath);
         var totalCount = groups.Count;
         var processedCount = 0;
+
+        album.Children = new List<Node>();
 
         foreach (var group in groups) {
             processedCount++;
@@ -116,6 +118,9 @@ public class ImportPicturesCommand {
             };
             
             await _nodeService.CreateNodeAsync(pictureNode);
+            album.Children.Add(pictureNode);
         }
+
+        return album;
     }
 }

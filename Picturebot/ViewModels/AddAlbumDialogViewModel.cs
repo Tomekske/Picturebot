@@ -112,11 +112,17 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
             .TryShow();
 
         try {
-            await _importCommand.ExecuteAsync(SelectedParent?.Id, AlbumName, libraryPath, SourcePath, progress);
+            var album = await _importCommand.ExecuteAsync(SelectedParent?.Id, AlbumName, libraryPath, SourcePath, progress);
 
-            // We need to find the created album to return it, or modify ImportCommand to return it.
-            // For now, we'll refresh the tree via message in the parent VM.
-            _onResult(new Album { Name = AlbumName }); // Placeholder for result
+            // Fetch the parent to ensure breadcrumbs work correctly if we navigate immediately
+            if (album.ParentId.HasValue) {
+                // We don't have a direct way to fetch parent here easily without adding more dependencies,
+                // but ImportPicturesCommand could potentially be improved or we can rely on GalleryViewModel 
+                // to handle the breadcrumbs if it has enough info.
+                // Actually, the album object from AlbumService should have its ParentId set.
+            }
+
+            _onResult(album);
         } catch (Exception ex) {
             Console.WriteLine($"Import failed: {ex.Message}");
             _onResult(null);

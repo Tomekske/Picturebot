@@ -71,7 +71,7 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(mockImage);
 
         // Act
-        await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
 
         // Assert
         var expectedFileName = capturedDate.ToString("yyyy-MM-dd_HH-mm-ss");
@@ -79,6 +79,12 @@ public class ImportPicturesCommandTests {
         var expectedThumbnailPath = Path.Combine(albumPath, "Thumbnails", expectedFileName + ".jpg");
 
         Assert.Multiple(() => {
+            Assert.That(resultAlbum, Is.Not.Null);
+            Assert.That(resultAlbum.Id, Is.EqualTo(album.Id));
+            Assert.That(resultAlbum.Children, Is.Not.Null);
+            Assert.That(resultAlbum.Children.Count, Is.EqualTo(1));
+            Assert.That(resultAlbum.Children.First().Name, Is.EqualTo(expectedFileName));
+
             Assert.That(_mockFileSystem.File.Exists(expectedJpgPath), Is.True, "JPG should be copied.");
             Assert.That(_mockFileSystem.File.Exists(expectedThumbnailPath), Is.True, "Thumbnail should be saved.");
             
@@ -131,12 +137,13 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(new Image<Rgba32>(1, 1));
 
         // Act
-        await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
 
         // Assert
         var expectedFileName = baseFileName + "_1";
         var expectedJpgPath = Path.Combine(jpgsPath, expectedFileName + ".jpg");
 
+        Assert.That(resultAlbum.Children.First().Name, Is.EqualTo(expectedFileName));
         Assert.That(_mockFileSystem.File.Exists(expectedJpgPath), Is.True, "File should be renamed with suffix _1 due to collision.");
         _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p => p.Name == expectedFileName)), Times.Once);
     }

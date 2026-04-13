@@ -15,7 +15,7 @@ using Serilog;
 
 namespace Picturebot.ViewModels;
 
-public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage> {
+public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage>, IRecipient<NodeCreatedMessage> {
     private readonly IPictureGroupingService _groupingService;
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
@@ -59,6 +59,21 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     public void Receive(NodeSelectedMessage message) {
         UpdateGallery(message.Value);
+    }
+
+    public void Receive(NodeCreatedMessage message) {
+        var newNode = message.Value;
+
+        if (newNode is not (Folder or Album)) {
+            return;
+        }
+
+        // If we are in the parent folder, add the new node to the items list
+        if (_currentNode?.Id == newNode.ParentId || (_currentNode == null && newNode.ParentId == null)) {
+            if (!Items.Any(i => i.Id == newNode.Id)) {
+                Items.Add(newNode);
+            }
+        }
     }
 
     [RelayCommand]
