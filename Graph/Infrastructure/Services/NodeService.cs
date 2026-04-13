@@ -21,6 +21,7 @@ public class NodeService(
 
         await strategy.ValidateAsync(node, parent);
         strategy.Prepare(node);
+        node.Parent = parent; // Ensure breadcrumbs work for the returned object
 
         await nodeRepository.CreateAsync(node);
     }
