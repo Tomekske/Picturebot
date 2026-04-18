@@ -20,7 +20,7 @@ namespace Picturebot.ViewModels;
 
 public partial class AddAlbumDialogViewModel : ViewModelBase {
     private readonly IAlbumService _albumService;
-    private readonly ImportPicturesCommand _importCommand;
+    private readonly IImportPicturesCommand _importCommand;
     private readonly Action<Album?> _onResult;
     private readonly ISettingsService _settingsService;
 
@@ -37,7 +37,7 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
 
     public AddAlbumDialogViewModel(
         IAlbumService albumService,
-        ImportPicturesCommand importCommand,
+        IImportPicturesCommand importCommand,
         ISettingsService settingsService,
         List<Folder> existingFolders,
         Action<Album?> onResult) {

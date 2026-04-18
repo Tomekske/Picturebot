@@ -76,7 +76,8 @@ internal sealed class Program {
             services.AddScoped<INodeService, NodeService>();
             services.AddScoped<IFolderService, FolderService>();
             services.AddScoped<IAlbumService, AlbumService>();
-            services.AddTransient<ImportPicturesCommand>();
+            services.AddScoped<IImportAlbumsService, ImportAlbumsService>();
+            services.AddTransient<IImportPicturesCommand, ImportPicturesCommand>();
             services.AddScoped<NodeStrategyFactory>();
             services.AddScoped<FolderCreationStrategy>();
             services.AddScoped<AlbumCreationStrategy>();
