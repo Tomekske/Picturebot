@@ -107,42 +107,13 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
 
     [RelayCommand]
     public async Task OpenImportAlbumsDialogAsync() {
-        try {
-            var topLevel = MainWindow.Instance;
-            if (topLevel == null) return;
+        var folders = await _folderService.FindAllAsync();
 
-            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
-                Title = "Select Root Directory for Import",
-                AllowMultiple = false
-            });
-
-            if (!folders.Any()) return;
-
-            var sourcePath = folders[0].Path.LocalPath;
-            var libraryPath = _settingsService.Current.LibraryPath;
-
-            if (string.IsNullOrEmpty(libraryPath)) {
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Error")
-                    .WithContent("Library path is not set in settings.")
-                    .Queue();
-                return;
-            }
-
-            var progressVM = new ImportProgressDialogViewModel();
-            var progress = new Progress<ImportBatchProgress>(p => progressVM.Update(p));
-
-            MainWindow.DialogManager.CreateDialog()
-                .WithContent(new ImportProgressDialog { DataContext = progressVM })
-                .TryShow();
-
-            try {
-                await Task.Run(async () => {
-                    await _importAlbumsService.ImportRecursiveAsync(null, sourcePath, libraryPath, progress);
-                });
-
-                Log.Information("Batch import completed for: {sourcePath}", sourcePath);
-
+        var vm = new BatchImportAlbumsDialogViewModel(
+            _importAlbumsService,
+            _settingsService,
+            folders,
+            async () => {
                 // Refresh the tree
                 await LoadFoldersAsync();
 
@@ -151,18 +122,12 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
                     .WithContent("Batch import of albums has completed.")
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .Queue();
-            } catch (Exception ex) {
-                Log.Error(ex, "Batch import failed");
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Error")
-                    .WithContent($"Batch import failed: {ex.Message}")
-                    .Queue();
-            } finally {
-                MainWindow.DialogManager.DismissDialog();
             }
-        } catch (Exception ex) {
-            Log.Error(ex, "Error starting batch import");
-        }
+        );
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new BatchImportAlbumsDialog { DataContext = vm })
+            .TryShow();
     }
 
     public async Task LoadFoldersAsync() {
