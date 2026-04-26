@@ -1,6 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,19 +12,25 @@ using CommunityToolkit.Mvvm.Messaging;
 using Database.Domain.Entities;
 using Database.Domain.Interfaces;
 using Domain.Enums;
+using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Picturebot.Messages;
 using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
+using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
 public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage>, IRecipient<NodeCreatedMessage> {
     private readonly IPictureGroupingService _groupingService;
+    private readonly INavigationService _navigationService;
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
-    private readonly INavigationService _navigationService;
+    private readonly ISettingsService _settingsService;
+
+    [ObservableProperty]
+    private ObservableCollection<Node> _albumItems = new();
 
     [ObservableProperty]
     private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
@@ -28,9 +38,13 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
     [NotifyCanExecuteChangedFor(nameof(GroupSimilarPicturesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenInExplorerCommand))]
     private bool _canPlayCarousel;
 
     private Node? _currentNode;
+
+    [ObservableProperty]
+    private ObservableCollection<Node> _folderItems = new();
 
     [ObservableProperty]
     private ObservableCollection<PictureGroupViewModel> _groupedPictures = new();
@@ -45,29 +59,21 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private ObservableCollection<Node> _items = new();
 
     [ObservableProperty]
-    private ObservableCollection<Node> _folderItems = new();
-
-    [ObservableProperty]
-    private ObservableCollection<Node> _albumItems = new();
-
-    [ObservableProperty]
     private ObservableCollection<PictureItemViewModel> _picturesList = new();
 
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
-        IPictureGroupingService groupingService, INavigationService navigationService) {
+        IPictureGroupingService groupingService, INavigationService navigationService,
+        ISettingsService settingsService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
         _navigationService = navigationService;
+        _settingsService = settingsService;
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
-    }
-
-    public void Receive(NodeSelectedMessage message) {
-        UpdateGallery(message.Value);
     }
 
     public void Receive(NodeCreatedMessage message) {
@@ -88,6 +94,10 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                 }
             }
         }
+    }
+
+    public void Receive(NodeSelectedMessage message) {
+        UpdateGallery(message.Value);
     }
 
     [RelayCommand]
@@ -178,15 +188,15 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             }
 
             var picVms = group.Select(p => {
-                var vm = PicturesList.FirstOrDefault(vm => vm.Picture.Id == p.Id);
-                if (vm != null) {
-                    groupedIds.Add(p.Id);
-                }
+                    var vm = PicturesList.FirstOrDefault(vm => vm.Picture.Id == p.Id);
+                    if (vm != null) {
+                        groupedIds.Add(p.Id);
+                    }
 
-                return vm;
-            }).Where(vm => vm != null).Cast<PictureItemViewModel>()
-            .OrderBy(vm => vm.Picture.CapturedAt)
-            .ToList();
+                    return vm;
+                }).Where(vm => vm != null).Cast<PictureItemViewModel>()
+                .OrderBy(vm => vm.Picture.CapturedAt)
+                .ToList();
 
             if (picVms.Count == 0) {
                 continue;
@@ -218,6 +228,48 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private async Task GroupSimilarPictures() {
         IsBurstViewEnabled = true;
         await RefreshGalleryGrouping();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private void OpenInExplorer() {
+        if (_currentNode is not Album album || string.IsNullOrEmpty(album.Uuid)) {
+            return;
+        }
+
+        var libraryPath = _settingsService.Current.LibraryPath;
+        if (string.IsNullOrEmpty(libraryPath)) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Library path is not configured.")
+                .Queue();
+            return;
+        }
+
+        var albumPath = Path.Combine(libraryPath, album.Uuid);
+
+        if (!Directory.Exists(albumPath)) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Album directory does not exist or is inaccessible.")
+                .Queue();
+            return;
+        }
+
+        try {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                Process.Start("explorer.exe", albumPath);
+            } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                Process.Start("open", albumPath);
+            } else {
+                Process.Start("xdg-open", albumPath);
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to open directory in file explorer: {Path}", albumPath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Failed to open File Explorer.")
+                .Queue();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
@@ -253,6 +305,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             _ = LoadInitialItemsAsync();
             return;
         }
+
         UpdateGalleryItems(node, node.Children?.ToList());
     }
 

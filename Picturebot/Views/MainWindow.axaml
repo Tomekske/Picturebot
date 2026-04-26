@@ -11,6 +11,7 @@
 
     <suki:SukiWindow.KeyBindings>
         <KeyBinding Gesture="F" Command="{Binding GalleryVM.PlayCarouselCommand}" />
+        <KeyBinding Gesture="O" Command="{Binding GalleryVM.OpenInExplorerCommand}" />
     </suki:SukiWindow.KeyBindings>
 
     <suki:SukiWindow.Hosts>
