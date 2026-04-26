@@ -138,44 +138,101 @@
             </StackPanel>
 
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
-                <ItemsControl ItemsSource="{Binding Items}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                <StackPanel Spacing="30">
+                    <!-- Folders Section -->
+                    <StackPanel Spacing="10" IsVisible="{Binding FolderItems.Count}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
+                            <icons:MaterialIcon Kind="FolderOutline" Width="20" Height="20" Foreground="{DynamicResource SukiLowText}" />
+                            <TextBlock Text="Folders" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SukiText}" />
+                        </StackPanel>
+                        
+                        <ItemsControl ItemsSource="{Binding FolderItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
 
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="entities:Node">
-                            <Button Classes="Basic"
-                                    Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToChildCommand}"
-                                    CommandParameter="{Binding}"
-                                    Margin="10"
-                                    Padding="0"
-                                    CornerRadius="12"
-                                    Cursor="Hand">
-                                <suki:GlassCard Width="160" Height="140">
-                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
-                                        <Panel Width="48" Height="48">
-                                            <icons:MaterialIcon Kind="Folder"
-                                                                IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}"
-                                                                Width="48" Height="48" Foreground="#FFD700" />
-                                            <icons:MaterialIcon Kind="ImageAlbum"
-                                                                IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Album}"
-                                                                Width="48" Height="48" Foreground="#87CEEB" />
-                                        </Panel>
-                                        <TextBlock Text="{Binding Name}"
-                                                   HorizontalAlignment="Center"
-                                                   TextWrapping="Wrap"
-                                                   TextAlignment="Center"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource SukiText}" />
-                                    </StackPanel>
-                                </suki:GlassCard>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="entities:Node">
+                                    <Button Classes="Basic"
+                                            Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToChildCommand}"
+                                            CommandParameter="{Binding}"
+                                            Margin="10"
+                                            Padding="0"
+                                            CornerRadius="12"
+                                            Cursor="Hand">
+                                        <suki:GlassCard Width="160" Height="140">
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                                <Panel Width="48" Height="48">
+                                                    <icons:MaterialIcon Kind="Folder"
+                                                                        IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}"
+                                                                        Width="48" Height="48" Foreground="#FFD700" />
+                                                    <icons:MaterialIcon Kind="ImageAlbum"
+                                                                        IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Album}"
+                                                                        Width="48" Height="48" Foreground="#87CEEB" />
+                                                </Panel>
+                                                <TextBlock Text="{Binding Name}"
+                                                           HorizontalAlignment="Center"
+                                                           TextWrapping="Wrap"
+                                                           TextAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource SukiText}" />
+                                            </StackPanel>
+                                        </suki:GlassCard>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Albums Section -->
+                    <StackPanel Spacing="10" IsVisible="{Binding AlbumItems.Count}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
+                            <icons:MaterialIcon Kind="ImageAlbum" Width="20" Height="20" Foreground="{DynamicResource SukiLowText}" />
+                            <TextBlock Text="Albums" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SukiText}" />
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding AlbumItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="entities:Node">
+                                    <Button Classes="Basic"
+                                            Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToChildCommand}"
+                                            CommandParameter="{Binding}"
+                                            Margin="10"
+                                            Padding="0"
+                                            CornerRadius="12"
+                                            Cursor="Hand">
+                                        <suki:GlassCard Width="160" Height="140">
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                                <Panel Width="48" Height="48">
+                                                    <icons:MaterialIcon Kind="Folder"
+                                                                        IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}"
+                                                                        Width="48" Height="48" Foreground="#FFD700" />
+                                                    <icons:MaterialIcon Kind="ImageAlbum"
+                                                                        IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Album}"
+                                                                        Width="48" Height="48" Foreground="#87CEEB" />
+                                                </Panel>
+                                                <TextBlock Text="{Binding Name}"
+                                                           HorizontalAlignment="Center"
+                                                           TextWrapping="Wrap"
+                                                           TextAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource SukiText}" />
+                                            </StackPanel>
+                                        </suki:GlassCard>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
             </ScrollViewer>
 
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">

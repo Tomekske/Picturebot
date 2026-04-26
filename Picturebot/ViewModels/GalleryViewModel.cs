@@ -43,6 +43,12 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private ObservableCollection<Node> _items = new();
 
     [ObservableProperty]
+    private ObservableCollection<Node> _folderItems = new();
+
+    [ObservableProperty]
+    private ObservableCollection<Node> _albumItems = new();
+
+    [ObservableProperty]
     private ObservableCollection<PictureItemViewModel> _picturesList = new();
 
     [ObservableProperty]
@@ -72,6 +78,11 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         if (_currentNode?.Id == newNode.ParentId || (_currentNode == null && newNode.ParentId == null)) {
             if (!Items.Any(i => i.Id == newNode.Id)) {
                 Items.Add(newNode);
+                if (newNode is Folder) {
+                    FolderItems.Add(newNode);
+                } else if (newNode is Album) {
+                    AlbumItems.Add(newNode);
+                }
             }
         }
     }
@@ -235,8 +246,11 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     private void UpdateGalleryItems(Node? currentNode, List<Node>? children) {
         _currentNode = currentNode;
-        // Clear both collections to prevent ghosting
+        // Clear collections to prevent ghosting
         Items.Clear();
+        FolderItems.Clear();
+        AlbumItems.Clear();
+
         foreach (var picVm in PicturesList) {
             picVm.Dispose();
         }
@@ -263,8 +277,14 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
                 _ = RefreshGalleryGrouping();
             } else {
-                foreach (var child in children.Where(n => n is Folder || n is Album)) {
+                var list = children.Where(n => n is Folder || n is Album).ToList();
+                foreach (var child in list) {
                     Items.Add(child);
+                    if (child is Folder) {
+                        FolderItems.Add(child);
+                    } else if (child is Album) {
+                        AlbumItems.Add(child);
+                    }
                 }
             }
         }
