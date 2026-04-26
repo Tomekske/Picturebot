@@ -36,7 +36,7 @@ public class NodeServiceTests {
     }
 
     [Test]
-    public async Task CreateNodeAsync_Branching_OnlyFolderCanHaveChildren() {
+    public async Task CreateNodeAsync_Branching_FolderAndAlbumCanHaveChildren() {
         // Arrange
         var parentAlbum = new Album { Id = 1, Name = "Parent Album", Type = NodeType.Album };
         _nodeRepositoryMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(parentAlbum);
@@ -44,13 +44,12 @@ public class NodeServiceTests {
         var childFolder = new Folder { Name = "Child Folder", Type = NodeType.Folder, ParentId = 1 };
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _nodeService.CreateNodeAsync(childFolder));
-        Assert.That(ex.Message, Is.EqualTo("Branching: Only Folder nodes can have children."));
+        await _nodeService.CreateNodeAsync(childFolder);
+        _nodeRepositoryMock.Verify(r => r.CreateAsync(childFolder), Times.Once);
     }
 
     [Test]
-    public async Task CreateNodeAsync_TypeHomogeneity_FolderCannotMixTypes_AddingAlbumToFolderWithFolders() {
+    public async Task CreateNodeAsync_TypeHomogeneity_FolderCanMixTypes_AddingAlbumToFolderWithFolders() {
         // Arrange
         var parentFolder = new Folder {
             Id = 1,
@@ -63,13 +62,12 @@ public class NodeServiceTests {
         var newAlbum = new Album { Name = "New Album", Type = NodeType.Album, ParentId = 1 };
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _nodeService.CreateNodeAsync(newAlbum));
-        Assert.That(ex.Message, Is.EqualTo("Type Homogeneity: This folder already contains non-album nodes."));
+        await _nodeService.CreateNodeAsync(newAlbum);
+        _nodeRepositoryMock.Verify(r => r.CreateAsync(newAlbum), Times.Once);
     }
 
     [Test]
-    public async Task CreateNodeAsync_TypeHomogeneity_FolderCannotMixTypes_AddingFolderToFolderWithAlbums() {
+    public async Task CreateNodeAsync_TypeHomogeneity_FolderCanMixTypes_AddingFolderToFolderWithAlbums() {
         // Arrange
         var parentFolder = new Folder {
             Id = 1,
@@ -82,9 +80,8 @@ public class NodeServiceTests {
         var newFolder = new Folder { Name = "New Folder", Type = NodeType.Folder, ParentId = 1 };
 
         // Act & Assert
-        var ex =
-            Assert.ThrowsAsync<InvalidOperationException>(async () => await _nodeService.CreateNodeAsync(newFolder));
-        Assert.That(ex.Message, Is.EqualTo("Type Homogeneity: This folder already contains non-folder nodes."));
+        await _nodeService.CreateNodeAsync(newFolder);
+        _nodeRepositoryMock.Verify(r => r.CreateAsync(newFolder), Times.Once);
     }
 
     [Test]

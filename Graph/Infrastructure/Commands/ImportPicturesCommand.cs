@@ -9,7 +9,7 @@ using SixLabors.ImageSharp;
 
 namespace Graph.Infrastructure.Commands;
 
-public class ImportPicturesCommand {
+public class ImportPicturesCommand : IImportPicturesCommand {
     private readonly IAlbumService _albumService;
     private readonly INodeService _nodeService;
     private readonly IFileSystem _fileSystem;
@@ -17,8 +17,8 @@ public class ImportPicturesCommand {
     private readonly IPictureProcessor _pictureProcessor;
     private readonly FileGrouper _fileGrouper;
 
-    private static readonly string[] RawExtensions = [".CR2", ".NEF", ".ARW", ".DNG", ".ORF", ".RAF"];
-    private static readonly string[] JpgExtensions = [".JPG", ".JPEG"];
+    private static readonly string[] RawExtensions = SupportedImageExtensions.RawExtensions;
+    private static readonly string[] JpgExtensions = SupportedImageExtensions.JpgExtensions;
 
     public ImportPicturesCommand(
         IAlbumService albumService,

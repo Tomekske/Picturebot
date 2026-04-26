@@ -32,6 +32,15 @@
                         CornerRadius="8">
                     <icons:MaterialIcon Kind="ImageAlbum" Width="22" Height="22" Foreground="#87CEEB" />
                 </Button>
+
+                <Button Command="{Binding OpenImportAlbumsDialogCommand}"
+                        Classes="Basic"
+                        ToolTip.Tip="Import Albums (Recursive)"
+                        Cursor="Hand"
+                        Padding="6"
+                        CornerRadius="8">
+                    <icons:MaterialIcon Kind="FolderSync" Width="22" Height="22" Foreground="#98FB98" />
+                </Button>
             </StackPanel>
         </Grid>
 

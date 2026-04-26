@@ -1,12 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Database.Domain.Entities;
 using Domain.Interfaces;
+using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Commands;
 using Picturebot.Messages;
@@ -20,7 +23,8 @@ namespace Picturebot.ViewModels;
 public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCreatedMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
-    private readonly ImportPicturesCommand _importCommand;
+    private readonly IImportAlbumsService _importAlbumsService;
+    private readonly IImportPicturesCommand _importCommand;
     private readonly INodeService _nodeService;
     private readonly ISettingsService _settingsService;
 
@@ -31,11 +35,13 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
         INodeService nodeService,
         IFolderService folderService,
         IAlbumService albumService,
+        IImportAlbumsService importAlbumsService,
         ISettingsService settingsService,
-        ImportPicturesCommand importCommand) {
+        IImportPicturesCommand importCommand) {
         _nodeService = nodeService;
         _folderService = folderService;
         _albumService = albumService;
+        _importAlbumsService = importAlbumsService;
         _settingsService = settingsService;
         _importCommand = importCommand;
         _ = LoadFoldersAsync();
@@ -96,6 +102,31 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
 
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new AddAlbumDialog { DataContext = vm })
+            .TryShow();
+    }
+
+    [RelayCommand]
+    public async Task OpenImportAlbumsDialogAsync() {
+        var folders = await _folderService.FindAllAsync();
+
+        var vm = new BatchImportAlbumsDialogViewModel(
+            _importAlbumsService,
+            _settingsService,
+            folders,
+            async () => {
+                // Refresh the tree
+                await LoadFoldersAsync();
+
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Success")
+                    .WithContent("Batch import of albums has completed.")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+            }
+        );
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new BatchImportAlbumsDialog { DataContext = vm })
             .TryShow();
     }
 
