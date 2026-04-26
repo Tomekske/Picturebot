@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:conv="clr-namespace:Picturebot.Converters"
+             x:Class="Picturebot.Views.LightroomGalleryView"
+             x:DataType="vm:GalleryViewModel">
+
+    <UserControl.Resources>
+        <conv:AspectRatioConverter x:Key="AspectRatioConverter" />
+        <SolidColorBrush x:Key="AppBackground" Color="#0A0E14"/>
+        <SolidColorBrush x:Key="CellBackground" Color="#1C232E"/>
+        <SolidColorBrush x:Key="CellBorder" Color="#3A4454"/>
+        <SolidColorBrush x:Key="AccentBlue" Color="#0078FF"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid Name="AspectRatioWrapper" Margin="6">
+                        <!-- Background/Matte Border -->
+                        <Border Name="PART_AspectBorder"
+                                Background="{StaticResource CellBackground}"
+                                BorderBrush="{StaticResource CellBorder}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                ClipToBounds="True"
+                                Height="{Binding #AspectRatioWrapper.Bounds.Width, Converter={StaticResource AspectRatioConverter}, ConverterParameter=0.75}">
+                            
+                            <!-- Matted Image Container -->
+                            <Image Source="{Binding Thumbnail}" 
+                                   Stretch="Uniform"
+                                   Margin="8"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center">
+                                <Image.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
+                                    </Transitions>
+                                </Image.Transitions>
+                            </Image>
+                        </Border>
+                        
+                        <!-- Selection Indicator (Electric Blue) -->
+                        <Border Name="SelectionIndicator"
+                                BorderBrush="{StaticResource AccentBlue}"
+                                BorderThickness="2"
+                                CornerRadius="4"
+                                Height="{Binding #PART_AspectBorder.Bounds.Height}"
+                                IsHitTestVisible="False"
+                                IsVisible="False"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="ListBoxItem:pointerover /template/ Border#PART_AspectBorder">
+            <Setter Property="Background" Value="#252E3B"/>
+        </Style>
+
+        <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Background="{StaticResource AppBackground}">
+        <ListBox ItemsSource="{Binding PicturesList}"
+                 SelectedItem="{Binding SelectedPicture}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Padding="6"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <!-- Strict 5 Columns -->
+                    <UniformGrid Columns="5" VerticalAlignment="Top" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+    </Grid>
+</UserControl>

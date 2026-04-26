@@ -7,13 +7,14 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:converters="using:Picturebot.Converters"
+             xmlns:controls="using:Picturebot.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Picturebot.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
 
     <UserControl.Resources>
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
-        <converters:CurationStatusToBooleanConverter x:Key="CurationStatusToBooleanConverter" />
+        <converters:AspectRatioConverter x:Key="AspectRatioConverter" />
     </UserControl.Resources>
 
     <Grid Margin="0,40,0,0" RowDefinitions="Auto,Auto,*">
@@ -65,7 +66,7 @@
                         <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
                     </Button>
                     <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
-                    
+
                     <Button Classes="Basic" ToolTip.Tip="Play Carousel (F)"
                             Command="{Binding PlayCarouselCommand}"
                             IsEnabled="{Binding CanPlayCarousel}">
@@ -127,7 +128,8 @@
                     </MultiBinding>
                 </StackPanel.IsVisible>
                 <icons:MaterialIcon Kind="FolderOpen" Width="64" Height="64" Foreground="{DynamicResource SukiLowText}" />
-                <TextBlock Text="This folder is empty" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource SukiLowText}" />
+                <TextBlock Text="This folder is empty" FontSize="20" FontWeight="SemiBold"
+                           Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>
 
             <!-- Empty State for Albums -->
@@ -141,7 +143,8 @@
                     </MultiBinding>
                 </StackPanel.IsVisible>
                 <icons:MaterialIcon Kind="ImageAlbum" Width="64" Height="64" Foreground="{DynamicResource SukiLowText}" />
-                <TextBlock Text="This album is empty" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource SukiLowText}" />
+                <TextBlock Text="This album is empty" FontSize="20" FontWeight="SemiBold"
+                           Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>
 
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
@@ -149,10 +152,12 @@
                     <!-- Folders Section -->
                     <StackPanel Spacing="10" IsVisible="{Binding FolderItems.Count}">
                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
-                            <icons:MaterialIcon Kind="FolderOutline" Width="20" Height="20" Foreground="{DynamicResource SukiLowText}" />
-                            <TextBlock Text="Folders" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SukiText}" />
+                            <icons:MaterialIcon Kind="FolderOutline" Width="20" Height="20"
+                                                Foreground="{DynamicResource SukiLowText}" />
+                            <TextBlock Text="Folders" FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource SukiText}" />
                         </StackPanel>
-                        
+
                         <ItemsControl ItemsSource="{Binding FolderItems}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -170,7 +175,8 @@
                                             CornerRadius="12"
                                             Cursor="Hand">
                                         <suki:GlassCard Width="160" Height="140">
-                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                        Spacing="10">
                                                 <Panel Width="48" Height="48">
                                                     <icons:MaterialIcon Kind="Folder"
                                                                         IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}"
@@ -196,8 +202,10 @@
                     <!-- Albums Section -->
                     <StackPanel Spacing="10" IsVisible="{Binding AlbumItems.Count}">
                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
-                            <icons:MaterialIcon Kind="ImageAlbum" Width="20" Height="20" Foreground="{DynamicResource SukiLowText}" />
-                            <TextBlock Text="Albums" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SukiText}" />
+                            <icons:MaterialIcon Kind="ImageAlbum" Width="20" Height="20"
+                                                Foreground="{DynamicResource SukiLowText}" />
+                            <TextBlock Text="Albums" FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource SukiText}" />
                         </StackPanel>
 
                         <ItemsControl ItemsSource="{Binding AlbumItems}">
@@ -217,7 +225,8 @@
                                             CornerRadius="12"
                                             Cursor="Hand">
                                         <suki:GlassCard Width="160" Height="140">
-                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                        Spacing="10">
                                                 <Panel Width="48" Height="48">
                                                     <icons:MaterialIcon Kind="Folder"
                                                                         IsVisible="{Binding Type, Converter={StaticResource NodeTypeToBooleanConverter}, ConverterParameter=Folder}"
@@ -243,8 +252,11 @@
             </ScrollViewer>
 
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
-                <ItemsControl ItemsSource="{Binding GroupedPictures}">
-                    <ItemsControl.ItemTemplate>
+                <ListBox ItemsSource="{Binding GroupedPictures}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0">
+                    <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PictureGroupViewModel">
                             <StackPanel Spacing="10" Margin="0,0,0,30">
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
@@ -267,135 +279,61 @@
                                          SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture}"
                                          Background="Transparent"
                                          BorderThickness="0"
-                                         Padding="0">
+                                         Padding="0"
+                                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="5" VerticalAlignment="Top" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
                                     <ListBox.Styles>
                                         <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
-                                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                                             <Setter Property="Padding" Value="0" />
                                             <Setter Property="Margin" Value="0" />
-
+                                            <Setter Property="Background" Value="Transparent" />
                                             <Setter Property="Template">
                                                 <ControlTemplate>
-                                                    <Panel>
-                                                        <Border Name="SelectionHighlight"
-                                                                Background="{DynamicResource SukiPrimaryColor}"
-                                                                Opacity="0"
-                                                                CornerRadius="12" />
-
-                                                        <ContentPresenter Name="PART_ContentPresenter"
-                                                                          Content="{TemplateBinding Content}"
-                                                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
-                                                    </Panel>
+                                                    <controls:AspectRatioPanel Ratio="0.75" Margin="8">
+                                                        <!-- The 'Matted Print' Border -->
+                                                        <Border Name="PART_AspectBorder"
+                                                                Background="#1C232E"
+                                                                BorderBrush="#3A4454"
+                                                                BorderThickness="1"
+                                                                CornerRadius="4"
+                                                                ClipToBounds="True">
+                                                            <Panel Margin="8">
+                                                                <Image Source="{Binding Thumbnail}" 
+                                                                       Stretch="Uniform"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                            </Panel>
+                                                        </Border>
+                                                        
+                                                        <!-- Selection Indicator overlay (Electric Blue) -->
+                                                        <Border Name="SelectionIndicator"
+                                                                BorderBrush="#0078FF"
+                                                                BorderThickness="2"
+                                                                CornerRadius="4"
+                                                                IsHitTestVisible="False"
+                                                                IsVisible="False"/>
+                                                    </controls:AspectRatioPanel>
                                                 </ControlTemplate>
                                             </Setter>
                                         </Style>
 
-                                        <Style Selector="ListBoxItem:pointerover /template/ Border#SelectionHighlight">
-                                            <Setter Property="Opacity" Value="0.1" />
-                                        </Style>
-                                        <Style Selector="ListBoxItem:selected /template/ Border#SelectionHighlight">
-                                            <Setter Property="Opacity" Value="0.3" />
-                                        </Style>
-                                        <Style
-                                            Selector="ListBoxItem:selected:pointerover /template/ Border#SelectionHighlight">
-                                            <Setter Property="Opacity" Value="0.4" />
+                                        <Style Selector="ListBoxItem:pointerover /template/ Border#PART_AspectBorder">
+                                            <Setter Property="Background" Value="#252E3B" />
                                         </Style>
 
-                                        <Style Selector="ListBoxItem Border.Caption">
-                                            <Setter Property="Opacity" Value="0" />
-                                            <Setter Property="Transitions">
-                                                <Transitions>
-                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
-                                                </Transitions>
-                                            </Setter>
-                                        </Style>
-                                        <Style Selector="ListBoxItem:pointerover Border.Caption">
-                                            <Setter Property="Opacity" Value="1" />
+                                        <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
+                                            <Setter Property="IsVisible" Value="True" />
                                         </Style>
                                     </ListBox.Styles>
-                                    <ListBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:PictureItemViewModel">
-                                            <suki:GlassCard Height="250" Margin="4" Padding="0"
-                                                            CornerRadius="8" ClipToBounds="True">
-                                                <Grid Background="{DynamicResource SukiControlTouchBackground}">
-                                                    <Image Source="{Binding Thumbnail}"
-                                                           Stretch="Uniform"
-                                                           VerticalAlignment="Stretch"
-                                                           HorizontalAlignment="Stretch"
-                                                           Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                        <Image.Styles>
-                                                            <Style Selector="Image">
-                                                                <Setter Property="Opacity" Value="0" />
-                                                                <Setter Property="Transitions">
-                                                                    <Transitions>
-                                                                        <DoubleTransition Property="Opacity"
-                                                                                Duration="0:0:0.6"
-                                                                                Easing="QuadraticEaseOut" />
-                                                                    </Transitions>
-                                                                </Setter>
-                                                            </Style>
-                                                            <Style Selector="Image.loaded">
-                                                                <Setter Property="Opacity" Value="1" />
-                                                            </Style>
-                                                        </Image.Styles>
-                                                    </Image>
-
-                                                    <Border Classes="Caption"
-                                                            VerticalAlignment="Bottom"
-                                                            HorizontalAlignment="Stretch"
-                                                            Background="#99000000"
-                                                            Padding="8,6">
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   FontSize="12"
-                                                                   FontWeight="Medium"
-                                                                   Foreground="White"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </Border>
-
-                                                    <Border VerticalAlignment="Top"
-                                                            HorizontalAlignment="Right"
-                                                            Margin="8"
-                                                            Padding="6,3"
-                                                            IsVisible="{Binding IsBest}"
-                                                            Background="{DynamicResource SukiPrimaryColor}"
-                                                            CornerRadius="4"
-                                                            BoxShadow="0 2 6 0 #40000000">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <icons:MaterialIcon Kind="Star" Width="12" Height="12"
-                                                                    Foreground="White" />
-                                                            <TextBlock Text="Best"
-                                                                       FontSize="11"
-                                                                       FontWeight="Heavy"
-                                                                       Foreground="White" />
-                                                        </StackPanel>
-                                                    </Border>
-
-                                                    <Border VerticalAlignment="Top"
-                                                            HorizontalAlignment="Left"
-                                                            Margin="8"
-                                                            Padding="4"
-                                                            IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}"
-                                                            Background="#228B22"
-                                                            CornerRadius="12"
-                                                            BoxShadow="0 2 6 0 #40000000">
-                                                        <icons:MaterialIcon Kind="Flag" Width="14" Height="14"
-                                                                            Foreground="White" />
-                                                    </Border>
-                                                </Grid>
-                                            </suki:GlassCard>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
                                 </ListBox>
                             </StackPanel>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </ScrollViewer>
 
         </Panel>
