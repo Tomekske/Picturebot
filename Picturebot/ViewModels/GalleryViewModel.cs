@@ -146,8 +146,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             var dateStr = group.Key.ToString("yyyy-MM-dd");
             var count = group.Count();
             var header = $"{dateStr} ({count})";
+            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt);
             var groupVm = new PictureGroupViewModel(dateStr, header,
-                new ObservableCollection<PictureItemViewModel>(group));
+                new ObservableCollection<PictureItemViewModel>(sortedGroup));
             GroupedPictures.Add(groupVm);
         }
     }
@@ -180,7 +181,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
                 }
 
                 return vm;
-            }).Where(vm => vm != null).Cast<PictureItemViewModel>().ToList();
+            }).Where(vm => vm != null).Cast<PictureItemViewModel>()
+            .OrderBy(vm => vm.Picture.CapturedAt)
+            .ToList();
 
             if (picVms.Count == 0) {
                 continue;
@@ -197,7 +200,9 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             GroupedPictures.Add(groupVm);
         }
 
-        var unclassified = PicturesList.Where(vm => !groupedIds.Contains(vm.Picture.Id)).ToList();
+        var unclassified = PicturesList.Where(vm => !groupedIds.Contains(vm.Picture.Id))
+            .OrderBy(vm => vm.Picture.CapturedAt)
+            .ToList();
         if (unclassified.Count > 0) {
             var header = $"Unclassified ({unclassified.Count})";
             var groupVm = new PictureGroupViewModel("Unclassified", header,
