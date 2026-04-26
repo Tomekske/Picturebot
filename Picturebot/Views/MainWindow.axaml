@@ -9,6 +9,9 @@
                  Icon="/Assets/icon.ico"
                  Width="1200" Height="800">
 
+    <suki:SukiWindow.KeyBindings>
+        <KeyBinding Gesture="F" Command="{Binding GalleryVM.PlayCarouselCommand}" />
+    </suki:SukiWindow.KeyBindings>
 
     <suki:SukiWindow.Hosts>
         <DockPanel LastChildFill="True">

@@ -59,7 +59,7 @@
                 CornerRadius="8">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                    <Button Classes="Basic" ToolTip.Tip="Play Carousel"
+                    <Button Classes="Basic" ToolTip.Tip="Play Carousel (F)"
                             Command="{Binding PlayCarouselCommand}"
                             IsEnabled="{Binding CanPlayCarousel}">
                         <icons:MaterialIcon Kind="Play" Width="20" Height="20" />
