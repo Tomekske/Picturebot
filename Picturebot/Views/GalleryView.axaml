@@ -14,7 +14,6 @@
 
     <UserControl.Resources>
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
-        <converters:AspectRatioConverter x:Key="AspectRatioConverter" />
     </UserControl.Resources>
 
     <Grid Margin="0,40,0,0" RowDefinitions="Auto,Auto,*">
@@ -252,11 +251,9 @@
             </ScrollViewer>
 
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
-                <ListBox ItemsSource="{Binding GroupedPictures}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Padding="0">
-                    <ListBox.ItemTemplate>
+                <ItemsControl ItemsSource="{Binding GroupedPictures}"
+                              Background="Transparent">
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:PictureGroupViewModel">
                             <StackPanel Spacing="10" Margin="0,0,0,30">
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
@@ -302,20 +299,20 @@
                                                                 CornerRadius="4"
                                                                 ClipToBounds="True">
                                                             <Panel Margin="8">
-                                                                <Image Source="{Binding Thumbnail}" 
+                                                                <Image Source="{Binding Thumbnail}"
                                                                        Stretch="Uniform"
                                                                        HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
+                                                                       VerticalAlignment="Center" />
                                                             </Panel>
                                                         </Border>
-                                                        
-                                                        <!-- Selection Indicator overlay (Electric Blue) -->
+
+                                                        <!-- Selection Indicator overlay (Blue) -->
                                                         <Border Name="SelectionIndicator"
                                                                 BorderBrush="#0078FF"
                                                                 BorderThickness="2"
                                                                 CornerRadius="4"
                                                                 IsHitTestVisible="False"
-                                                                IsVisible="False"/>
+                                                                IsVisible="False" />
                                                     </controls:AspectRatioPanel>
                                                 </ControlTemplate>
                                             </Setter>
@@ -332,8 +329,8 @@
                                 </ListBox>
                             </StackPanel>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </ScrollViewer>
 
         </Panel>
