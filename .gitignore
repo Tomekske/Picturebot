@@ -6,3 +6,5 @@ riderModule.iml
 
 .idea/*
 Picturebot.sln.DotSettings.user
+
+*.ps1

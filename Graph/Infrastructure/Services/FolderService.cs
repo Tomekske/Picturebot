@@ -19,6 +19,8 @@ public class FolderService(INodeService nodeService) : IFolderService {
     public async Task<List<Folder>> FindAllAsync() {
         var allNodes = await nodeService.GetAllNodesAsync();
 
-        return allNodes.OfType<Folder>().ToList();
+        return allNodes.OfType<Folder>()
+            .Where(n => n.Type == NodeType.Folder)
+            .ToList();
     }
 }
