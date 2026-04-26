@@ -59,6 +59,13 @@
                 CornerRadius="8">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="Basic" ToolTip.Tip="Open in File Explorer (O)"
+                            Command="{Binding OpenInExplorerCommand}"
+                            IsEnabled="{Binding CanPlayCarousel}">
+                        <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
+                    </Button>
+                    <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
+                    
                     <Button Classes="Basic" ToolTip.Tip="Play Carousel (F)"
                             Command="{Binding PlayCarouselCommand}"
                             IsEnabled="{Binding CanPlayCarousel}">
