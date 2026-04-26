@@ -10,6 +10,7 @@ using Database.Domain.Interfaces;
 using Domain.Enums;
 using Graph.Domain.Interfaces;
 using Picturebot.Messages;
+using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
 
@@ -19,6 +20,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private readonly IPictureGroupingService _groupingService;
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     private ObservableCollection<BreadcrumbItem> _breadcrumbs = new();
@@ -55,10 +57,11 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private PictureItemViewModel? _selectedPicture;
 
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
-        IPictureGroupingService groupingService) {
+        IPictureGroupingService groupingService, INavigationService navigationService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
+        _navigationService = navigationService;
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
     }
@@ -245,7 +248,11 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         UpdateGalleryItems(null, roots);
     }
 
-    private void UpdateGallery(Node node) {
+    private void UpdateGallery(Node? node) {
+        if (node == null) {
+            _ = LoadInitialItemsAsync();
+            return;
+        }
         UpdateGalleryItems(node, node.Children?.ToList());
     }
 
@@ -322,18 +329,12 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     [RelayCommand]
     private async Task NavigateToBreadcrumb(BreadcrumbItem breadcrumb) {
-        if (breadcrumb.Node == null) {
-            await LoadInitialItemsAsync();
-        } else {
-            UpdateGallery(breadcrumb.Node);
-            WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(breadcrumb.Node));
-        }
+        _navigationService.NavigateTo(breadcrumb.Node);
     }
 
     [RelayCommand]
     private void NavigateToChild(Node node) {
-        UpdateGallery(node);
-        WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(node));
+        _navigationService.NavigateTo(node);
     }
 }
 
