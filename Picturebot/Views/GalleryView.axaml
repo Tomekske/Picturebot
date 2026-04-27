@@ -14,6 +14,7 @@
 
     <UserControl.Resources>
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
+        <converters:CurationStatusToBooleanConverter x:Key="CurationStatusToBooleanConverter" />
     </UserControl.Resources>
 
     <Grid Margin="0,40,0,0" RowDefinitions="Auto,Auto,*">
@@ -320,6 +321,19 @@
                                                                                TextAlignment="Center"
                                                                                TextWrapping="NoWrap"
                                                                                TextTrimming="CharacterEllipsis" />
+                                                                </Border>
+
+                                                                <!-- Flagged Indicator -->
+                                                                <Border VerticalAlignment="Top"
+                                                                        HorizontalAlignment="Left"
+                                                                        Margin="4"
+                                                                        Padding="4"
+                                                                        CornerRadius="4"
+                                                                        Background="#80000000"
+                                                                        IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}">
+                                                                    <icons:MaterialIcon Kind="Flag"
+                                                                                        Width="16" Height="16"
+                                                                                        Foreground="#4CAF50" />
                                                                 </Border>
                                                             </Panel>
                                                         </Border>
