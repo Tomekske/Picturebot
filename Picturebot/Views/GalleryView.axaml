@@ -281,13 +281,14 @@
                                          ScrollViewer.VerticalScrollBarVisibility="Disabled">
                                     <ListBox.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <UniformGrid Columns="5" VerticalAlignment="Top" />
+                                            <WrapPanel />
                                         </ItemsPanelTemplate>
                                     </ListBox.ItemsPanel>
                                     <ListBox.Styles>
                                         <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
                                             <Setter Property="Padding" Value="0" />
                                             <Setter Property="Margin" Value="0" />
+                                            <Setter Property="Width" Value="200" />
                                             <Setter Property="Background" Value="Transparent" />
                                             <Setter Property="Template">
                                                 <ControlTemplate>
