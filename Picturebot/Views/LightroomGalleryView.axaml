@@ -2,11 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Picturebot.ViewModels"
              xmlns:conv="clr-namespace:Picturebot.Converters"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Picturebot.Views.LightroomGalleryView"
              x:DataType="vm:GalleryViewModel">
 
     <UserControl.Resources>
         <conv:AspectRatioConverter x:Key="AspectRatioConverter" />
+        <conv:CurationStatusToBooleanConverter x:Key="CurationStatusToBooleanConverter" />
         <SolidColorBrush x:Key="AppBackground" Color="#0A0E14"/>
         <SolidColorBrush x:Key="CellBackground" Color="#1C232E"/>
         <SolidColorBrush x:Key="CellBorder" Color="#3A4454"/>
@@ -59,6 +61,19 @@
                                                TextAlignment="Center"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis" />
+                                </Border>
+
+                                <!-- Flagged Indicator -->
+                                <Border VerticalAlignment="Top"
+                                        HorizontalAlignment="Left"
+                                        Margin="4"
+                                        Padding="4"
+                                        CornerRadius="4"
+                                        Background="#80000000"
+                                        IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}">
+                                    <icons:MaterialIcon Kind="Flag"
+                                                        Width="16" Height="16"
+                                                        Foreground="#4CAF50" />
                                 </Border>
                             </Panel>
                         </Border>
