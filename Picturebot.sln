@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PictureWorker", "PictureWor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PictureWorker.Test", "PictureWorker.Test\PictureWorker.Test.csproj", "{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synchronize", "Synchronize\Synchronize.csproj", "{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynchronizeWorker", "SynchronizeWorker\SynchronizeWorker.csproj", "{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synchronize.Test", "Synchronize.Test\Synchronize.Test.csproj", "{097C8812-CD35-42A7-9FD9-4DBA3E25F323}"
 EndProject

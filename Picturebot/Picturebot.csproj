@@ -61,6 +61,6 @@
         <ProjectReference Include="..\Domain\Domain.csproj"/>
         <ProjectReference Include="..\Graph\Graph.csproj"/>
         <ProjectReference Include="..\PictureWorker\PictureWorker.csproj"/>
-        <ProjectReference Include="..\Synchronize\Synchronize.csproj"/>
+        <ProjectReference Include="..\SynchronizeWorker\SynchronizeWorker.csproj" />
     </ItemGroup>
 </Project>
