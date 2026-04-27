@@ -18,4 +18,9 @@ public class SubFolder {
     ///     The absolute path to the high-quality preview (JPG) of the picture.
     /// </summary>
     public string Preview { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The absolute path to the picked version of the picture.
+    /// </summary>
+    public string Picked { get; set; } = string.Empty;
 }

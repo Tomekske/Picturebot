@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PictureWorker", "PictureWor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PictureWorker.Test", "PictureWorker.Test\PictureWorker.Test.csproj", "{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synchronize", "Synchronize\Synchronize.csproj", "{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -68,6 +70,10 @@ Global
 		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E1F1643-9908-4398-A72E-DAE7DAFB55DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96AE1C96-E67D-4E85-B6BD-0A03A7A35E5B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{76BDEF4C-4257-4534-A2FE-11E79E010267} = {EFA08C46-58F7-445F-8D5C-A29200BDAC55}

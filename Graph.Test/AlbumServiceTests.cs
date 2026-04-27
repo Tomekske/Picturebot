@@ -61,6 +61,7 @@ public class AlbumServiceTests {
                 Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "RAWs")), Is.True, "The RAWs directory should be created.");
                 Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "JPGs")), Is.True, "The JPGs directory should be created.");
                 Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "Thumbnails")), Is.True, "The Thumbnails directory should be created.");
+                Assert.That(_mockFileSystem.Directory.Exists(Path.Combine(expectedPath, "Picked")), Is.True, "The Picked directory should be created.");
             });
 
             // Verify node service call
