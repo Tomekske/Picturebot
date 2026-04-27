@@ -26,6 +26,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     private readonly IPictureGroupingService _groupingService;
     private readonly INavigationService _navigationService;
     private readonly INodeService _nodeService;
+    private readonly ICurationQueue _curationQueue;
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
 
@@ -66,12 +67,13 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
         IPictureGroupingService groupingService, INavigationService navigationService,
-        ISettingsService settingsService) {
+        ISettingsService settingsService, ICurationQueue curationQueue) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
         _navigationService = navigationService;
         _settingsService = settingsService;
+        _curationQueue = curationQueue;
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
     }
@@ -121,8 +123,8 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             picVm.CurationStatus = CurationStatus.Flagged;
             picVm.Picture.CurationStatus = CurationStatus.Flagged;
 
-            // Persist to database (sequentially for stability)
-            await _nodeService.UpdateNodeAsync(picVm.Picture);
+            // Enqueue for background persistence and Picked sync
+            _curationQueue.Enqueue(picVm.Picture);
         }
 
         Log.Information("Auto-flagged {Count} best shots across burst groups", bestPictures.Count);
@@ -275,7 +277,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
     private void PlayCarousel() {
         var window = new CarouselWindow();
-        var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, window.Close);
+        var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, window.Close);
         window.DataContext = carouselVm;
 
         if (MainWindow.Instance != null) {

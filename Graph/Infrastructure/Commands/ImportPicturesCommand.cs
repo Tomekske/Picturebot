@@ -42,6 +42,7 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         var rawsPath = _fileSystem.Path.Combine(albumPath, "RAWs");
         var jpgsPath = _fileSystem.Path.Combine(albumPath, "JPGs");
         var thumbnailsPath = _fileSystem.Path.Combine(albumPath, "Thumbnails");
+        var pickedPath = _fileSystem.Path.Combine(albumPath, "Picked");
 
         // Task 2: Group files
         var groups = await _fileGrouper.GroupFilesAsync(sourcePath);

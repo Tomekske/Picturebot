@@ -20,6 +20,7 @@ using Picturebot.ViewModels;
 using PictureWorker.Domain.Interfaces;
 using PictureWorker.Infrastructure.Services;
 using Serilog;
+using Synchronize;
 
 namespace Picturebot;
 
@@ -72,6 +73,8 @@ internal sealed class Program {
             services.AddScoped<IPathService, PathService>();
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();
+            services.AddScoped<IPickedService, PickedService>();
+            services.AddSingleton<ICurationQueue, CurationQueue>();
 
             // Graph Services
             services.AddScoped<INodeService, NodeService>();
