@@ -31,17 +31,36 @@
                                 Height="{Binding #AspectRatioWrapper.Bounds.Width, Converter={StaticResource AspectRatioConverter}, ConverterParameter=0.75}">
                             
                             <!-- Matted Image Container -->
-                            <Image Source="{Binding Thumbnail}" 
-                                   Stretch="Uniform"
-                                   Margin="8"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center">
-                                <Image.Transitions>
-                                    <Transitions>
-                                        <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
-                                    </Transitions>
-                                </Image.Transitions>
-                            </Image>
+                            <Panel>
+                                <Panel Margin="8">
+                                    <Image Source="{Binding Thumbnail}" 
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center">
+                                        <Image.Transitions>
+                                            <Transitions>
+                                                <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
+                                            </Transitions>
+                                        </Image.Transitions>
+                                    </Image>
+                                </Panel>
+
+                                <!-- Filename Overlay -->
+                                <Border Name="FilenameOverlay"
+                                        Background="#CC000000"
+                                        VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="4,6"
+                                        IsVisible="False">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               TextAlignment="Center"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Border>
+                            </Panel>
                         </Border>
                         
                         <!-- Selection Indicator (Electric Blue) -->
@@ -59,6 +78,10 @@
 
         <Style Selector="ListBoxItem:pointerover /template/ Border#PART_AspectBorder">
             <Setter Property="Background" Value="#252E3B"/>
+        </Style>
+
+        <Style Selector="ListBoxItem:pointerover /template/ Border#FilenameOverlay">
+            <Setter Property="IsVisible" Value="True" />
         </Style>
 
         <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
