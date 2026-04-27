@@ -16,6 +16,7 @@ namespace Picturebot.ViewModels;
 
 public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<PictureSelectedMessage> {
     private readonly INodeService _nodeService;
+    private readonly ICurationQueue _curationQueue;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -27,8 +28,9 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
-    public DetailsInspectorViewModel(INodeService nodeService) {
+    public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue) {
         _nodeService = nodeService;
+        _curationQueue = curationQueue;
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
 
@@ -77,7 +79,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             SelectedPicture.Picture.CurationStatus = status;
             SelectedPicture.CurationStatus = status; // Update the VM property to trigger UI update
 
-            await _nodeService.UpdateNodeAsync(SelectedPicture.Picture);
+            _curationQueue.Enqueue(SelectedPicture.Picture);
+            await Task.CompletedTask;
 
             // Success indicator: Brief icon glow or toast notification?
             // For now, let's just assume the UI binding handles the "visual active state"

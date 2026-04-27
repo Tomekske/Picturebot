@@ -18,6 +18,7 @@ namespace Picturebot.ViewModels;
 public partial class CarouselDialogViewModel : ViewModelBase {
     private readonly Action? _closeAction;
     private readonly INodeService _nodeService;
+    private readonly ICurationQueue _curationQueue;
     private readonly List<PictureItemViewModel> _pictures;
 
     [ObservableProperty]
@@ -35,8 +36,9 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private int _sharpness;
 
     public CarouselDialogViewModel(IEnumerable<PictureItemViewModel> pictures, PictureItemViewModel? selectedPicture,
-        INodeService nodeService, Action? closeAction = null) {
+        INodeService nodeService, ICurationQueue curationQueue, Action? closeAction = null) {
         _nodeService = nodeService;
+        _curationQueue = curationQueue;
         _closeAction = closeAction;
         _pictures = pictures.ToList();
 
@@ -96,7 +98,9 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         try {
             CurrentPicture.Picture.CurationStatus = status;
             CurrentPicture.CurationStatus = status; // Triggers UI update in Grid/Details
-            await _nodeService.UpdateNodeAsync(CurrentPicture.Picture);
+            
+            _curationQueue.Enqueue(CurrentPicture.Picture);
+            await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update curation in carousel for {Name}", CurrentPicture.Name);
         }
