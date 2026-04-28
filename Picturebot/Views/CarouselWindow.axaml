@@ -6,6 +6,7 @@
         xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:converters="using:Picturebot.Converters"
         xmlns:enums="using:Domain.Enums"
+        xmlns:controls="using:Picturebot.Controls"
         mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="Picturebot.Views.CarouselWindow"
         x:DataType="vm:CarouselDialogViewModel"
@@ -25,8 +26,9 @@
     <Grid>
         <Canvas Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
-        <Image Source="{Binding PreviewImage}"
-               Stretch="Uniform"
+        <controls:GpuAcceleratedCarousel
+               Items="{Binding Previews}"
+               SelectedIndex="{Binding CurrentIndex}"
                Margin="100,80,100,200"
                VerticalAlignment="Stretch"
                HorizontalAlignment="Stretch" />

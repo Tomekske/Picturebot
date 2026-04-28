@@ -11,5 +11,6 @@
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
         <StyleInclude Source="avares://Material.Icons.Avalonia/MaterialIconStyles.xaml" />
+        <StyleInclude Source="avares://Picturebot/Controls/GpuAcceleratedCarousel.axaml" />
     </Application.Styles>
 </Application>

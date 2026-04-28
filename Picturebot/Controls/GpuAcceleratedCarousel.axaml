@@ -1,0 +1,26 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:Picturebot.Controls">
+    <Styles.Resources>
+        <ControlTheme x:Key="{x:Type controls:GpuAcceleratedCarousel}" TargetType="controls:GpuAcceleratedCarousel">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel Background="Black" ClipToBounds="True">
+                        <StackPanel Name="PART_ItemsContainer" 
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Stretch"
+                                    HorizontalAlignment="Left">
+                            <!-- Images are injected here dynamically -->
+                            <StackPanel.Styles>
+                                <Style Selector="Image">
+                                    <Setter Property="Width" Value="{Binding $parent[controls:GpuAcceleratedCarousel].Bounds.Width}" />
+                                    <Setter Property="Height" Value="{Binding $parent[controls:GpuAcceleratedCarousel].Bounds.Height}" />
+                                </Style>
+                            </StackPanel.Styles>
+                        </StackPanel>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+</Styles>
