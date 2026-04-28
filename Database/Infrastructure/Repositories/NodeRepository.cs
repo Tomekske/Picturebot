@@ -37,6 +37,11 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         return await query.AnyAsync(n => n.Name == name && n.Type == type);
     }
 
+    public async Task<bool> IsPictureHashDuplicateAsync(int parentId, ulong hash) {
+        return await context.Nodes.OfType<Picture>()
+            .AnyAsync(p => p.ParentId == parentId && p.Hash == hash);
+    }
+
     public async Task<List<Node>> FindNodesByTypeAsync(NodeType type) {
         return await context.Nodes
             .AsNoTracking()

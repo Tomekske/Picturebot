@@ -14,8 +14,15 @@ public class FileGrouper(IFileSystem fileSystem, IPictureAnalyzer pictureAnalyze
         var groups = new Dictionary<string, FileGroup>();
 
         foreach (var filePath in files) {
+            var fileName = fileSystem.Path.GetFileName(filePath);
+
+            // Skip hidden/ghost files
+            if (fileName.StartsWith('.') || fileName.StartsWith("._")) {
+                continue;
+            }
+
             var fileNameWithoutExtension = fileSystem.Path.GetFileNameWithoutExtension(filePath);
-            
+
             if (!groups.TryGetValue(fileNameWithoutExtension, out var group)) {
                 group = new FileGroup {
                     BaseName = fileNameWithoutExtension,

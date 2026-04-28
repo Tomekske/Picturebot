@@ -94,6 +94,16 @@ public class ImportPicturesCommand : IImportPicturesCommand {
             var hashResult = await _pictureAnalyzer.CalculateHashAsync(analysisFile);
             var sharpnessResult = await _pictureAnalyzer.CalculateSharpnessAsync(analysisFile);
 
+            // Abort if metadata extraction fails. We do not want 0-value records in the DB.
+            if (hashResult.IsError || sharpnessResult.IsError) {
+                continue;
+            }
+
+            // Prevent duplicate records for the same physical asset within the same album.
+            if (await _nodeService.IsPictureHashDuplicateAsync(album.Id, hashResult.Value)) {
+                continue;
+            }
+
             // Task 3: IPictureProcessor to generate a preview (auto-oriented)
             // Preview Path (High Fidelity)
             var previewResult =

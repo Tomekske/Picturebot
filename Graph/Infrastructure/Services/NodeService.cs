@@ -26,6 +26,10 @@ public class NodeService(
         await nodeRepository.CreateAsync(node);
     }
 
+    public async Task<bool> IsPictureHashDuplicateAsync(int parentId, ulong hash) {
+        return await nodeRepository.IsPictureHashDuplicateAsync(parentId, hash);
+    }
+
     public async Task<List<Node>> LoadHydratedTreeAsync() {
         var allNodes = await nodeRepository.FindAllAsync();
 
