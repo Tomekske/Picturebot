@@ -3,6 +3,7 @@ using Database.Domain.Interfaces;
 using Database.Infrastructure.Data;
 using Database.Infrastructure.Mappers;
 using Domain.Models;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Database.Infrastructure.Repositories;
@@ -14,17 +15,24 @@ public class SettingsRepository(ApplicationDbContext context) : ISettingsReposit
     private readonly SettingsMapper _mapper = new();
 
     public async Task<SettingsModel> LoadAsync() {
-        var entity = await context.Settings.FirstOrDefaultAsync(s => s.Id == 1);
+        try {
+            var entity = await context.Settings.FirstOrDefaultAsync(s => s.Id == 1);
 
-        if (entity != null) {
+            if (entity != null) {
+                return _mapper.EntityToModel(entity);
+            }
+
+            entity = new Settings { Id = 1 };
+            context.Settings.Add(entity);
+            await context.SaveChangesAsync();
+
             return _mapper.EntityToModel(entity);
+        } catch (Exception ex) when (ex.InnerException is SqliteException or SqliteException) {
+            // Use Console as fallback if logger is not available in this layer
+            Console.WriteLine($"Database schema mismatch detected while loading settings. Using defaults. Error: {ex.Message}");
+            // Return defaults from Model to allow app to start
+            return new SettingsModel();
         }
-
-        entity = new Settings { Id = 1 };
-        context.Settings.Add(entity);
-        await context.SaveChangesAsync();
-
-        return _mapper.EntityToModel(entity);
     }
 
     public async Task UpdateAsync(SettingsModel updatedSettings) {

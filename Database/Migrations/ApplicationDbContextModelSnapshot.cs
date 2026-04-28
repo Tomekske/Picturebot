@@ -67,6 +67,15 @@ namespace Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("BurstFallbackTimeThresholdSeconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BurstHashSimilarityThreshold")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BurstTimeThresholdSeconds")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("GroupingThreshold")
                         .HasColumnType("INTEGER");
 
@@ -88,7 +97,10 @@ namespace Database.Migrations
                         new
                         {
                             Id = 1,
-                            GroupingThreshold = 5,
+                            BurstFallbackTimeThresholdSeconds = 10,
+                            BurstHashSimilarityThreshold = 8,
+                            BurstTimeThresholdSeconds = 3,
+                            GroupingThreshold = 8,
                             LaunchMaximized = false,
                             LibraryPath = "",
                             ThemeMode = 0
@@ -127,7 +139,13 @@ namespace Database.Migrations
                     b.Property<long>("Hash")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Height")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Sharpness")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Width")
                         .HasColumnType("INTEGER");
 
                     b.ToTable("pictures", (string)null);

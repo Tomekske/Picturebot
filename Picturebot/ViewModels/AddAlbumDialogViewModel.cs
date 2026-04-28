@@ -64,10 +64,29 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
                 return;
             }
 
-            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
+            var options = new FolderPickerOpenOptions {
                 Title = "Select Source Directory",
                 AllowMultiple = false
-            });
+            };
+
+            // Try to set a valid starting location to avoid platform-specific initialization crashes
+            var startPath = SourcePath;
+            if (string.IsNullOrWhiteSpace(startPath) || !Directory.Exists(startPath)) {
+                startPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (!Directory.Exists(startPath)) {
+                    startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                }
+            }
+
+            if (Directory.Exists(startPath)) {
+                try {
+                    options.SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(startPath);
+                } catch (Exception ex) {
+                    Log.Debug(ex, "Could not set suggested start location for folder picker");
+                }
+            }
+
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(options);
 
             if (folders.Any()) {
                 var selectedPath = folders[0].Path.LocalPath;

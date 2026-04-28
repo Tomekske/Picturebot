@@ -75,6 +75,7 @@ public class ImportPicturesCommand : IImportPicturesCommand {
 
             var hashResult = await _pictureAnalyzer.CalculateHashAsync(fileToHash);
             var timeResult = await _pictureAnalyzer.ExtractTimestamp(fileToHash);
+            var dimensionResult = await _pictureAnalyzer.GetDimensionsAsync(fileToHash);
 
             if (hashResult.IsError) {
                 continue;
@@ -84,12 +85,17 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 ? timeResult.Value
                 : _fileSystem.File.GetCreationTime(fileToHash);
 
+            var width = dimensionResult is { IsError: false } ? dimensionResult.Value.Width : 0;
+            var height = dimensionResult is { IsError: false } ? dimensionResult.Value.Height : 0;
+
             // Add all files in this pair (RAW and JPG) to the cache list sharing the same hash and date
             foreach (var file in pair) {
                 cachedDataList.Add(new CachedPictureData {
                     FilePath = file,
                     PrimaryDate = primaryDate,
-                    PHash = hashResult.Value
+                    PHash = hashResult.Value,
+                    Width = width,
+                    Height = height
                 });
             }
         }
@@ -194,7 +200,9 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                     Type = NodeType.Picture,
                     CapturedAt = cachedData.PrimaryDate,
                     Hash = pHash,
-                    Sharpness = sharpnessResult.Value
+                    Sharpness = sharpnessResult.Value,
+                    Width = cachedData.Width,
+                    Height = cachedData.Height
                 };
 
                 await _nodeService.CreateNodeAsync(pictureNode);

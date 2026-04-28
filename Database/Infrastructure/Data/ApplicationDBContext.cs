@@ -67,7 +67,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 Id = 1,
                 ThemeMode = ThemeMode.System,
                 LibraryPath = "",
-                GroupingThreshold = 5,
+                GroupingThreshold = 8,
+                BurstTimeThresholdSeconds = 3,
+                BurstFallbackTimeThresholdSeconds = 10,
+                BurstHashSimilarityThreshold = 8,
                 LaunchMaximized = false
             }
         );

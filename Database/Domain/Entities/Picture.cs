@@ -21,6 +21,16 @@ public class Picture : Node {
     public DateTime CapturedAt { get; set; }
 
     /// <summary>
+    ///     The width of the picture in pixels.
+    /// </summary>
+    public int Width { get; set; }
+
+    /// <summary>
+    ///     The height of the picture in pixels.
+    /// </summary>
+    public int Height { get; set; }
+
+    /// <summary>
     ///     The perceptual hash of the picture.
     /// </summary>
     public ulong Hash { get; set; }

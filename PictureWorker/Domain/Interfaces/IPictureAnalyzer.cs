@@ -6,4 +6,5 @@ public interface IPictureAnalyzer {
     Task<ErrorOr<ulong>> CalculateHashAsync(string filePath);
     Task<ErrorOr<int>> CalculateSharpnessAsync(string filePath);
     Task<ErrorOr<DateTime>> ExtractTimestamp(string filePath);
+    Task<ErrorOr<(int Width, int Height)>> GetDimensionsAsync(string filePath);
 }

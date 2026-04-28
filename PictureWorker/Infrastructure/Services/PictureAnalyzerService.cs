@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CoenM.ImageHash.HashAlgorithms;
 using ErrorOr;
 using MetadataExtractor;
@@ -30,7 +30,7 @@ public class PictureAnalyzerService : IPictureAnalyzer {
             return Error.Validation(
                 "Picture.InvalidFormat",
                 "The file is not a supported image format.");
-        } catch (Exception e) {
+        } catch (Exception) {
             return Error.Failure(
                 "Picture.ProcessingFailed",
                 "An unexpected error occurred while calculating the hash.");
@@ -86,7 +86,7 @@ public class PictureAnalyzerService : IPictureAnalyzer {
                 // Implicitly converts the int to ErrorOr<int>
                 return (int)mean.Val0;
             });
-        } catch (Exception e) {
+        } catch (Exception) {
             return Error.Failure(
                 "Picture.ProcessingFailed",
                 "An unexpected error occurred while calculating sharpness.");
@@ -127,11 +127,50 @@ public class PictureAnalyzerService : IPictureAnalyzer {
                     "Picture.MetadataNotFound",
                     "Could not find a valid creation timestamp in the image metadata.");
             });
-        } catch (Exception e) {
+        } catch (Exception) {
             // Log the error here if you have a logger injected
             return Error.Failure(
                 "Picture.MetadataExtractionFailed",
                 "An unexpected error occurred while extracting metadata.");
+        }
+    }
+
+    public async Task<ErrorOr<(int Width, int Height)>> GetDimensionsAsync(string filePath) {
+        if (!File.Exists(filePath)) {
+            return Error.NotFound(
+                "Picture.NotFound",
+                $"The file was not found at path: {filePath}");
+        }
+
+        try {
+            // Use ImageSharp's IdentifyAsync as it's very fast and efficient for just dimensions
+            var info = await Image.IdentifyAsync(filePath);
+            if (info == null) {
+                return Error.Validation("Picture.InvalidFormat", "Failed to identify image dimensions.");
+            }
+
+            var width = info.Width;
+            var height = info.Height;
+
+            // We need the orientation to know if we should swap width and height
+            // We use MetadataExtractor here as it's already working in this service
+            return await Task.Run<ErrorOr<(int Width, int Height)>>(() => {
+                var directories = ImageMetadataReader.ReadMetadata(filePath);
+                var ifd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
+
+                if (ifd0Directory != null && ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation, out var orientation)) {
+                    // Orientation values 5-8 indicate the image is rotated 90 or 270 degrees
+                    if (orientation > 4) {
+                        return (height, width);
+                    }
+                }
+
+                return (width, height);
+            });
+        } catch (Exception) {
+            return Error.Failure(
+                "Picture.ProcessingFailed",
+                "An unexpected error occurred while extracting dimensions.");
         }
     }
 

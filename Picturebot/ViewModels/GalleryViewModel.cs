@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -168,44 +169,72 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         }
     }
 
+    private Orientation GetOrientation(Picture p) {
+        if (p.Width > p.Height) {
+            return Orientation.Landscape;
+        }
+
+        if (p.Height > p.Width) {
+            return Orientation.Portrait;
+        }
+
+        return Orientation.Square;
+    }
+
+    private int CalculateHammingDistance(ulong h1, ulong h2) {
+        return BitOperations.PopCount(h1 ^ h2);
+    }
+
     private async Task ApplyBurstGrouping() {
         if (_currentNode == null || PicturesList.Count == 0) {
             return;
         }
 
-        // --- Fetch configurable thresholds from the database/settings ---
-        var strictTimeThreshold = 1; //_settingsService.Current.BurstTimeThresholdSeconds;
-        var fallbackTimeThreshold = 5; //_settingsService.Current.BurstFallbackTimeThresholdSeconds;
-        var hashSimilarityThreshold = 8; //_settingsService.Current.BurstHashSimilarityThreshold;
+        // 1. Fetch Config with safe fallbacks
+        var settings = _settingsService.Current;
+        var timeThreshold = settings.BurstTimeThresholdSeconds > 0 ? settings.BurstTimeThresholdSeconds : 3;
+        var fallbackThreshold = settings.BurstFallbackTimeThresholdSeconds > 0
+            ? settings.BurstFallbackTimeThresholdSeconds
+            : 10;
+        var hashThreshold = settings.BurstHashSimilarityThreshold > 0 ? settings.BurstHashSimilarityThreshold : 8;
 
-        // 1. Sort everything chronologically
+        // 2. Sort everything chronologically
         var sortedPics = PicturesList.OrderBy(p => p.Picture.CapturedAt).ToList();
 
         var burstGroups = new List<List<PictureItemViewModel>>();
-        var currentGroup = new List<PictureItemViewModel> { sortedPics[0] };
+        if (sortedPics.Count > 0) {
+            var currentGroup = new List<PictureItemViewModel> { sortedPics[0] };
 
-        // 2. Sliding window to catch bursts
-        for (var i = 1; i < sortedPics.Count; i++) {
-            var currentPic = sortedPics[i];
-            var prevPic = currentGroup.Last();
+            // 3. Sliding window to catch bursts
+            for (var i = 1; i < sortedPics.Count; i++) {
+                var currentPic = sortedPics[i];
+                var prevPic = sortedPics[i - 1];
 
-            var timeSpan = currentPic.Picture.CapturedAt - prevPic.Picture.CapturedAt;
-            var hammingDistance = CalculateHammingDistance(prevPic.Picture.Hash, currentPic.Picture.Hash);
+                var timeDiff = (currentPic.Picture.CapturedAt - prevPic.Picture.CapturedAt).TotalSeconds;
 
-            if (timeSpan.TotalSeconds <= strictTimeThreshold ||
-                (timeSpan.TotalSeconds <= fallbackTimeThreshold && hammingDistance <= hashSimilarityThreshold)) {
-                currentGroup.Add(currentPic);
-            } else {
-                burstGroups.Add(currentGroup);
-                currentGroup = new List<PictureItemViewModel> { currentPic };
+                // Condition A: Orientation must match exactly
+                var orientationMatches = GetOrientation(prevPic.Picture) == GetOrientation(currentPic.Picture);
+
+                // Condition B: Strict time OR (Fallback time AND Hash similarity)
+                var isSimilar = timeDiff <= timeThreshold ||
+                                (timeDiff <= fallbackThreshold &&
+                                 CalculateHammingDistance(prevPic.Picture.Hash, currentPic.Picture.Hash) <=
+                                 hashThreshold);
+
+                if (orientationMatches && isSimilar) {
+                    currentGroup.Add(currentPic);
+                } else {
+                    burstGroups.Add(currentGroup);
+                    currentGroup = new List<PictureItemViewModel> { currentPic };
+                }
             }
-        }
 
-        burstGroups.Add(currentGroup);
+            burstGroups.Add(currentGroup);
+        }
 
         var groupIndex = 1;
 
-        // 3. Process ALL groups as burst groups (even singletons)
+        // 4. Process ALL groups as burst groups (even singletons)
         foreach (var group in burstGroups) {
             // Mark the sharpest photo as the 'Best' (if it's a singleton, it automatically wins)
             var bestPic = group.OrderByDescending(p => p.Picture.Sharpness).FirstOrDefault();
@@ -214,27 +243,13 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
             }
 
             // Format the header dynamically depending on if it's a sequence or a single shot
-            var header = group.Count > 1
-                ? $"Burst {groupIndex} ({group.Count} photos)"
-                : $"Burst {groupIndex} (Single)";
-
-            groupIndex++;
+            var countSuffix = group.Count > 1 ? $"{group.Count} photos" : "Single";
+            var header = $"Burst {groupIndex++} ({countSuffix})";
 
             // Pass 'true' to ensure the UI treats every single one as a burst group
             GroupedPictures.Add(new PictureGroupViewModel(header, header,
                 new ObservableCollection<PictureItemViewModel>(group), true));
         }
-    }
-
-    private int CalculateHammingDistance(ulong hash1, ulong hash2) {
-        var xor = hash1 ^ hash2;
-        var distance = 0;
-        while (xor != 0) {
-            distance += 1;
-            xor &= xor - 1;
-        }
-
-        return distance;
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
@@ -402,6 +417,12 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [RelayCommand]
     private void NavigateToChild(Node node) {
         _navigationService.NavigateTo(node);
+    }
+
+    private enum Orientation {
+        Landscape,
+        Portrait,
+        Square
     }
 }
 

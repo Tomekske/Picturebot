@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -17,6 +18,15 @@ namespace Picturebot.ViewModels;
 
 public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
+
+    [ObservableProperty]
+    private int _burstFallbackThreshold = 10;
+
+    [ObservableProperty]
+    private int _burstHashThreshold = 8;
+
+    [ObservableProperty]
+    private int _burstTimeThreshold = 3;
 
     [ObservableProperty]
     private int _clusterThreshold = 10;
@@ -55,6 +65,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         var settings = _settingsService.Current;
         LibraryLocation = settings.LibraryPath ?? string.Empty;
         ClusterThreshold = settings.GroupingThreshold;
+        BurstTimeThreshold = settings.BurstTimeThresholdSeconds;
+        BurstFallbackThreshold = settings.BurstFallbackTimeThresholdSeconds;
+        BurstHashThreshold = settings.BurstHashSimilarityThreshold;
         LaunchFullScreen = settings.LaunchMaximized;
 
         ThemeIndex = settings.ThemeMode switch {
@@ -87,12 +100,31 @@ public partial class SettingsDialogViewModel : ViewModelBase {
                 return;
             }
 
-            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
+            var options = new FolderPickerOpenOptions {
                 Title = "Select Library Location",
                 AllowMultiple = false
-            });
+            };
 
-            if (folders.Count > 0) {
+            // Try to set a valid starting location to avoid platform-specific initialization crashes
+            var startPath = LibraryLocation;
+            if (string.IsNullOrWhiteSpace(startPath) || !Directory.Exists(startPath)) {
+                startPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (!Directory.Exists(startPath)) {
+                    startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                }
+            }
+
+            if (Directory.Exists(startPath)) {
+                try {
+                    options.SuggestedStartLocation = await window.StorageProvider.TryGetFolderFromPathAsync(startPath);
+                } catch (Exception ex) {
+                    Log.Debug(ex, "Could not set suggested start location for folder picker");
+                }
+            }
+
+            var folders = await window.StorageProvider.OpenFolderPickerAsync(options);
+
+            if (folders != null && folders.Count > 0) {
                 LibraryLocation = folders[0].Path.LocalPath;
             }
         } catch (Exception ex) {
@@ -109,6 +141,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         var settings = new SettingsModel {
             LibraryPath = LibraryLocation,
             GroupingThreshold = ClusterThreshold,
+            BurstTimeThresholdSeconds = BurstTimeThreshold,
+            BurstFallbackTimeThresholdSeconds = BurstFallbackThreshold,
+            BurstHashSimilarityThreshold = BurstHashThreshold,
             LaunchMaximized = LaunchFullScreen,
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,

@@ -124,4 +124,6 @@ public class CachedPictureData {
     public string FilePath { get; set; } = string.Empty;
     public DateTime PrimaryDate { get; set; }
     public ulong PHash { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
 }
