@@ -3,6 +3,7 @@ using ErrorOr;
 using PictureWorker.Domain.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace PictureWorker.Infrastructure.Services;
 
@@ -13,7 +14,7 @@ public class PictureProcessorService : IPictureProcessor {
         _fileSystem = fileSystem;
     }
 
-    public async Task<ErrorOr<Image>> GenerateProcessedImageAsync(string filePath, int maxWidth, int maxHeight) {
+    public async Task<ErrorOr<Image>> GenerateProcessedImageAsync(string filePath, int maxWidth, int maxHeight, IResampler? resampler = null) {
         try {
             // Read from the abstracted file system, not the physical disk
             await using var stream = _fileSystem.File.OpenRead(filePath);
@@ -26,7 +27,8 @@ public class PictureProcessorService : IPictureProcessor {
             if (image.Width > maxWidth || image.Height > maxHeight) {
                 image.Mutate(x => x.Resize(new ResizeOptions {
                     Size = new Size(maxWidth, maxHeight),
-                    Mode = ResizeMode.Max
+                    Mode = ResizeMode.Max,
+                    Sampler = resampler ?? KnownResamplers.Bicubic
                 }));
             }
 
