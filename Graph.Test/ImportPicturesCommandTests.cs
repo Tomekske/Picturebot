@@ -4,9 +4,9 @@ using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Commands;
 using Moq;
 using PictureWorker.Domain.Interfaces;
-using ErrorOr;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace Graph.Test;
 
@@ -33,6 +33,60 @@ public class ImportPicturesCommandTests {
             _mockFileSystem,
             _mockPictureAnalyzer.Object,
             _mockPictureProcessor.Object);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ShouldHandleNamingCollisions() {
+        // Arrange
+        var parentId = 1;
+        var albumName = "Collision Album";
+        var libraryPath = @"C:\Library";
+        var sourcePath = @"C:\Source";
+        var albumUuid = "album-collision";
+        var albumPath = Path.Combine(libraryPath, albumUuid);
+
+        var album = new Album { Id = 11, Uuid = albumUuid, Name = albumName };
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+            .ReturnsAsync(album);
+
+        _mockFileSystem.AddDirectory(sourcePath);
+        _mockFileSystem.AddDirectory(albumPath);
+        var jpgsPath = Path.Combine(albumPath, "JPGs");
+        _mockFileSystem.AddDirectory(jpgsPath);
+        _mockFileSystem.AddDirectory(Path.Combine(albumPath, "RAWs"));
+        _mockFileSystem.AddDirectory(Path.Combine(albumPath, "Thumbnails"));
+
+        var capturedDate = new DateTime(2026, 4, 1, 12, 0, 0);
+        var baseFileName = capturedDate.ToString("yyyy-MM-dd_HH-mm-ss");
+
+        // Simulate existing file
+        _mockFileSystem.AddFile(Path.Combine(jpgsPath, baseFileName + ".jpg"), new MockFileData("existing"));
+
+        var photoPath = Path.Combine(sourcePath, "photo1.jpg");
+        _mockFileSystem.AddFile(photoPath, new MockFileData("new photo"));
+
+        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(photoPath))
+            .ReturnsAsync(capturedDate);
+        _mockPictureAnalyzer.Setup(a => a.CalculateHashAsync(photoPath))
+            .ReturnsAsync(0UL);
+        _mockPictureAnalyzer.Setup(a => a.CalculateSharpnessAsync(photoPath))
+            .ReturnsAsync(0);
+        _mockPictureProcessor.Setup(p =>
+                p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<IResampler?>()))
+            .ReturnsAsync(new Image<Rgba32>(1, 1));
+
+        // Act
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+
+        // Assert
+        var expectedFileName = baseFileName + "_1";
+        var expectedJpgPath = Path.Combine(jpgsPath, expectedFileName + ".jpg");
+
+        Assert.That(resultAlbum.Children.First().Name, Is.EqualTo(expectedFileName));
+        Assert.That(_mockFileSystem.File.Exists(expectedJpgPath), Is.True,
+            "File should be renamed with suffix _1 due to collision.");
+        _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p => p.Name == expectedFileName)), Times.Once);
     }
 
     [Test]
@@ -67,7 +121,9 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(80);
 
         var mockImage = new Image<Rgba32>(1, 1);
-        _mockPictureProcessor.Setup(p => p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+        _mockPictureProcessor.Setup(p =>
+                p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<IResampler?>()))
             .ReturnsAsync(mockImage);
 
         // Act
@@ -87,64 +143,13 @@ public class ImportPicturesCommandTests {
 
             Assert.That(_mockFileSystem.File.Exists(expectedJpgPath), Is.True, "JPG should be copied.");
             Assert.That(_mockFileSystem.File.Exists(expectedThumbnailPath), Is.True, "Thumbnail should be saved.");
-            
-            _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p => 
-                p.Name == expectedFileName && 
-                p.ParentId == album.Id && 
+
+            _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p =>
+                p.Name == expectedFileName &&
+                p.ParentId == album.Id &&
                 p.CapturedAt == capturedDate &&
                 p.Hash == 12345UL &&
                 p.Sharpness == 80)), Times.Once);
         });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ShouldHandleNamingCollisions() {
-        // Arrange
-        var parentId = 1;
-        var albumName = "Collision Album";
-        var libraryPath = @"C:\Library";
-        var sourcePath = @"C:\Source";
-        var albumUuid = "album-collision";
-        var albumPath = Path.Combine(libraryPath, albumUuid);
-
-        var album = new Album { Id = 11, Uuid = albumUuid, Name = albumName };
-        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
-            .ReturnsAsync(album);
-
-        _mockFileSystem.AddDirectory(sourcePath);
-        _mockFileSystem.AddDirectory(albumPath);
-        var jpgsPath = Path.Combine(albumPath, "JPGs");
-        _mockFileSystem.AddDirectory(jpgsPath);
-        _mockFileSystem.AddDirectory(Path.Combine(albumPath, "RAWs"));
-        _mockFileSystem.AddDirectory(Path.Combine(albumPath, "Thumbnails"));
-
-        var capturedDate = new DateTime(2026, 4, 1, 12, 0, 0);
-        var baseFileName = capturedDate.ToString("yyyy-MM-dd_HH-mm-ss");
-        
-        // Simulate existing file
-        _mockFileSystem.AddFile(Path.Combine(jpgsPath, baseFileName + ".jpg"), new MockFileData("existing"));
-
-        var photoPath = Path.Combine(sourcePath, "photo1.jpg");
-        _mockFileSystem.AddFile(photoPath, new MockFileData("new photo"));
-
-        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(photoPath))
-            .ReturnsAsync(capturedDate);
-        _mockPictureAnalyzer.Setup(a => a.CalculateHashAsync(photoPath))
-            .ReturnsAsync(0UL);
-        _mockPictureAnalyzer.Setup(a => a.CalculateSharpnessAsync(photoPath))
-            .ReturnsAsync(0);
-        _mockPictureProcessor.Setup(p => p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .ReturnsAsync(new Image<Rgba32>(1, 1));
-
-        // Act
-        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
-
-        // Assert
-        var expectedFileName = baseFileName + "_1";
-        var expectedJpgPath = Path.Combine(jpgsPath, expectedFileName + ".jpg");
-
-        Assert.That(resultAlbum.Children.First().Name, Is.EqualTo(expectedFileName));
-        Assert.That(_mockFileSystem.File.Exists(expectedJpgPath), Is.True, "File should be renamed with suffix _1 due to collision.");
-        _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p => p.Name == expectedFileName)), Times.Once);
     }
 }
