@@ -76,6 +76,9 @@ public class ImportPicturesCommandTests {
                     It.IsAny<IResampler?>()))
             .ReturnsAsync(new Image<Rgba32>(1, 1));
 
+        _mockNodeService.Setup(s => s.IsPictureHashDuplicateAsync(It.IsAny<int>(), It.IsAny<ulong>()))
+            .ReturnsAsync(false);
+
         // Act
         var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
 
@@ -121,12 +124,14 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(80);
 
         var mockImage = new Image<Rgba32>(1, 1);
-        _mockPictureProcessor.Setup(p =>
-                p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
-                    It.IsAny<IResampler?>()))
+        _mockPictureProcessor.Setup(p => p.GenerateProcessedImageAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IResampler?>()))
             .ReturnsAsync(mockImage);
 
+        _mockNodeService.Setup(s => s.IsPictureHashDuplicateAsync(It.IsAny<int>(), It.IsAny<ulong>()))
+            .ReturnsAsync(false);
+
         // Act
+
         var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
 
         // Assert
@@ -151,5 +156,67 @@ public class ImportPicturesCommandTests {
                 p.Hash == 12345UL &&
                 p.Sharpness == 80)), Times.Once);
         });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ShouldSkipIngestion_WhenMetadataExtractionFails() {
+        // Arrange
+        var parentId = 1;
+        var albumName = "Error Album";
+        var libraryPath = @"C:\Library";
+        var sourcePath = @"C:\Source";
+        var album = new Album { Id = 12, Uuid = "error-uuid", Name = albumName };
+
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+            .ReturnsAsync(album);
+
+        _mockFileSystem.AddDirectory(sourcePath);
+        var photoPath = Path.Combine(sourcePath, "corrupt.jpg");
+        _mockFileSystem.AddFile(photoPath, new MockFileData("corrupt data"));
+
+        _mockPictureAnalyzer.Setup(a => a.CalculateHashAsync(photoPath))
+            .ReturnsAsync(ErrorOr.Error.Failure("AnalysisFailed"));
+        _mockPictureAnalyzer.Setup(a => a.CalculateSharpnessAsync(photoPath))
+            .ReturnsAsync(80);
+
+        // Act
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+
+        // Assert
+        Assert.That(resultAlbum.Children.Count, Is.EqualTo(0), "No picture should be created if hash extraction fails.");
+        _mockNodeService.Verify(s => s.CreateNodeAsync(It.IsAny<Node>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ShouldSkipIngestion_WhenHashIsDuplicateInAlbum() {
+        // Arrange
+        var parentId = 1;
+        var albumName = "Duplicate Album";
+        var libraryPath = @"C:\Library";
+        var sourcePath = @"C:\Source";
+        var album = new Album { Id = 13, Uuid = "dup-uuid", Name = albumName };
+
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+            .ReturnsAsync(album);
+
+        _mockFileSystem.AddDirectory(sourcePath);
+        var photoPath = Path.Combine(sourcePath, "duplicate.jpg");
+        _mockFileSystem.AddFile(photoPath, new MockFileData("duplicate data"));
+
+        var duplicateHash = 999UL;
+        _mockPictureAnalyzer.Setup(a => a.CalculateHashAsync(photoPath))
+            .ReturnsAsync(duplicateHash);
+        _mockPictureAnalyzer.Setup(a => a.CalculateSharpnessAsync(photoPath))
+            .ReturnsAsync(80);
+
+        _mockNodeService.Setup(s => s.IsPictureHashDuplicateAsync(album.Id, duplicateHash))
+            .ReturnsAsync(true);
+
+        // Act
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+
+        // Assert
+        Assert.That(resultAlbum.Children.Count, Is.EqualTo(0), "No picture should be created if hash is already in the album.");
+        _mockNodeService.Verify(s => s.CreateNodeAsync(It.IsAny<Node>()), Times.Never);
     }
 }

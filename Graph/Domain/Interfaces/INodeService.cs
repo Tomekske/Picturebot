@@ -14,6 +14,14 @@ public interface INodeService {
     Task CreateNodeAsync(Node node);
 
     /// <summary>
+    ///     Checks if a picture with the specified perceptual hash already exists under a specific parent.
+    /// </summary>
+    /// <param name="parentId">The identifier of the parent album.</param>
+    /// <param name="hash">The perceptual hash to check.</param>
+    /// <returns>A task that returns true if a duplicate hash is found in the album; otherwise, false.</returns>
+    Task<bool> IsPictureHashDuplicateAsync(int parentId, ulong hash);
+
+    /// <summary>
     ///     Retrieves the entire node hierarchy, fully hydrated.
     /// </summary>
     /// <returns>A Task that returns the root nodes of the hydrated tree.</returns>

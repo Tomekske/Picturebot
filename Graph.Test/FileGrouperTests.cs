@@ -66,4 +66,24 @@ public class FileGrouperTests {
         var group = result.First(g => g.BaseName == "photo1");
         Assert.That(group.PrimaryDate, Is.EqualTo(metadataDate));
     }
+
+    [Test]
+    public async Task GroupFilesAsync_ShouldIgnoreGhostFiles() {
+        // Arrange
+        var sourcePath = @"C:\Source";
+        _mockFileSystem.AddDirectory(sourcePath);
+        _mockFileSystem.AddFile(Path.Combine(sourcePath, "photo1.jpg"), new MockFileData(""));
+        _mockFileSystem.AddFile(Path.Combine(sourcePath, "._photo1.jpg"), new MockFileData("mac ghost"));
+        _mockFileSystem.AddFile(Path.Combine(sourcePath, ".DS_Store"), new MockFileData("ds store"));
+
+        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(It.IsAny<string>()))
+            .ReturnsAsync(Error.Failure("No metadata"));
+
+        // Act
+        var result = await _fileGrouper.GroupFilesAsync(sourcePath);
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(result[0].BaseName, Is.EqualTo("photo1"));
+    }
 }
