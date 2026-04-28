@@ -51,8 +51,6 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         var totalCount = groups.Count;
         var processedCount = 0;
 
-        album.Children = new List<Node>();
-
         foreach (var group in groups) {
             processedCount++;
             var currentFile = group.BaseName;
@@ -139,7 +137,14 @@ public class ImportPicturesCommand : IImportPicturesCommand {
             };
 
             await _nodeService.CreateNodeAsync(pictureNode);
-            album.Children.Add(pictureNode);
+            
+            // The service already set pictureNode.Parent = album, which might trigger EF fix-up
+            // and add it to album.Children if they share the same context. 
+            // We check to avoid doubling.
+            album.Children ??= new List<Node>();
+            if (!album.Children.Contains(pictureNode)) {
+                album.Children.Add(pictureNode);
+            }
         }
 
         return album;
