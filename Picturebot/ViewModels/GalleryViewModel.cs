@@ -155,7 +155,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
 
     private void ApplyDateGrouping() {
         var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
-            .OrderByDescending(g => g.Key);
+            .OrderBy(g => g.Key);
 
         foreach (var group in groups) {
             var dateStr = group.Key.ToString("yyyy-MM-dd");
@@ -331,7 +331,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         if (children != null) {
             if (IsShowingAlbum) {
                 var pics = children.OfType<Picture>()
-                    .OrderByDescending(p => p.CapturedAt)
+                    .OrderBy(p => p.CapturedAt)
                     .ToList();
 
                 _pathService.PopulatePaths(pics);
