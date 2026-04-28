@@ -23,10 +23,10 @@ using SukiUI.Toasts;
 namespace Picturebot.ViewModels;
 
 public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage>, IRecipient<NodeCreatedMessage> {
+    private readonly ICurationQueue _curationQueue;
     private readonly IPictureGroupingService _groupingService;
     private readonly INavigationService _navigationService;
     private readonly INodeService _nodeService;
-    private readonly ICurationQueue _curationQueue;
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
 
@@ -169,61 +169,72 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     }
 
     private async Task ApplyBurstGrouping() {
-        if (_currentNode == null) {
+        if (_currentNode == null || PicturesList.Count == 0) {
             return;
         }
 
-        // Threshold 6 for > 90% similarity
-        var groups = await _groupingService.GroupSimilarPicturesAsync(_currentNode.Id, 6);
+        // --- Fetch configurable thresholds from the database/settings ---
+        var strictTimeThreshold = 1; //_settingsService.Current.BurstTimeThresholdSeconds;
+        var fallbackTimeThreshold = 5; //_settingsService.Current.BurstFallbackTimeThresholdSeconds;
+        var hashSimilarityThreshold = 8; //_settingsService.Current.BurstHashSimilarityThreshold;
 
-        if (groups.Count == 0) {
-            ApplyDateGrouping();
-            return;
+        // 1. Sort everything chronologically
+        var sortedPics = PicturesList.OrderBy(p => p.Picture.CapturedAt).ToList();
+
+        var burstGroups = new List<List<PictureItemViewModel>>();
+        var currentGroup = new List<PictureItemViewModel> { sortedPics[0] };
+
+        // 2. Sliding window to catch bursts
+        for (var i = 1; i < sortedPics.Count; i++) {
+            var currentPic = sortedPics[i];
+            var prevPic = currentGroup.Last();
+
+            var timeSpan = currentPic.Picture.CapturedAt - prevPic.Picture.CapturedAt;
+            var hammingDistance = CalculateHammingDistance(prevPic.Picture.Hash, currentPic.Picture.Hash);
+
+            if (timeSpan.TotalSeconds <= strictTimeThreshold ||
+                (timeSpan.TotalSeconds <= fallbackTimeThreshold && hammingDistance <= hashSimilarityThreshold)) {
+                currentGroup.Add(currentPic);
+            } else {
+                burstGroups.Add(currentGroup);
+                currentGroup = new List<PictureItemViewModel> { currentPic };
+            }
         }
+
+        burstGroups.Add(currentGroup);
 
         var groupIndex = 1;
-        var groupedIds = new HashSet<int>();
 
-        foreach (var group in groups) {
-            if (group.Count <= 1) {
-                continue;
-            }
-
-            var picVms = group.Select(p => {
-                    var vm = PicturesList.FirstOrDefault(vm => vm.Picture.Id == p.Id);
-                    if (vm != null) {
-                        groupedIds.Add(p.Id);
-                    }
-
-                    return vm;
-                }).Where(vm => vm != null).Cast<PictureItemViewModel>()
-                .OrderBy(vm => vm.Picture.CapturedAt)
-                .ToList();
-
-            if (picVms.Count == 0) {
-                continue;
-            }
-
-            var bestPic = picVms.OrderByDescending(vm => vm.Picture.Sharpness).FirstOrDefault();
+        // 3. Process ALL groups as burst groups (even singletons)
+        foreach (var group in burstGroups) {
+            // Mark the sharpest photo as the 'Best' (if it's a singleton, it automatically wins)
+            var bestPic = group.OrderByDescending(p => p.Picture.Sharpness).FirstOrDefault();
             if (bestPic != null) {
                 bestPic.IsBest = true;
             }
 
-            var header = $"Burst Group {groupIndex++} ({picVms.Count})";
-            var groupVm = new PictureGroupViewModel(header, header,
-                new ObservableCollection<PictureItemViewModel>(picVms), true);
-            GroupedPictures.Add(groupVm);
+            // Format the header dynamically depending on if it's a sequence or a single shot
+            var header = group.Count > 1
+                ? $"Burst {groupIndex} ({group.Count} photos)"
+                : $"Burst {groupIndex} (Single)";
+
+            groupIndex++;
+
+            // Pass 'true' to ensure the UI treats every single one as a burst group
+            GroupedPictures.Add(new PictureGroupViewModel(header, header,
+                new ObservableCollection<PictureItemViewModel>(group), true));
+        }
+    }
+
+    private int CalculateHammingDistance(ulong hash1, ulong hash2) {
+        var xor = hash1 ^ hash2;
+        var distance = 0;
+        while (xor != 0) {
+            distance += 1;
+            xor &= xor - 1;
         }
 
-        var unclassified = PicturesList.Where(vm => !groupedIds.Contains(vm.Picture.Id))
-            .OrderBy(vm => vm.Picture.CapturedAt)
-            .ToList();
-        if (unclassified.Count > 0) {
-            var header = $"Unclassified ({unclassified.Count})";
-            var groupVm = new PictureGroupViewModel("Unclassified", header,
-                new ObservableCollection<PictureItemViewModel>(unclassified));
-            GroupedPictures.Add(groupVm);
-        }
+        return distance;
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
@@ -277,7 +288,8 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
     private void PlayCarousel() {
         var window = new CarouselWindow();
-        var carouselVm = new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, window.Close);
+        var carouselVm =
+            new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, window.Close);
         window.DataContext = carouselVm;
 
         if (MainWindow.Instance != null) {
