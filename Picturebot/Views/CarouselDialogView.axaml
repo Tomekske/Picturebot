@@ -6,6 +6,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:converters="using:Picturebot.Converters"
              xmlns:enums="using:Domain.Enums"
+             xmlns:controls="using:Picturebot.Controls"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="Picturebot.Views.CarouselDialogView"
              x:DataType="vm:CarouselDialogViewModel"
@@ -17,8 +18,9 @@
     </UserControl.Resources>
 
     <Grid>
-        <Image Source="{Binding PreviewImage}"
-               Stretch="Uniform"
+        <controls:GpuAcceleratedCarousel
+               Items="{Binding Previews}"
+               SelectedIndex="{Binding CurrentIndex}"
                Margin="80,80,80,140"
                VerticalAlignment="Center"
                HorizontalAlignment="Center" />
