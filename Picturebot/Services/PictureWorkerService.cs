@@ -146,56 +146,59 @@ public class PictureWorkerService(
     private async Task<bool> ProcessPictureInternalAsync(Picture picture, IPathService pathService, ISettingsService settingsService, CancellationToken ct) {
         pathService.PopulatePaths(picture);
         
-        if (picture.SubFolder == null) return false;
-
-        // Determine analysis file (Prefer Preview if it exists, else RAW)
-        // Actually, for analysis we want the RAW or imported high-res file.
-        // During import, we copy raw to RAWs and preview to JPGs.
-        var analysisFile = picture.SubFolder.Preview;
-        if (!fileSystem.File.Exists(analysisFile)) {
-            analysisFile = picture.SubFolder.Raw;
-        }
-
-        if (!fileSystem.File.Exists(analysisFile)) {
-             // Try searching with extensions if Raw path is incomplete
-             var rawDir = fileSystem.Path.GetDirectoryName(picture.SubFolder.Raw);
-             if (rawDir != null && fileSystem.Directory.Exists(rawDir)) {
-                 var files = fileSystem.Directory.GetFiles(rawDir, picture.Name + ".*");
-                 analysisFile = files.FirstOrDefault() ?? analysisFile;
-             }
-        }
-
-        if (!fileSystem.File.Exists(analysisFile)) {
-            Log.Warning("Analysis file not found for {Name} at {Path}", picture.Name, analysisFile);
+        if (picture.SubFolder == null) {
+            Log.Error("SubFolder is null for Picture {Id} ({Name}). Ensure Parent (Album) is loaded.", picture.Id, picture.Name);
             return false;
         }
+
+        // Determine analysis file (Must use the JPG/Preview file)
+        var analysisFile = picture.SubFolder.Preview;
+        
+        if (!fileSystem.File.Exists(analysisFile)) {
+            Log.Warning("Analysis file (JPG) not found for {Name} (ID: {Id}) at {Preview}. Skipping analysis as RAW fallback is disabled.", 
+                picture.Name, picture.Id, picture.SubFolder.Preview);
+            return false;
+        }
+
+        Log.Information("Analyzing {Name} using {File}", picture.Name, analysisFile);
 
         // 1. Dimensions
         var dimResult = await pictureAnalyzer.GetDimensionsAsync(analysisFile);
         if (!dimResult.IsError) {
             picture.Width = dimResult.Value.Width;
             picture.Height = dimResult.Value.Height;
+        } else {
+             Log.Warning("Failed to get dimensions for {Name}: {Error}", picture.Name, dimResult.FirstError.Description);
         }
 
         // 2. Hash
         var hashResult = await pictureAnalyzer.CalculateHashAsync(analysisFile);
         if (!hashResult.IsError) {
             picture.Hash = hashResult.Value;
+        } else {
+             Log.Warning("Failed to calculate hash for {Name}: {Error}", picture.Name, hashResult.FirstError.Description);
         }
 
         // 3. Sharpness
         var sharpnessResult = await pictureAnalyzer.CalculateSharpnessAsync(analysisFile);
         if (!sharpnessResult.IsError) {
             picture.Sharpness = sharpnessResult.Value;
+        } else {
+             Log.Warning("Failed to calculate sharpness for {Name}: {Error}", picture.Name, sharpnessResult.FirstError.Description);
         }
 
         // 4. Preview Generation (If missing)
         if (!fileSystem.File.Exists(picture.SubFolder.Preview)) {
             var previewResult = await pictureProcessor.GenerateProcessedImageAsync(analysisFile, 2400, 2400, KnownResamplers.Lanczos3);
             if (!previewResult.IsError) {
-                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Preview)!);
-                await using var stream = fileSystem.File.OpenWrite(picture.SubFolder.Preview);
-                await previewResult.Value.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 }, ct);
+                using (var image = previewResult.Value) {
+                    fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Preview)!);
+                    await using var stream = fileSystem.File.OpenWrite(picture.SubFolder.Preview);
+                    await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 }, ct);
+                }
+                Log.Debug("Generated preview for {Name}", picture.Name);
+            } else {
+                Log.Warning("Failed to generate preview for {Name}: {Error}", picture.Name, previewResult.FirstError.Description);
             }
         }
 
@@ -203,9 +206,14 @@ public class PictureWorkerService(
         if (!fileSystem.File.Exists(picture.SubFolder.Thumbnail)) {
             var thumbResult = await pictureProcessor.GenerateProcessedImageAsync(analysisFile, 400, 400, KnownResamplers.Triangle);
             if (!thumbResult.IsError) {
-                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Thumbnail)!);
-                await using var stream = fileSystem.File.OpenWrite(picture.SubFolder.Thumbnail);
-                await thumbResult.Value.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 }, ct);
+                using (var image = thumbResult.Value) {
+                    fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Thumbnail)!);
+                    await using var stream = fileSystem.File.OpenWrite(picture.SubFolder.Thumbnail);
+                    await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 }, ct);
+                }
+                Log.Debug("Generated thumbnail for {Name}", picture.Name);
+            } else {
+                Log.Warning("Failed to generate thumbnail for {Name}: {Error}", picture.Name, thumbResult.FirstError.Description);
             }
         }
 
@@ -232,6 +240,7 @@ public class PictureWorkerService(
             picture.ProcessingState = state;
             if (state == ProcessingState.Completed) {
                  picture.LastErrorMessage = null;
+                 Log.Information("Picture {Id} ({Name}) processed successfully.", picture.Id, picture.Name);
             }
             await context.SaveChangesAsync();
         }
@@ -243,8 +252,12 @@ public class PictureWorkerService(
         var picture = await context.Pictures.FindAsync(pictureId);
         if (picture != null) {
             picture.RetryCount++;
-            picture.LastErrorMessage = error;
+            picture.LastErrorMessage = error ?? "Unknown error";
             picture.ProcessingState = picture.RetryCount >= MaxRetries ? ProcessingState.Failed : ProcessingState.Pending;
+            
+            Log.Warning("Picture {Id} ({Name}) processing failed (Attempt {Count}). Error: {Error}", 
+                picture.Id, picture.Name, picture.RetryCount, picture.LastErrorMessage);
+                
             await context.SaveChangesAsync();
         }
     }
