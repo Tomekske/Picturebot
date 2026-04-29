@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Threading;
 using AppRegistry.Infrastructure;
 using Avalonia;
 using Database.Infrastructure;
@@ -15,6 +16,7 @@ using Graph.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Picturebot.Services;
 using Picturebot.ViewModels;
 using PictureWorker.Domain.Interfaces;
@@ -104,7 +106,18 @@ internal sealed class Program {
 
             Log.Information("Database migrations applied successfully");
 
+            // Manually start hosted services
+            var hostedServices = App.Services.GetServices<IHostedService>();
+            foreach (var hostedService in hostedServices) {
+                hostedService.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+            }
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+
+            // Manually stop hosted services
+            foreach (var hostedService in hostedServices) {
+                hostedService.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+            }
         } catch (Exception ex) {
             Log.Fatal(ex, "Application terminated unexpectedly");
         } finally {
