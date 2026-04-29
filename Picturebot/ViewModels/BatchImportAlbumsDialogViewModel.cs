@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
@@ -19,8 +20,8 @@ namespace Picturebot.ViewModels;
 
 public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
     private readonly IImportAlbumsService _importAlbumsService;
-    private readonly ISettingsService _settingsService;
     private readonly Action _onCompleted;
+    private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
     private LocationItem? _selectedParent;
@@ -54,12 +55,34 @@ public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
     private async Task SelectSourcePathAsync() {
         try {
             var topLevel = MainWindow.Instance;
-            if (topLevel == null) return;
+            if (topLevel == null) {
+                return;
+            }
 
-            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
+            var options = new FolderPickerOpenOptions {
                 Title = "Select Root Directory for Import",
                 AllowMultiple = false
-            });
+            };
+
+            // Try to set a valid starting location to avoid platform-specific initialization crashes
+            var startPath = SourcePath;
+            if (string.IsNullOrWhiteSpace(startPath) || !Directory.Exists(startPath)) {
+                startPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (!Directory.Exists(startPath)) {
+                    startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                }
+            }
+
+            if (Directory.Exists(startPath)) {
+                try {
+                    options.SuggestedStartLocation =
+                        await topLevel.StorageProvider.TryGetFolderFromPathAsync(startPath);
+                } catch (Exception ex) {
+                    Log.Debug(ex, "Could not set suggested start location for folder picker");
+                }
+            }
+
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(options);
 
             if (folders.Any()) {
                 SourcePath = folders[0].Path.LocalPath;
@@ -103,7 +126,9 @@ public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
         }
     }
 
-    private bool CanStartImport() => !string.IsNullOrWhiteSpace(SourcePath);
+    private bool CanStartImport() {
+        return !string.IsNullOrWhiteSpace(SourcePath);
+    }
 
     [RelayCommand]
     private void Cancel() {

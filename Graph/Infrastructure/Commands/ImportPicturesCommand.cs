@@ -32,12 +32,14 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         _fileSystem = fileSystem;
         _pictureAnalyzer = pictureAnalyzer;
         _pictureProcessor = pictureProcessor;
-        _fileGrouper = new FileGrouper(fileSystem, pictureAnalyzer);
+
+        // Updated: FileGrouper now only needs the file system as it operates on cached DTOs
+        _fileGrouper = new FileGrouper(fileSystem);
     }
 
     public async Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath,
         IProgress<ImportProgress>? progress = null) {
-        // Task 1: Create the Album (Sub-folders are created by modified AlbumService)
+        // Task 1: Create the Album
         var album = await _albumService.CreateAsync(parentId, albumName, libraryPath);
         var albumPath = _fileSystem.Path.Combine(libraryPath, album.Uuid);
 
@@ -46,104 +48,169 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         var thumbnailsPath = _fileSystem.Path.Combine(albumPath, "Thumbnails");
         var pickedPath = _fileSystem.Path.Combine(albumPath, "Picked");
 
-        // Task 2: Group files
-        var groups = await _fileGrouper.GroupFilesAsync(sourcePath);
-        var totalCount = groups.Count;
+        // Ensure directories exist
+        _fileSystem.Directory.CreateDirectory(rawsPath);
+        _fileSystem.Directory.CreateDirectory(jpgsPath);
+        _fileSystem.Directory.CreateDirectory(thumbnailsPath);
+
+        // Task 2: Pre-calculation & Caching Phase
+        var allFiles = _fileSystem.Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories)
+            .Where(f => !f.StartsWith('.') && !f.StartsWith("._"))
+            .ToList();
+
+        // Pair RAW+JPG by name early to avoid double-hashing the same picture
+        var preGroupedByName = allFiles.GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f)).ToList();
+        var cachedDataList = new List<CachedPictureData>(); // Assumes this DTO is defined in your domain
+
+        var preProcessCount = 0;
+        foreach (var pair in preGroupedByName) {
+            preProcessCount++;
+            progress?.Report(new ImportProgress(preProcessCount, preGroupedByName.Count,
+                $"Analyzing metadata for {pair.Key}..."));
+
+            // Prefer JPG for faster hashing, fallback to RAW
+            var fileToHash = pair.FirstOrDefault(f =>
+                                 JpgExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()))
+                             ?? pair.First();
+
+            var hashResult = await _pictureAnalyzer.CalculateHashAsync(fileToHash);
+            var timeResult = await _pictureAnalyzer.ExtractTimestamp(fileToHash);
+            var dimensionResult = await _pictureAnalyzer.GetDimensionsAsync(fileToHash);
+
+            if (hashResult.IsError) {
+                continue;
+            }
+
+            var primaryDate = timeResult is { IsError: false }
+                ? timeResult.Value
+                : _fileSystem.File.GetCreationTime(fileToHash);
+
+            var width = dimensionResult is { IsError: false } ? dimensionResult.Value.Width : 0;
+            var height = dimensionResult is { IsError: false } ? dimensionResult.Value.Height : 0;
+
+            // Add all files in this pair (RAW and JPG) to the cache list sharing the same hash and date
+            foreach (var file in pair) {
+                cachedDataList.Add(new CachedPictureData {
+                    FilePath = file,
+                    PrimaryDate = primaryDate,
+                    PHash = hashResult.Value,
+                    Width = width,
+                    Height = height
+                });
+            }
+        }
+
+        // Task 3: Burst Grouping (In-Memory, O(N))
+        var groups = _fileGrouper.GroupFiles(cachedDataList);
+
+        // Count total unique images (pairs) across all burst groups for accurate progress reporting
+        var totalImageCount = groups.Sum(g =>
+            g.FilePaths.GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f)).Count());
         var processedCount = 0;
 
+        // Task 4: Import Process
         foreach (var group in groups) {
-            processedCount++;
-            var currentFile = group.BaseName;
-            progress?.Report(new ImportProgress(processedCount, totalCount, currentFile));
+            // A group might be a single photo, OR a burst containing multiple distinct photos.
+            // We group by original base name again to identify the RAW+JPG pairs *within* the burst.
+            var filePairsWithinBurst = group.FilePaths
+                .GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f))
+                .ToList();
 
-            // Task 4: Implementation of naming convention
-            var baseFileName = group.PrimaryDate.ToString("yyyy-MM-dd_HH-mm-ss");
+            var burstIndex = 1;
+            var isBurst = filePairsWithinBurst.Count > 1;
 
-            // Task 3: Classify files
-            var rawFile = group.FilePaths.FirstOrDefault(f =>
-                RawExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()));
-            var jpgFile = group.FilePaths.FirstOrDefault(f =>
-                JpgExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()));
+            foreach (var pair in filePairsWithinBurst) {
+                processedCount++;
+                progress?.Report(new ImportProgress(processedCount, totalImageCount, $"Importing {pair.Key}"));
 
-            // Task 4: Collision Handling for naming
-            var finalFileName = baseFileName;
-            var counter = 1;
-            while (_fileSystem.File.Exists(_fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg")) ||
-                   _fileSystem.File.Exists(_fileSystem.Path.Combine(rawsPath,
-                       finalFileName + _fileSystem.Path.GetExtension(rawFile ?? "")))) {
-                finalFileName = $"{baseFileName}_{counter++}";
-            }
+                var rawFile = pair.FirstOrDefault(f =>
+                    RawExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()));
+                var jpgFile = pair.FirstOrDefault(f =>
+                    JpgExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()));
 
-            string? importedJpgPath = null;
-            string? importedRawPath = null;
+                var analysisFile = jpgFile ?? rawFile;
+                if (analysisFile == null) {
+                    continue;
+                }
 
-            if (rawFile != null) {
-                var extension = _fileSystem.Path.GetExtension(rawFile);
-                importedRawPath = _fileSystem.Path.Combine(rawsPath, finalFileName + extension);
-                _fileSystem.File.Copy(rawFile, importedRawPath);
-            }
+                // We get the hash from the pre-calculation to save time
+                var cachedData = cachedDataList.First(c => c.FilePath == analysisFile);
+                var pHash = cachedData.PHash;
 
-            // Task 3: IPictureAnalyzer to get metrics
-            var analysisFile = jpgFile ?? rawFile;
-            if (analysisFile == null) {
-                continue;
-            }
+                // Check for duplicates before doing expensive processing
+                if (await _nodeService.IsPictureHashDuplicateAsync(album.Id, pHash)) {
+                    continue;
+                }
 
-            var hashResult = await _pictureAnalyzer.CalculateHashAsync(analysisFile);
-            var sharpnessResult = await _pictureAnalyzer.CalculateSharpnessAsync(analysisFile);
+                // Calculate sharpness here so we only run it on files that aren't duplicates
+                var sharpnessResult = await _pictureAnalyzer.CalculateSharpnessAsync(analysisFile);
+                if (sharpnessResult.IsError) {
+                    continue;
+                }
 
-            // Abort if metadata extraction fails. We do not want 0-value records in the DB.
-            if (hashResult.IsError || sharpnessResult.IsError) {
-                continue;
-            }
+                // Naming Convention: Append a burst suffix if this is part of a high-speed sequence
+                var baseFileName = cachedData.PrimaryDate.ToString("yyyy-MM-dd_HH-mm-ss");
+                if (isBurst) {
+                    baseFileName += $"_B{burstIndex++}";
+                }
 
-            // Prevent duplicate records for the same physical asset within the same album.
-            if (await _nodeService.IsPictureHashDuplicateAsync(album.Id, hashResult.Value)) {
-                continue;
-            }
+                // Collision Handling
+                var finalFileName = baseFileName;
+                var counter = 1;
+                while (_fileSystem.File.Exists(_fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg")) ||
+                       _fileSystem.File.Exists(_fileSystem.Path.Combine(rawsPath,
+                           finalFileName + _fileSystem.Path.GetExtension(rawFile ?? "")))) {
+                    finalFileName = $"{baseFileName}_{counter++}";
+                }
 
-            // Task 3: IPictureProcessor to generate a preview (auto-oriented)
-            // Preview Path (High Fidelity)
-            var previewResult =
-                await _pictureProcessor.GenerateProcessedImageAsync(analysisFile, 2400, 2400, KnownResamplers.Lanczos3);
-            if (previewResult is { IsError: false }) {
-                importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
-                await using var stream = _fileSystem.File.OpenWrite(importedJpgPath);
-                await previewResult.Value.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 });
-            } else if (jpgFile != null) {
-                // Fallback to simple copy if processing fails and we have a JPG
-                importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
-                _fileSystem.File.Copy(jpgFile, importedJpgPath);
-            }
+                // Copy RAW
+                if (rawFile != null) {
+                    var extension = _fileSystem.Path.GetExtension(rawFile);
+                    var importedRawPath = _fileSystem.Path.Combine(rawsPath, finalFileName + extension);
+                    _fileSystem.File.Copy(rawFile, importedRawPath);
+                }
 
-            // Task 3: IPictureProcessor to generate a thumbnail (auto-oriented)
-            // Thumbnail Path (Fast Path)
-            var thumbnailResult =
-                await _pictureProcessor.GenerateProcessedImageAsync(analysisFile, 400, 400, KnownResamplers.Triangle);
-            if (thumbnailResult is { IsError: false }) {
-                var thumbnailFile = _fileSystem.Path.Combine(thumbnailsPath, finalFileName + ".jpg");
-                await using var stream = _fileSystem.File.OpenWrite(thumbnailFile);
-                await thumbnailResult.Value.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 });
-            }
+                // Generate High-Fidelity Preview
+                var previewResult =
+                    await _pictureProcessor.GenerateProcessedImageAsync(analysisFile, 2400, 2400,
+                        KnownResamplers.Lanczos3);
+                if (previewResult is { IsError: false }) {
+                    var importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
+                    await using var stream = _fileSystem.File.OpenWrite(importedJpgPath);
+                    await previewResult.Value.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 });
+                } else if (jpgFile != null) {
+                    var importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
+                    _fileSystem.File.Copy(jpgFile, importedJpgPath);
+                }
 
-            // Task 3: Persists a new Picture node via INodeService
-            var pictureNode = new Picture {
-                Name = finalFileName,
-                ParentId = album.Id,
-                Type = NodeType.Picture,
-                CapturedAt = group.PrimaryDate,
-                Hash = hashResult.IsError ? 0 : hashResult.Value,
-                Sharpness = sharpnessResult.IsError ? 0 : sharpnessResult.Value
-            };
+                // Generate Thumbnail
+                var thumbnailResult =
+                    await _pictureProcessor.GenerateProcessedImageAsync(analysisFile, 400, 400,
+                        KnownResamplers.Triangle);
+                if (thumbnailResult is { IsError: false }) {
+                    var thumbnailFile = _fileSystem.Path.Combine(thumbnailsPath, finalFileName + ".jpg");
+                    await using var stream = _fileSystem.File.OpenWrite(thumbnailFile);
+                    await thumbnailResult.Value.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 });
+                }
 
-            await _nodeService.CreateNodeAsync(pictureNode);
-            
-            // The service already set pictureNode.Parent = album, which might trigger EF fix-up
-            // and add it to album.Children if they share the same context. 
-            // We check to avoid doubling.
-            album.Children ??= new List<Node>();
-            if (!album.Children.Contains(pictureNode)) {
-                album.Children.Add(pictureNode);
+                // Persist to Database
+                var pictureNode = new Picture {
+                    Name = finalFileName,
+                    ParentId = album.Id,
+                    Type = NodeType.Picture,
+                    CapturedAt = cachedData.PrimaryDate,
+                    Hash = pHash,
+                    Sharpness = sharpnessResult.Value,
+                    Width = cachedData.Width,
+                    Height = cachedData.Height
+                };
+
+                await _nodeService.CreateNodeAsync(pictureNode);
+
+                album.Children ??= new List<Node>();
+                if (!album.Children.Contains(pictureNode)) {
+                    album.Children.Add(pictureNode);
+                }
             }
         }
 

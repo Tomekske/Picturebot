@@ -31,6 +31,16 @@ public class Settings {
     public int GroupingThreshold { get; set; } = 5;
 
     /// <summary>
+    ///     Maximum time gap in seconds to consider pictures as part of a burst without checking visual similarity.
+    /// </summary>
+    public int BurstTimeThresholdSeconds { get; set; } = 3;
+
+    /// <summary>
+    ///     Maximum time gap in seconds to consider pictures as part of a burst if they are visually similar.
+    /// </summary>
+    public int BurstFallbackTimeThresholdSeconds { get; set; } = 10;
+
+    /// <summary>
     ///     Indicates whether the application should launch in a maximized window state.
     /// </summary>
     public bool LaunchMaximized { get; set; }

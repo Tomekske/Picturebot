@@ -1,89 +1,171 @@
 using System.IO.Abstractions.TestingHelpers;
 using Graph.Infrastructure.Utilities;
-using Moq;
-using PictureWorker.Domain.Interfaces;
-using ErrorOr;
+// Assumes CachedPictureData and FileGroup are here
 
 namespace Graph.Test;
 
 [TestFixture]
 public class FileGrouperTests {
     private MockFileSystem _mockFileSystem;
-    private Mock<IPictureAnalyzer> _mockPictureAnalyzer;
     private FileGrouper _fileGrouper;
 
     [SetUp]
     public void Setup() {
+        // MockFileSystem automatically handles cross-platform Path operations 
+        // without needing to touch the physical disk.
         _mockFileSystem = new MockFileSystem();
-        _mockPictureAnalyzer = new Mock<IPictureAnalyzer>();
-        _fileGrouper = new FileGrouper(_mockFileSystem, _mockPictureAnalyzer.Object);
+        _fileGrouper = new FileGrouper(_mockFileSystem);
+    }
+
+    // Helper method to keep test arrangement clean
+    private static CachedPictureData CreateCachedData(string path, DateTime time, ulong pHash) {
+        return new CachedPictureData {
+            FilePath = path,
+            PrimaryDate = time,
+            PHash = pHash
+        };
     }
 
     [Test]
-    public async Task GroupFilesAsync_ShouldGroupFilesByBaseName() {
+    public void GroupFiles_ShouldGroupByTimeAndHash_WhenWithinThreshold() {
         // Arrange
-        var sourcePath = @"C:\Source";
-        _mockFileSystem.AddDirectory(sourcePath);
-        _mockFileSystem.AddFile(Path.Combine(sourcePath, "photo1.jpg"), new MockFileData(""));
-        _mockFileSystem.AddFile(Path.Combine(sourcePath, "photo1.raw"), new MockFileData(""));
-        _mockFileSystem.AddFile(Path.Combine(sourcePath, "photo2.jpg"), new MockFileData(""));
+        var baseTime = new DateTime(2025, 1, 1, 12, 0, 0);
 
-        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(It.IsAny<string>()))
-            .ReturnsAsync(Error.Failure("No metadata"));
+        // Hashes differ by exactly 1 bit (Hamming distance = 1), well within threshold
+        var files = new List<CachedPictureData> {
+            CreateCachedData(@"C:\Source\Seq_100.jpg", baseTime, 0b0000),
+            CreateCachedData(@"C:\Source\Seq_101.jpg", baseTime.AddSeconds(1), 0b0001),
+            CreateCachedData(@"C:\Source\Seq_102.jpg", baseTime.AddSeconds(2), 0b0011)
+        };
 
         // Act
-        var result = await _fileGrouper.GroupFilesAsync(sourcePath);
-
-        // Assert
-        Assert.That(result, Has.Count.EqualTo(2));
-        var group1 = result.First(g => g.BaseName == "photo1");
-        Assert.That(group1.FilePaths, Has.Count.EqualTo(2));
-        var group2 = result.First(g => g.BaseName == "photo2");
-        Assert.That(group2.FilePaths, Has.Count.EqualTo(1));
-    }
-
-    [Test]
-    public async Task GroupFilesAsync_ShouldPrioritizeMetadataTimestamp() {
-        // Arrange
-        var sourcePath = @"C:\Source";
-        var metadataDate = new DateTime(2025, 1, 1, 12, 0, 0);
-        _mockFileSystem.AddDirectory(sourcePath);
-        var jpgPath = Path.Combine(sourcePath, "photo1.jpg");
-        var rawPath = Path.Combine(sourcePath, "photo1.raw");
-        _mockFileSystem.AddFile(jpgPath, new MockFileData(""));
-        _mockFileSystem.AddFile(rawPath, new MockFileData(""));
-
-        // Mock jpg having no metadata, but raw having it
-        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(jpgPath))
-            .ReturnsAsync(Error.Failure("No metadata"));
-        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(rawPath))
-            .ReturnsAsync(metadataDate);
-
-        // Act
-        var result = await _fileGrouper.GroupFilesAsync(sourcePath);
-
-        // Assert
-        var group = result.First(g => g.BaseName == "photo1");
-        Assert.That(group.PrimaryDate, Is.EqualTo(metadataDate));
-    }
-
-    [Test]
-    public async Task GroupFilesAsync_ShouldIgnoreGhostFiles() {
-        // Arrange
-        var sourcePath = @"C:\Source";
-        _mockFileSystem.AddDirectory(sourcePath);
-        _mockFileSystem.AddFile(Path.Combine(sourcePath, "photo1.jpg"), new MockFileData(""));
-        _mockFileSystem.AddFile(Path.Combine(sourcePath, "._photo1.jpg"), new MockFileData("mac ghost"));
-        _mockFileSystem.AddFile(Path.Combine(sourcePath, ".DS_Store"), new MockFileData("ds store"));
-
-        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(It.IsAny<string>()))
-            .ReturnsAsync(Error.Failure("No metadata"));
-
-        // Act
-        var result = await _fileGrouper.GroupFilesAsync(sourcePath);
+        var result = _fileGrouper.GroupFiles(files);
 
         // Assert
         Assert.That(result, Has.Count.EqualTo(1));
-        Assert.That(result[0].BaseName, Is.EqualTo("photo1"));
+        Assert.That(result[0].FilePaths, Has.Count.EqualTo(3));
+        Assert.That(result[0].BaseName, Does.StartWith("Burst_"));
+    }
+
+    [Test]
+    public void GroupFiles_ShouldGroupExactNames_CaseInsensitive() {
+        // Arrange
+        var baseTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var files = new List<CachedPictureData> {
+            CreateCachedData(@"C:\Source\IMG_001.JPG", baseTime, 0),
+            CreateCachedData(@"C:\Source\img_001.cr2", baseTime, 0)
+        };
+
+        // Act
+        var result = _fileGrouper.GroupFiles(files);
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(result[0].BaseName, Is.EqualTo("IMG_001").IgnoreCase);
+        Assert.That(result[0].FilePaths, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void GroupFiles_ShouldGroupExplicitBurstPatterns() {
+        // Arrange
+        var baseTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var files = new List<CachedPictureData> {
+            CreateCachedData(@"C:\Source\Photo_BURST1.jpg", baseTime, 0),
+            CreateCachedData(@"C:\Source\Photo_BURST2.jpg", baseTime, 0),
+            CreateCachedData(@"C:\Source\Event-1.jpg", baseTime, 0),
+            CreateCachedData(@"C:\Source\Event-2.jpg", baseTime, 0)
+        };
+
+        // Act
+        var result = _fileGrouper.GroupFiles(files);
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(2), "Should create two distinct pattern groups");
+
+        var burstGroup = result.First(g => g.BaseName == "Photo");
+        Assert.That(burstGroup.FilePaths, Has.Count.EqualTo(2));
+
+        var eventGroup = result.First(g => g.BaseName == "Event");
+        Assert.That(eventGroup.FilePaths, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void GroupFiles_ShouldHandleEmptyList() {
+        // Arrange
+        var files = new List<CachedPictureData>();
+
+        // Act
+        var result = _fileGrouper.GroupFiles(files);
+
+        // Assert
+        Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public void GroupFiles_ShouldProcessWaterfallCorrectly_PatternThenTime() {
+        // Arrange
+        var baseTime = new DateTime(2025, 1, 1, 12, 0, 0);
+
+        var files = new List<CachedPictureData> {
+            // Pair 1: Should be caught by Pass 1 (Exact Match)
+            CreateCachedData(@"C:\Source\Pair1.jpg", baseTime, 100),
+            CreateCachedData(@"C:\Source\Pair1.raw", baseTime, 100),
+
+            // Burst: Should be caught by Pass 2 (Time & Hash)
+            CreateCachedData(@"C:\Source\Random_01.jpg", baseTime.AddMinutes(5), 0b1010),
+            CreateCachedData(@"C:\Source\Random_02.jpg", baseTime.AddMinutes(5).AddSeconds(1), 0b1010)
+        };
+
+        // Act
+        var result = _fileGrouper.GroupFiles(files);
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(2));
+
+        var patternGroup = result.FirstOrDefault(g => g.BaseName == "Pair1");
+        Assert.That(patternGroup, Is.Not.Null);
+        Assert.That(patternGroup!.FilePaths, Has.Count.EqualTo(2));
+
+        var burstGroup = result.FirstOrDefault(g => g.BaseName.StartsWith("Burst_"));
+        Assert.That(burstGroup, Is.Not.Null);
+        Assert.That(burstGroup!.FilePaths, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void GroupFiles_ShouldSplitBurst_WhenHashThresholdExceeded() {
+        // Arrange
+        var baseTime = new DateTime(2025, 1, 1, 12, 0, 0);
+
+        // Time gap is within threshold (1 sec), but images are completely different (max hamming distance)
+        var files = new List<CachedPictureData> {
+            CreateCachedData(@"C:\Source\Seq_100.jpg", baseTime, 0),
+            CreateCachedData(@"C:\Source\Seq_101.jpg", baseTime.AddSeconds(1), ulong.MaxValue)
+        };
+
+        // Act
+        var result = _fileGrouper.GroupFiles(files);
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void GroupFiles_ShouldSplitBurst_WhenTimeThresholdExceeded() {
+        // Arrange
+        var baseTime = new DateTime(2025, 1, 1, 12, 0, 0);
+
+        // Exact same hash, but time gap is > 2 seconds
+        var files = new List<CachedPictureData> {
+            CreateCachedData(@"C:\Source\Seq_100.jpg", baseTime, 0),
+            CreateCachedData(@"C:\Source\Seq_101.jpg", baseTime.AddSeconds(3), 0)
+        };
+
+        // Act
+        var result = _fileGrouper.GroupFiles(files);
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(2));
+        Assert.That(result[0].FilePaths, Has.Count.EqualTo(1));
+        Assert.That(result[1].FilePaths, Has.Count.EqualTo(1));
     }
 }
