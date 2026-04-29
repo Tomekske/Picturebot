@@ -41,11 +41,6 @@ public class Settings {
     public int BurstFallbackTimeThresholdSeconds { get; set; } = 10;
 
     /// <summary>
-    ///     Perceptual hash threshold for the fallback burst grouping.
-    /// </summary>
-    public int BurstHashSimilarityThreshold { get; set; } = 8;
-
-    /// <summary>
     ///     Indicates whether the application should launch in a maximized window state.
     /// </summary>
     public bool LaunchMaximized { get; set; }

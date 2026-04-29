@@ -22,10 +22,5 @@ public class SettingsModel {
     /// </summary>
     public int BurstFallbackTimeThresholdSeconds { get; set; } = 10;
 
-    /// <summary>
-    ///     Perceptual hash threshold for the fallback burst grouping.
-    /// </summary>
-    public int BurstHashSimilarityThreshold { get; set; } = 8;
-
     public bool LaunchMaximized { get; set; } = false;
 }

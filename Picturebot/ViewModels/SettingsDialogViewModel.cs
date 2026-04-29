@@ -23,13 +23,10 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private int _burstFallbackThreshold = 10;
 
     [ObservableProperty]
-    private int _burstHashThreshold = 8;
-
-    [ObservableProperty]
     private int _burstTimeThreshold = 3;
 
     [ObservableProperty]
-    private int _clusterThreshold = 10;
+    private int _groupingThreshold = 10;
 
     [ObservableProperty]
     private bool _launchFullScreen;
@@ -64,10 +61,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
         var settings = _settingsService.Current;
         LibraryLocation = settings.LibraryPath ?? string.Empty;
-        ClusterThreshold = settings.GroupingThreshold;
+        GroupingThreshold = settings.GroupingThreshold;
         BurstTimeThreshold = settings.BurstTimeThresholdSeconds;
         BurstFallbackThreshold = settings.BurstFallbackTimeThresholdSeconds;
-        BurstHashThreshold = settings.BurstHashSimilarityThreshold;
         LaunchFullScreen = settings.LaunchMaximized;
 
         ThemeIndex = settings.ThemeMode switch {
@@ -140,10 +136,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
         var settings = new SettingsModel {
             LibraryPath = LibraryLocation,
-            GroupingThreshold = ClusterThreshold,
+            GroupingThreshold = GroupingThreshold,
             BurstTimeThresholdSeconds = BurstTimeThreshold,
             BurstFallbackTimeThresholdSeconds = BurstFallbackThreshold,
-            BurstHashSimilarityThreshold = BurstHashThreshold,
             LaunchMaximized = LaunchFullScreen,
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,

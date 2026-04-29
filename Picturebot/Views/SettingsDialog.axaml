@@ -66,9 +66,9 @@
         </StackPanel>
 
         <StackPanel Spacing="10">
-            <TextBlock Text="CLUSTER THRESHOLD" FontSize="11" FontWeight="Bold"
+            <TextBlock Text="GROUPING THRESHOLD" FontSize="11" FontWeight="Bold"
                        Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-            <NumericUpDown Value="{Binding ClusterThreshold}"
+            <NumericUpDown Value="{Binding GroupingThreshold}"
                            Minimum="1"
                            Maximum="100"
                            FormatString="0"
@@ -95,18 +95,6 @@
             <NumericUpDown Value="{Binding BurstFallbackThreshold}"
                            Minimum="1"
                            Maximum="120"
-                           FormatString="0"
-                           HorizontalAlignment="Left"
-                           Width="120"
-                           Height="40" />
-        </StackPanel>
-
-        <StackPanel Spacing="10">
-            <TextBlock Text="BURST HASH THRESHOLD" FontSize="11" FontWeight="Bold"
-                       Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-            <NumericUpDown Value="{Binding BurstHashThreshold}"
-                           Minimum="1"
-                           Maximum="64"
                            FormatString="0"
                            HorizontalAlignment="Left"
                            Width="120"

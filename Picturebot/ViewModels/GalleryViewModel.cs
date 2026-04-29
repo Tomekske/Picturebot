@@ -196,7 +196,7 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         var fallbackThreshold = settings.BurstFallbackTimeThresholdSeconds > 0
             ? settings.BurstFallbackTimeThresholdSeconds
             : 10;
-        var hashThreshold = settings.BurstHashSimilarityThreshold > 0 ? settings.BurstHashSimilarityThreshold : 8;
+        var hashThreshold = settings.GroupingThreshold > 0 ? settings.GroupingThreshold : 8;
 
         // 2. Sort everything chronologically
         var sortedPics = PicturesList.OrderBy(p => p.Picture.CapturedAt).ToList();

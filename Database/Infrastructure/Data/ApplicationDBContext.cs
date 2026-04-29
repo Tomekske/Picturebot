@@ -70,7 +70,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 GroupingThreshold = 8,
                 BurstTimeThresholdSeconds = 3,
                 BurstFallbackTimeThresholdSeconds = 10,
-                BurstHashSimilarityThreshold = 8,
                 LaunchMaximized = false
             }
         );
