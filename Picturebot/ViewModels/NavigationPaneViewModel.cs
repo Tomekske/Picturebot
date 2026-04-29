@@ -27,6 +27,7 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
     private readonly IImportPicturesCommand _importCommand;
     private readonly INodeService _nodeService;
     private readonly ISettingsService _settingsService;
+    private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
 
     [ObservableProperty]
     private ObservableCollection<NavigationNodeViewModel> _folders = new();
@@ -37,13 +38,15 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
         IAlbumService albumService,
         IImportAlbumsService importAlbumsService,
         ISettingsService settingsService,
-        IImportPicturesCommand importCommand) {
+        IImportPicturesCommand importCommand,
+        Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory) {
         _nodeService = nodeService;
         _folderService = folderService;
         _albumService = albumService;
         _importAlbumsService = importAlbumsService;
         _settingsService = settingsService;
         _importCommand = importCommand;
+        _scopeFactory = scopeFactory;
         _ = LoadFoldersAsync();
 
         WeakReferenceMessenger.Default.Register(this);
@@ -82,7 +85,7 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
     public async Task OpenAddAlbumDialogAsync() {
         var folders = await _folderService.FindAllAsync();
 
-        var vm = new AddAlbumDialogViewModel(_albumService, _importCommand, _settingsService, folders, result => {
+        var vm = new AddAlbumDialogViewModel(_albumService, _importCommand, _settingsService, _scopeFactory, folders, result => {
             if (result != null) {
                 Log.Information("Album creation process started/finished for: {result}", result.Name);
 

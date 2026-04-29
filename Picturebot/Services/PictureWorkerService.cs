@@ -227,11 +227,20 @@ public class PictureWorkerService(
             await pictureProcessor.GenerateProcessedImageAsync(analysisSource, 2400, 2400, KnownResamplers.Lanczos3);
         if (!previewResult.IsError) {
             using (var image = previewResult.Value) {
-                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Preview)!);
+                var previewPath = picture.SubFolder.Preview;
+                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(previewPath)!);
                 
-                // Use File.Create to ensure the file is truncated if it already exists (e.g. original large JPG)
-                await using var stream = fileSystem.File.Create(picture.SubFolder.Preview);
-                await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 }, ct);
+                // Use a temporary file if we are overwriting the source to avoid locks/corruption
+                var useTemp = string.Equals(analysisSource, previewPath, StringComparison.OrdinalIgnoreCase);
+                var writePath = useTemp ? previewPath + ".tmp" : previewPath;
+
+                await using (var stream = fileSystem.File.Create(writePath)) {
+                    await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 }, ct);
+                }
+
+                if (useTemp) {
+                    fileSystem.File.Move(writePath, previewPath, true);
+                }
             }
 
             Log.Debug("Generated preview for {Name}", picture.Name);
@@ -245,11 +254,10 @@ public class PictureWorkerService(
             await pictureProcessor.GenerateProcessedImageAsync(analysisSource, 400, 400, KnownResamplers.Triangle);
         if (!thumbResult.IsError) {
             using (var image = thumbResult.Value) {
-                fileSystem.Directory.CreateDirectory(
-                    fileSystem.Path.GetDirectoryName(picture.SubFolder.Thumbnail)!);
+                var thumbPath = picture.SubFolder.Thumbnail;
+                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(thumbPath)!);
                 
-                // Use File.Create to ensure truncation
-                await using var stream = fileSystem.File.Create(picture.SubFolder.Thumbnail);
+                await using var stream = fileSystem.File.Create(thumbPath);
                 await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 }, ct);
             }
 

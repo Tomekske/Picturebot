@@ -14,7 +14,6 @@ public class ImportPicturesCommand : IImportPicturesCommand {
     private static readonly string[] RawExtensions = SupportedImageExtensions.RawExtensions;
     private static readonly string[] JpgExtensions = SupportedImageExtensions.JpgExtensions;
     private readonly IAlbumService _albumService;
-    private readonly FileGrouper _fileGrouper;
     private readonly IFileSystem _fileSystem;
     private readonly INodeService _nodeService;
     private readonly IPictureAnalyzer _pictureAnalyzer;
@@ -28,9 +27,6 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         _nodeService = nodeService;
         _fileSystem = fileSystem;
         _pictureAnalyzer = pictureAnalyzer;
-
-        // Updated: FileGrouper now only needs the file system as it operates on cached DTOs
-        _fileGrouper = new FileGrouper(fileSystem);
     }
 
     public async Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath,
@@ -51,8 +47,13 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         _fileSystem.Directory.CreateDirectory(thumbnailsPath);
 
         // Task 2: Pre-calculation & Caching Phase (Fast Metadata Only)
-        var allFiles = _fileSystem.Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories)
-            .Where(f => !f.StartsWith('.') && !f.StartsWith("._"))
+        var allFiles = _fileSystem.Directory.GetFiles(sourcePath, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(f => {
+                var fileName = _fileSystem.Path.GetFileName(f);
+                return !fileName.StartsWith('.') &&
+                       SupportedImageExtensions.AllExtensions.Contains(_fileSystem.Path.GetExtension(f)
+                           .ToUpperInvariant());
+            })
             .ToList();
 
         var preGroupedByName = allFiles.GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f)).ToList();
@@ -86,84 +87,72 @@ public class ImportPicturesCommand : IImportPicturesCommand {
             }
         }
 
-        // Task 3: Burst Grouping (In-Memory, O(N))
-        var groups = _fileGrouper.GroupFiles(cachedDataList);
+        // Task 3: Import Process (Copying Files Only)
+        var filePairs = cachedDataList
+            .GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f.FilePath))
+            .ToList();
 
-        var totalImageCount = groups.Sum(g =>
-            g.FilePaths.GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f)).Count());
+        var totalImageCount = filePairs.Count;
         var processedCount = 0;
 
-        // Task 4: Import Process (Copying Files Only)
-        foreach (var group in groups) {
-            var filePairsWithinBurst = group.FilePaths
-                .GroupBy(f => _fileSystem.Path.GetFileNameWithoutExtension(f))
-                .ToList();
+        foreach (var pair in filePairs) {
+            processedCount++;
+            progress?.Report(new ImportProgress(processedCount, totalImageCount, $"Importing {pair.Key}"));
 
-            var burstIndex = 1;
-            var isBurst = filePairsWithinBurst.Count > 1;
+            var rawFile = pair.FirstOrDefault(f =>
+                RawExtensions.Contains(_fileSystem.Path.GetExtension(f.FilePath).ToUpperInvariant()));
+            var jpgFile = pair.FirstOrDefault(f =>
+                JpgExtensions.Contains(_fileSystem.Path.GetExtension(f.FilePath).ToUpperInvariant()));
 
-            foreach (var pair in filePairsWithinBurst) {
-                processedCount++;
-                progress?.Report(new ImportProgress(processedCount, totalImageCount, $"Importing {pair.Key}"));
+            var analysisFile = jpgFile ?? rawFile;
+            if (analysisFile == null) {
+                continue;
+            }
 
-                var rawFile = pair.FirstOrDefault(f =>
-                    RawExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()));
-                var jpgFile = pair.FirstOrDefault(f =>
-                    JpgExtensions.Contains(_fileSystem.Path.GetExtension(f).ToUpperInvariant()));
+            var cachedData = analysisFile;
 
-                var analysisFile = jpgFile ?? rawFile;
-                if (analysisFile == null) {
-                    continue;
-                }
+            // Naming Convention
+            var baseFileName = cachedData.PrimaryDate.ToString("yyyy-MM-dd_HH-mm-ss");
 
-                var cachedData = cachedDataList.First(c => c.FilePath == analysisFile);
+            var finalFileName = baseFileName;
+            var counter = 1;
 
-                // Naming Convention
-                var baseFileName = cachedData.PrimaryDate.ToString("yyyy-MM-dd_HH-mm-ss");
-                if (isBurst) {
-                    baseFileName += $"_B{burstIndex++}";
-                }
+            while (_fileSystem.File.Exists(_fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg")) ||
+                   _fileSystem.File.Exists(_fileSystem.Path.Combine(rawsPath,
+                       finalFileName + _fileSystem.Path.GetExtension(rawFile?.FilePath ?? ""))) ||
+                   await _nodeService.ExistsAsync(album.Id, finalFileName, NodeType.Picture)) {
+                finalFileName = $"{baseFileName}_{counter++}";
+            }
 
-                var finalFileName = baseFileName;
-                var counter = 1;
+            // Copy RAW
+            string? rawExtension = null;
+            if (rawFile != null) {
+                rawExtension = _fileSystem.Path.GetExtension(rawFile.FilePath);
+                var importedRawPath = _fileSystem.Path.Combine(rawsPath, finalFileName + rawExtension);
+                _fileSystem.File.Copy(rawFile.FilePath, importedRawPath);
+            }
 
-                while (_fileSystem.File.Exists(_fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg")) ||
-                       _fileSystem.File.Exists(_fileSystem.Path.Combine(rawsPath,
-                           finalFileName + _fileSystem.Path.GetExtension(rawFile ?? ""))) ||
-                       await _nodeService.ExistsAsync(album.Id, finalFileName, NodeType.Picture)) {
-                    finalFileName = $"{baseFileName}_{counter++}";
-                }
+            // Copy Analysis File (JPG) to JPGs folder for background worker to use
+            if (jpgFile != null) {
+                var importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
+                _fileSystem.File.Copy(jpgFile.FilePath, importedJpgPath);
+            }
 
-                // Copy RAW
-                string? rawExtension = null;
-                if (rawFile != null) {
-                    rawExtension = _fileSystem.Path.GetExtension(rawFile);
-                    var importedRawPath = _fileSystem.Path.Combine(rawsPath, finalFileName + rawExtension);
-                    _fileSystem.File.Copy(rawFile, importedRawPath);
-                }
+            // Persist to Database as PENDING
+            var pictureNode = new Picture {
+                Name = finalFileName,
+                ParentId = album.Id,
+                Type = NodeType.Picture,
+                CapturedAt = cachedData.PrimaryDate,
+                ProcessingState = ProcessingState.Pending,
+                Extension = rawExtension
+            };
 
-                // Copy Analysis File (JPG) to JPGs folder for background worker to use
-                if (jpgFile != null) {
-                    var importedJpgPath = _fileSystem.Path.Combine(jpgsPath, finalFileName + ".jpg");
-                    _fileSystem.File.Copy(jpgFile, importedJpgPath);
-                }
+            await _nodeService.CreateNodeAsync(pictureNode);
 
-                // Persist to Database as PENDING
-                var pictureNode = new Picture {
-                    Name = finalFileName,
-                    ParentId = album.Id,
-                    Type = NodeType.Picture,
-                    CapturedAt = cachedData.PrimaryDate,
-                    ProcessingState = ProcessingState.Pending,
-                    Extension = rawExtension
-                };
-
-                await _nodeService.CreateNodeAsync(pictureNode);
-
-                album.Children ??= new List<Node>();
-                if (!album.Children.Contains(pictureNode)) {
-                    album.Children.Add(pictureNode);
-                }
+            album.Children ??= new List<Node>();
+            if (!album.Children.Contains(pictureNode)) {
+                album.Children.Add(pictureNode);
             }
         }
 

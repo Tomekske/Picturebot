@@ -9,12 +9,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Database.Domain.Entities;
 using Domain.Interfaces;
-using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
-using Graph.Infrastructure.Commands;
+using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Views;
 using Serilog;
-using SukiUI.Dialogs;
 
 namespace Picturebot.ViewModels;
 
@@ -22,6 +20,7 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
     private readonly IAlbumService _albumService;
     private readonly IImportPicturesCommand _importCommand;
     private readonly Action<Album?> _onResult;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
@@ -39,11 +38,13 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
         IAlbumService albumService,
         IImportPicturesCommand importCommand,
         ISettingsService settingsService,
+        IServiceScopeFactory scopeFactory,
         List<Folder> existingFolders,
         Action<Album?> onResult) {
         _albumService = albumService;
         _importCommand = importCommand;
         _settingsService = settingsService;
+        _scopeFactory = scopeFactory;
         _onResult = onResult;
 
         Parents.Add(new LocationItem { Name = "Library", Id = null });
@@ -80,7 +81,8 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
 
             if (Directory.Exists(startPath)) {
                 try {
-                    options.SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(startPath);
+                    options.SuggestedStartLocation =
+                        await topLevel.StorageProvider.TryGetFolderFromPathAsync(startPath);
                 } catch (Exception ex) {
                     Log.Debug(ex, "Could not set suggested start location for folder picker");
                 }
@@ -120,12 +122,21 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
             return;
         }
 
+        // Capture local variables for the background task
+        var parentId = SelectedParent?.Id;
+        var albumName = AlbumName;
+        var sourcePath = SourcePath;
+
         // Close the current input dialog immediately
         MainWindow.DialogManager.DismissDialog();
 
         try {
-            // Start the import in the background. ExecuteAsync only does copying now.
-            var album = await _importCommand.ExecuteAsync(SelectedParent?.Id, AlbumName, libraryPath, SourcePath);
+            // Start the import in the background using a dedicated scope for thread-safety.
+            var album = await Task.Run(async () => {
+                using var scope = _scopeFactory.CreateScope();
+                var scopedImportCommand = scope.ServiceProvider.GetRequiredService<IImportPicturesCommand>();
+                return await scopedImportCommand.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+            });
 
             _onResult(album);
         } catch (Exception ex) {

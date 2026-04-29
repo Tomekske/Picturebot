@@ -125,4 +125,54 @@ public class ImportPicturesCommandTests {
                 p.Sharpness == 0)), Times.Once);
         });
     }
+
+    [Test]
+    public async Task ExecuteAsync_ShouldIgnoreHiddenFilesAndSubdirectories() {
+        // Arrange
+        var parentId = 1;
+        var albumName = "Filtered Album";
+        var libraryPath = @"C:\Library";
+        var sourcePath = @"C:\Source";
+        var albumUuid = "album-filtered";
+        var albumPath = _mockFileSystem.Path.Combine(libraryPath, albumUuid);
+
+        var album = new Album { Id = 12, Uuid = albumUuid, Name = albumName };
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+            .ReturnsAsync(album);
+
+        _mockFileSystem.AddDirectory(sourcePath);
+        _mockFileSystem.AddDirectory(albumPath);
+        _mockFileSystem.AddDirectory(_mockFileSystem.Path.Combine(albumPath, "RAWs"));
+        _mockFileSystem.AddDirectory(_mockFileSystem.Path.Combine(albumPath, "JPGs"));
+        _mockFileSystem.AddDirectory(_mockFileSystem.Path.Combine(albumPath, "Thumbnails"));
+
+        var capturedDate = new DateTime(2026, 4, 1, 12, 0, 0);
+        
+        // 1. Valid image
+        var validPhotoPath = _mockFileSystem.Path.Combine(sourcePath, "photo1.jpg");
+        _mockFileSystem.AddFile(validPhotoPath, new MockFileData("valid"));
+        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(validPhotoPath))
+            .ReturnsAsync(capturedDate);
+
+        // 2. Hidden macOS file
+        var hiddenPath = _mockFileSystem.Path.Combine(sourcePath, "._photo1.jpg");
+        _mockFileSystem.AddFile(hiddenPath, new MockFileData("hidden"));
+
+        // 3. File in subdirectory (should be ignored due to TopDirectoryOnly)
+        var subDirPath = _mockFileSystem.Path.Combine(sourcePath, "SubDir");
+        _mockFileSystem.AddDirectory(subDirPath);
+        var subDirPhotoPath = _mockFileSystem.Path.Combine(subDirPath, "photo2.jpg");
+        _mockFileSystem.AddFile(subDirPhotoPath, new MockFileData("subdir photo"));
+
+        // 4. Non-image file
+        var textFilePath = _mockFileSystem.Path.Combine(sourcePath, "notes.txt");
+        _mockFileSystem.AddFile(textFilePath, new MockFileData("notes"));
+
+        // Act
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+
+        // Assert
+        Assert.That(resultAlbum.Children.Count, Is.EqualTo(1), "Only the valid top-level photo should be imported.");
+        Assert.That(resultAlbum.Children.First().Name, Is.EqualTo(capturedDate.ToString("yyyy-MM-dd_HH-mm-ss")));
+    }
 }
