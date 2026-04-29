@@ -7,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -23,7 +24,11 @@ using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
-public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage>, IRecipient<NodeCreatedMessage> {
+public partial class GalleryViewModel : ViewModelBase, 
+    IRecipient<NodeSelectedMessage>, 
+    IRecipient<NodeCreatedMessage>,
+    IRecipient<ProcessingProgressMessage>,
+    IRecipient<ProcessingCompletedMessage> {
     private readonly ICurationQueue _curationQueue;
     private readonly IPictureGroupingService _groupingService;
     private readonly INavigationService _navigationService;
@@ -417,6 +422,33 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [RelayCommand]
     private void NavigateToChild(Node node) {
         _navigationService.NavigateTo(node);
+    }
+
+    public void Receive(ProcessingProgressMessage message) {
+        if (_currentNode?.Id != message.Value.AlbumId) {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => {
+            var picVm = PicturesList.FirstOrDefault(p => p.Name == message.Value.CurrentItemName);
+            if (picVm != null) {
+                // If it was pending, it's now completed (or at least progressed)
+                // The worker sends this message after finishing one item
+                picVm.ProcessingState = ProcessingState.Completed;
+                _ = picVm.LoadThumbnailAsync(250);
+            }
+        });
+    }
+
+    public void Receive(ProcessingCompletedMessage message) {
+        if (_currentNode?.Id != message.Value) {
+            return;
+        }
+
+        Log.Information("Processing completed for current album {Id}, refreshing gallery.", message.Value);
+        Dispatcher.UIThread.Post(() => {
+            _ = RefreshGalleryGrouping();
+        });
     }
 
     private enum Orientation {

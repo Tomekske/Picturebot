@@ -61,6 +61,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
             .Property(p => p.CurationStatus)
             .HasConversion<string>();
 
+        modelBuilder.Entity<Picture>()
+            .Property(p => p.ProcessingState)
+            .HasConversion<string>();
+
         // Seed default Settings
         modelBuilder.Entity<Settings>().HasData(
             new Settings {

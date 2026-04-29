@@ -73,8 +73,9 @@ internal sealed class Program {
             services.AddScoped<IPathService, PathService>();
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();
-            services.AddScoped<IPickedService, PickedService>();
+            services.AddSingleton<IPickedService, PickedService>();
             services.AddSingleton<ICurationQueue, CurationQueue>();
+            services.AddHostedService<PictureWorkerService>();
 
             // Graph Services
             services.AddScoped<INodeService, NodeService>();

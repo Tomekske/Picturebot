@@ -51,6 +51,26 @@ public class Picture : Node {
     public CurationStatus CurationStatus { get; set; } = CurationStatus.Unflagged;
 
     /// <summary>
+    ///     The extension of the raw picture file (e.g., .ARW, .CR2).
+    /// </summary>
+    public string? Extension { get; set; }
+
+    /// <summary>
+    ///     The background processing state of the picture.
+    /// </summary>
+    public ProcessingState ProcessingState { get; set; } = ProcessingState.Pending;
+
+    /// <summary>
+    ///     The number of times processing has been attempted.
+    /// </summary>
+    public int RetryCount { get; set; }
+
+    /// <summary>
+    ///     The error message from the last failed processing attempt.
+    /// </summary>
+    public string? LastErrorMessage { get; set; }
+
+    /// <summary>
     ///     Calculated physical paths for various versions of the picture (RAW, Preview, Thumbnail).
     /// </summary>
     [NotMapped]

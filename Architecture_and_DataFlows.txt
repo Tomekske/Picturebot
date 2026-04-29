@@ -1,0 +1,32 @@
+Architectural Analysis of Picturebot
+
+1. Project Organization and Responsibilities
+
+- Picturebot: The main executable project containing the Avalonia UI framework. It manages the ViewModels (GalleryViewModel, SettingsDialogViewModel, etc.), Views (Gallery.axaml, SettingsDialog.axaml), and application startup/dependency injection (Program.cs, App.axaml).
+- AppRegistry: Handles OS-level and file system infrastructure setups (e.g., FileSystemOrchestrator) that ensure the application has the appropriate directories and permissions to operate, primarily initializing settings and log directories.
+- Database: The Entity Framework Core data access layer. It manages the SQLite database context (ApplicationDbContext), data entities (Node, Folder, Album, Picture, Settings, Metrics), migrations, and generic repository logic (SettingsRepository, NodeRepository).
+- Domain: Contains cross-cutting contracts and models used by multiple layers. It holds Enums (CurationStatus, NodeType, ThemeMode), Domain Models (NodeModel, SettingsModel), and Interfaces (IOrchestratorService, ISettingsService) to maintain loose coupling.
+- Graph: Manages the core tree/graph structure of the user's photo library. It includes domain logic for navigating, creating, and grouping nodes (Folders, Albums, Pictures). It holds the IPictureGroupingService for grouping similar pictures or bursts.
+- PictureWorker: Responsible for background image processing tasks. It handles operations like extracting EXIF timestamps, calculating perceptual hashes (pHash) for image similarity, creating thumbnails, and calculating image sharpness to pick the best shot in a burst.
+- SynchronizeWorker: Handles asynchronous tasks that interact with external systems or the file system over time. The primary example is the CurationQueue, which listens for curation state changes (like flagging a photo) and synchronizes those changes (e.g., physically copying 'Picked' photos or applying metadata).
+
+2. Core Data Flows
+
+UI Interactions & Application State
+- The user interacts with Avalonia Views, bound to ViewModels (using CommunityToolkit.Mvvm).
+- Actions (Commands) triggered in the ViewModels call specific Services via Dependency Injection.
+- Components use WeakReferenceMessenger (from the MVVM toolkit) to broadcast events (e.g., NodeSelectedMessage, NodeCreatedMessage, PictureSelectedMessage) to decouple ViewModels. For example, when an album is selected in the navigation pane, the GalleryViewModel receives the message and updates its current view.
+
+Data Persistence
+- Services map Models (from Domain) to Entities (from Database) using Mapperly or manual mapping.
+- Data is stored in a SQLite database using EF Core (ApplicationDbContext). The Node table uses Table-Per-Type (TPT) inheritance to store Folders, Albums, and Pictures in specialized tables mapped back to the base nodes table. 
+
+Background Processing
+- As pictures are imported or modified, tasks are delegated to background workers.
+- The PictureWorker analyzes new files, determining sharpness and pHash for burst grouping. These metrics are stored alongside the picture in the Metrics entity.
+- The SynchronizeWorker (CurationQueue) runs asynchronously in the background. When a user flags a photo, the photo is added to the CurationQueue which persists the status to the database and performs any necessary file system operations (like copying to a specific 'Picked' folder) without blocking the UI.
+
+Tree/Graph Management
+- The library is represented as a tree of Nodes. The NodeService manages this tree, lazily or eagerly loading relationships (Parent/Children).
+- Folders can contain Albums, and Albums contain Pictures. Pictures are leaves in the graph. The Graph project manages the logic for traversing, importing, and visualizing this structure.
+- Grouping: The IPictureGroupingService (or internal logic in GalleryViewModel) analyzes the PictureList utilizing the CapturedAt timestamp, Sharpness, and perceptual Hash (using the GroupingThreshold defined in Settings) to group burst photos together and highlight the best shots.
