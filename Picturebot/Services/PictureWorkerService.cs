@@ -42,6 +42,8 @@ public class PictureWorkerService(
                 var albumId = await GetNextAlbumIdWithPendingWorkAsync();
 
                 if (albumId == null) {
+                    // Notify that everything is done
+                    WeakReferenceMessenger.Default.Send(new ProcessingCompletedMessage(-1)); // -1 indicates all albums done
                     await Task.Delay(5000, stoppingToken);
                     continue;
                 }

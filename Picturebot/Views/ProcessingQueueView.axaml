@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:icons="using:Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
+             x:DataType="vm:ProcessingQueueViewModel"
+             x:Class="Picturebot.Views.ProcessingQueueView">
+    <StackPanel Spacing="15" Margin="20">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <icons:MaterialIcon Kind="TrayArrowDown" Width="24" Height="24" Foreground="{DynamicResource SukiPrimaryColor}"/>
+            <TextBlock Text="Processing Queue" FontSize="18" FontWeight="Bold"/>
+        </StackPanel>
+
+        <Separator Height="1" Background="{DynamicResource SukiBorderBrush}"/>
+
+        <ScrollViewer MaxHeight="300">
+            <ItemsControl ItemsSource="{Binding QueueItems}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AlbumQueueItem">
+                        <Border Padding="10" Margin="0,0,0,8" 
+                                Background="{DynamicResource SukiGlassCardBackground}" 
+                                CornerRadius="8">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding PendingCount, StringFormat='{}{0} items'}" 
+                                           FontSize="12" Foreground="{DynamicResource SukiLowText}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+        
+        <TextBlock IsVisible="{Binding !QueueItems.Count}" 
+                   Text="No albums in queue." 
+                   HorizontalAlignment="Center" 
+                   Margin="20" 
+                   Foreground="{DynamicResource SukiLowText}"/>
+    </StackPanel>
+</UserControl>

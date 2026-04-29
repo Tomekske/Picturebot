@@ -6,6 +6,7 @@
              x:Class="Picturebot.Views.StatusBarView"
              xmlns:ic="using:FluentIcons.Avalonia"
              xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:views="using:Picturebot.Views"
              x:DataType="vm:StatusBarViewModel">
 
     <Grid ColumnDefinitions="Auto, *">
@@ -30,8 +31,13 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
-                    Spacing="8"
+                    Spacing="12"
                     Margin="0,0,10,0">
+
+            <!-- Sync Status -->
+            <views:SyncStatusView DataContext="{Binding SyncStatusVM}" />
+
+            <Separator Width="1" Height="14" Background="#3f3f3f" />
 
             <!-- DEV Badge (Visible only in non-Production environments) -->
             <Border IsVisible="{Binding ShowDevBadge}"

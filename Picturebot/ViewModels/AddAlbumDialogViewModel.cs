@@ -120,33 +120,17 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
             return;
         }
 
-        var progressVM = new ImportProgressDialogViewModel();
-        var progress = new Progress<ImportProgress>(p => progressVM.Update(p));
-
-        // Close the current input dialog and show the progress dialog
+        // Close the current input dialog immediately
         MainWindow.DialogManager.DismissDialog();
 
-        MainWindow.DialogManager.CreateDialog()
-            .WithContent(new ImportProgressDialog { DataContext = progressVM })
-            .TryShow();
-
         try {
-            var album = await _importCommand.ExecuteAsync(SelectedParent?.Id, AlbumName, libraryPath, SourcePath, progress);
-
-            // Fetch the parent to ensure breadcrumbs work correctly if we navigate immediately
-            if (album.ParentId.HasValue) {
-                // We don't have a direct way to fetch parent here easily without adding more dependencies,
-                // but ImportPicturesCommand could potentially be improved or we can rely on GalleryViewModel 
-                // to handle the breadcrumbs if it has enough info.
-                // Actually, the album object from AlbumService should have its ParentId set.
-            }
+            // Start the import in the background. ExecuteAsync only does copying now.
+            var album = await _importCommand.ExecuteAsync(SelectedParent?.Id, AlbumName, libraryPath, SourcePath);
 
             _onResult(album);
         } catch (Exception ex) {
-            Console.WriteLine($"Import failed: {ex.Message}");
+            Log.Error(ex, "Import failed");
             _onResult(null);
-        } finally {
-            MainWindow.DialogManager.DismissDialog();
         }
     }
 

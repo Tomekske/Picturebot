@@ -103,26 +103,18 @@ public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
             return;
         }
 
-        var progressVM = new ImportProgressDialogViewModel();
-        var progress = new Progress<ImportBatchProgress>(p => progressVM.Update(p));
-
         MainWindow.DialogManager.DismissDialog();
 
-        MainWindow.DialogManager.CreateDialog()
-            .WithContent(new ImportProgressDialog { DataContext = progressVM })
-            .TryShow();
-
         try {
-            await Task.Run(async () => {
-                await _importAlbumsService.ImportRecursiveAsync(SelectedParent?.Id, SourcePath, libraryPath, progress);
+            // Start the batch import in the background. Recursive import creates album nodes (copy phase).
+            _ = Task.Run(async () => {
+                await _importAlbumsService.ImportRecursiveAsync(SelectedParent?.Id, SourcePath, libraryPath);
+                _onCompleted();
             });
 
-            Log.Information("Batch import completed for: {sourcePath}", SourcePath);
-            _onCompleted();
+            Log.Information("Batch import started for: {sourcePath}", SourcePath);
         } catch (Exception ex) {
             Log.Error(ex, "Batch import failed");
-        } finally {
-            MainWindow.DialogManager.DismissDialog();
         }
     }
 
