@@ -35,6 +35,8 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
+    private readonly HashSet<string> _pendingThumbnailRefreshes = new();
+    private readonly DispatcherTimer _refreshTimer;
 
     [ObservableProperty]
     private ObservableCollection<Node> _albumItems = new();
@@ -80,8 +82,31 @@ public partial class GalleryViewModel : ViewModelBase,
         _navigationService = navigationService;
         _settingsService = settingsService;
         _curationQueue = curationQueue;
+
+        _refreshTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(500),
+            DispatcherPriority.ApplicationIdle,
+            (s, e) => ProcessPendingRefreshes());
+
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
+    }
+
+    private void ProcessPendingRefreshes() {
+        List<string> itemsToRefresh;
+        lock (_pendingThumbnailRefreshes) {
+            itemsToRefresh = _pendingThumbnailRefreshes.ToList();
+            _pendingThumbnailRefreshes.Clear();
+            _refreshTimer.Stop();
+        }
+
+        foreach (var name in itemsToRefresh) {
+            var picVm = PicturesList.FirstOrDefault(p => p.Name == name);
+            if (picVm != null) {
+                picVm.ProcessingState = ProcessingState.Completed;
+                _ = picVm.LoadThumbnailAsync(250);
+            }
+        }
     }
 
     public void Receive(NodeCreatedMessage message) {
@@ -429,15 +454,12 @@ public partial class GalleryViewModel : ViewModelBase,
             return;
         }
 
-        Dispatcher.UIThread.Post(() => {
-            var picVm = PicturesList.FirstOrDefault(p => p.Name == message.Value.CurrentItemName);
-            if (picVm != null) {
-                // If it was pending, it's now completed (or at least progressed)
-                // The worker sends this message after finishing one item
-                picVm.ProcessingState = ProcessingState.Completed;
-                _ = picVm.LoadThumbnailAsync(250);
+        lock (_pendingThumbnailRefreshes) {
+            _pendingThumbnailRefreshes.Add(message.Value.CurrentItemName);
+            if (!_refreshTimer.IsEnabled) {
+                _refreshTimer.Start();
             }
-        });
+        }
     }
 
     public void Receive(ProcessingCompletedMessage message) {

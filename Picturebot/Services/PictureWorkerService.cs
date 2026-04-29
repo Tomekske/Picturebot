@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
@@ -20,7 +18,6 @@ using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace Picturebot.Services;
 
@@ -50,6 +47,10 @@ public class PictureWorkerService(
                 }
 
                 await ProcessAlbumAsync(albumId.Value, stoppingToken);
+
+                // Explicitly yield control back to the Avalonia Dispatcher and other background tasks
+                // to prevent process-wide starvation during heavy album transitions.
+                await Task.Delay(1, stoppingToken);
             } catch (OperationCanceledException) {
                 break;
             } catch (Exception ex) {
@@ -100,21 +101,31 @@ public class PictureWorkerService(
         var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
         var pathService = scope.ServiceProvider.GetRequiredService<IPathService>();
 
-        var pictures = await context.Pictures
+        // 1. Initial State: Load all metadata once before entering the parallel loop
+        var allPicturesInAlbum = await context.Pictures
             .Include(p => p.Parent)
-            .Where(p => p.ParentId == albumId && p.ProcessingState == ProcessingState.Pending)
+            .Where(p => p.ParentId == albumId)
             .ToListAsync(ct);
 
-        if (!pictures.Any()) return;
+        var totalCount = allPicturesInAlbum.Count;
+        var initiallyCompleted = allPicturesInAlbum.Count(p => p.ProcessingState == ProcessingState.Completed);
+        var pendingPictures = allPicturesInAlbum.Where(p => p.ProcessingState == ProcessingState.Pending).ToList();
 
-        var totalCount = pictures.Count;
-        var processedCount = 0;
+        if (!pendingPictures.Any()) {
+            WeakReferenceMessenger.Default.Send(new ProcessingCompletedMessage(albumId));
+            return;
+        }
+
+        // 2. In-Memory Tracking: Use Interlocked to avoid DB CountAsync queries inside the loop
+        var sessionProcessedCount = 0;
+        var lastReportTicks = DateTime.UtcNow.Ticks;
+        var reportIntervalTicks = TimeSpan.FromMilliseconds(500).Ticks;
 
         using var semaphore = new SemaphoreSlim(MaxParallelism);
-        var tasks = pictures.Select(async picture => {
+        var tasks = pendingPictures.Select(async picture => {
             await semaphore.WaitAsync(ct);
             try {
-                // Mark as processing
+                // Persistence: Keep DB updates surgical and dedicated to state changes
                 await UpdateProcessingStateAsync(picture.Id, ProcessingState.Processing);
 
                 var success = await ProcessPictureInternalAsync(picture, pathService, settingsService, ct);
@@ -125,10 +136,19 @@ public class PictureWorkerService(
                     await HandleProcessingFailureAsync(picture.Id);
                 }
 
-                var currentCount = Interlocked.Increment(ref processedCount);
-                WeakReferenceMessenger.Default.Send(new ProcessingProgressMessage(
-                    new ProcessingProgress(albumId, currentCount, totalCount, picture.Name)));
+                // Increment in-memory counter
+                var currentSessionTotal = Interlocked.Increment(ref sessionProcessedCount);
+                var currentTotalCompleted = initiallyCompleted + currentSessionTotal;
 
+                // 3. Throttled Reporting: Use local time check to avoid messenger saturation
+                var nowTicks = DateTime.UtcNow.Ticks;
+                if (currentTotalCompleted == totalCount ||
+                    nowTicks - Volatile.Read(ref lastReportTicks) > reportIntervalTicks) {
+                    Interlocked.Exchange(ref lastReportTicks, nowTicks);
+
+                    WeakReferenceMessenger.Default.Send(new ProcessingProgressMessage(
+                        new ProcessingProgress(albumId, currentTotalCompleted, totalCount, picture.Name)));
+                }
             } catch (Exception ex) {
                 Log.Error(ex, "Failed to process picture {PictureId}", picture.Id);
                 await HandleProcessingFailureAsync(picture.Id, ex.Message);
@@ -138,84 +158,105 @@ public class PictureWorkerService(
         });
 
         await Task.WhenAll(tasks);
-        
+
+        // Final report to ensure 100% completion is captured
         WeakReferenceMessenger.Default.Send(new ProcessingCompletedMessage(albumId));
         Log.Information("Completed processing Album {AlbumId}", albumId);
     }
 
-    private async Task<bool> ProcessPictureInternalAsync(Picture picture, IPathService pathService, ISettingsService settingsService, CancellationToken ct) {
+
+    private async Task<bool> ProcessPictureInternalAsync(Picture picture, IPathService pathService,
+        ISettingsService settingsService, CancellationToken ct) {
         pathService.PopulatePaths(picture);
-        
+
         if (picture.SubFolder == null) {
-            Log.Error("SubFolder is null for Picture {Id} ({Name}). Ensure Parent (Album) is loaded.", picture.Id, picture.Name);
+            Log.Error("SubFolder is null for Picture {Id} ({Name}). Ensure Parent (Album) is loaded.", picture.Id,
+                picture.Name);
             return false;
         }
 
-        // Determine analysis file (Must use the JPG/Preview file)
-        var analysisFile = picture.SubFolder.Preview;
-        
-        if (!fileSystem.File.Exists(analysisFile)) {
-            Log.Warning("Analysis file (JPG) not found for {Name} (ID: {Id}) at {Preview}. Skipping analysis as RAW fallback is disabled.", 
-                picture.Name, picture.Id, picture.SubFolder.Preview);
+        // 1. Identify source for analysis & processing
+        // Prefer the imported JPG (in Preview folder), fallback to the original RAW
+        string? analysisSource = null;
+        if (fileSystem.File.Exists(picture.SubFolder.Preview)) {
+            analysisSource = picture.SubFolder.Preview;
+        } else if (fileSystem.File.Exists(picture.SubFolder.Raw)) {
+            analysisSource = picture.SubFolder.Raw;
+        }
+
+        if (analysisSource == null) {
+            Log.Warning("No source file found for {Name} (ID: {Id}). Expected at {Preview} or {Raw}",
+                picture.Name, picture.Id, picture.SubFolder.Preview, picture.SubFolder.Raw);
             return false;
         }
 
-        Log.Information("Analyzing {Name} using {File}", picture.Name, analysisFile);
+        Log.Information("Analyzing {Name} using {File}", picture.Name, analysisSource);
 
-        // 1. Dimensions
-        var dimResult = await pictureAnalyzer.GetDimensionsAsync(analysisFile);
+        // 2. Dimensions
+        var dimResult = await pictureAnalyzer.GetDimensionsAsync(analysisSource);
         if (!dimResult.IsError) {
             picture.Width = dimResult.Value.Width;
             picture.Height = dimResult.Value.Height;
         } else {
-             Log.Warning("Failed to get dimensions for {Name}: {Error}", picture.Name, dimResult.FirstError.Description);
+            Log.Warning("Failed to get dimensions for {Name}: {Error}", picture.Name, dimResult.FirstError.Description);
         }
 
-        // 2. Hash
-        var hashResult = await pictureAnalyzer.CalculateHashAsync(analysisFile);
+        // 3. Hash
+        var hashResult = await pictureAnalyzer.CalculateHashAsync(analysisSource);
         if (!hashResult.IsError) {
             picture.Hash = hashResult.Value;
         } else {
-             Log.Warning("Failed to calculate hash for {Name}: {Error}", picture.Name, hashResult.FirstError.Description);
+            Log.Warning("Failed to calculate hash for {Name}: {Error}", picture.Name,
+                hashResult.FirstError.Description);
         }
 
-        // 3. Sharpness
-        var sharpnessResult = await pictureAnalyzer.CalculateSharpnessAsync(analysisFile);
+        // 4. Sharpness
+        var sharpnessResult = await pictureAnalyzer.CalculateSharpnessAsync(analysisSource);
         if (!sharpnessResult.IsError) {
             picture.Sharpness = sharpnessResult.Value;
         } else {
-             Log.Warning("Failed to calculate sharpness for {Name}: {Error}", picture.Name, sharpnessResult.FirstError.Description);
+            Log.Warning("Failed to calculate sharpness for {Name}: {Error}", picture.Name,
+                sharpnessResult.FirstError.Description);
         }
 
-        // 4. Preview Generation (If missing)
-        if (!fileSystem.File.Exists(picture.SubFolder.Preview)) {
-            var previewResult = await pictureProcessor.GenerateProcessedImageAsync(analysisFile, 2400, 2400, KnownResamplers.Lanczos3);
-            if (!previewResult.IsError) {
-                using (var image = previewResult.Value) {
-                    fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Preview)!);
-                    await using var stream = fileSystem.File.OpenWrite(picture.SubFolder.Preview);
-                    await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 }, ct);
-                }
-                Log.Debug("Generated preview for {Name}", picture.Name);
-            } else {
-                Log.Warning("Failed to generate preview for {Name}: {Error}", picture.Name, previewResult.FirstError.Description);
+        // 5. Preview Generation
+        // We always try to generate it to ensure it's downsampled and correctly oriented
+        var previewResult =
+            await pictureProcessor.GenerateProcessedImageAsync(analysisSource, 2400, 2400, KnownResamplers.Lanczos3);
+        if (!previewResult.IsError) {
+            using (var image = previewResult.Value) {
+                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Preview)!);
+                
+                // Use File.Create to ensure the file is truncated if it already exists (e.g. original large JPG)
+                await using var stream = fileSystem.File.Create(picture.SubFolder.Preview);
+                await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 99 }, ct);
             }
+
+            Log.Debug("Generated preview for {Name}", picture.Name);
+        } else {
+            Log.Warning("Failed to generate preview for {Name}: {Error}", picture.Name,
+                previewResult.FirstError.Description);
         }
 
-        // 5. Thumbnail Generation (If missing)
-        if (!fileSystem.File.Exists(picture.SubFolder.Thumbnail)) {
-            var thumbResult = await pictureProcessor.GenerateProcessedImageAsync(analysisFile, 400, 400, KnownResamplers.Triangle);
-            if (!thumbResult.IsError) {
-                using (var image = thumbResult.Value) {
-                    fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(picture.SubFolder.Thumbnail)!);
-                    await using var stream = fileSystem.File.OpenWrite(picture.SubFolder.Thumbnail);
-                    await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 }, ct);
-                }
-                Log.Debug("Generated thumbnail for {Name}", picture.Name);
-            } else {
-                Log.Warning("Failed to generate thumbnail for {Name}: {Error}", picture.Name, thumbResult.FirstError.Description);
+        // 6. Thumbnail Generation
+        var thumbResult =
+            await pictureProcessor.GenerateProcessedImageAsync(analysisSource, 400, 400, KnownResamplers.Triangle);
+        if (!thumbResult.IsError) {
+            using (var image = thumbResult.Value) {
+                fileSystem.Directory.CreateDirectory(
+                    fileSystem.Path.GetDirectoryName(picture.SubFolder.Thumbnail)!);
+                
+                // Use File.Create to ensure truncation
+                await using var stream = fileSystem.File.Create(picture.SubFolder.Thumbnail);
+                await image.SaveAsJpegAsync(stream, new JpegEncoder { Quality = 75 }, ct);
             }
+
+            Log.Debug("Generated thumbnail for {Name}", picture.Name);
+        } else {
+            Log.Warning("Failed to generate thumbnail for {Name}: {Error}", picture.Name,
+                thumbResult.FirstError.Description);
         }
+
 
         // Persist updates
         using var scope = scopeFactory.CreateScope();
@@ -239,9 +280,10 @@ public class PictureWorkerService(
         if (picture != null) {
             picture.ProcessingState = state;
             if (state == ProcessingState.Completed) {
-                 picture.LastErrorMessage = null;
-                 Log.Information("Picture {Id} ({Name}) processed successfully.", picture.Id, picture.Name);
+                picture.LastErrorMessage = null;
+                Log.Information("Picture {Id} ({Name}) processed successfully.", picture.Id, picture.Name);
             }
+
             await context.SaveChangesAsync();
         }
     }
@@ -253,11 +295,12 @@ public class PictureWorkerService(
         if (picture != null) {
             picture.RetryCount++;
             picture.LastErrorMessage = error ?? "Unknown error";
-            picture.ProcessingState = picture.RetryCount >= MaxRetries ? ProcessingState.Failed : ProcessingState.Pending;
-            
-            Log.Warning("Picture {Id} ({Name}) processing failed (Attempt {Count}). Error: {Error}", 
+            picture.ProcessingState =
+                picture.RetryCount >= MaxRetries ? ProcessingState.Failed : ProcessingState.Pending;
+
+            Log.Warning("Picture {Id} ({Name}) processing failed (Attempt {Count}). Error: {Error}",
                 picture.Id, picture.Name, picture.RetryCount, picture.LastErrorMessage);
-                
+
             await context.SaveChangesAsync();
         }
     }

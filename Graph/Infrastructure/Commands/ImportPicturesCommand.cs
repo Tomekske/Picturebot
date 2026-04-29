@@ -169,7 +169,7 @@ public class ImportPicturesCommand : IImportPicturesCommand {
 
         stopwatch.Stop();
         var elapsed = stopwatch.Elapsed;
-        Serilog.Log.Information("Imported album {AlbumName} in {Elapsed:hh\\:mm\\:ss}", albumName, elapsed);
+        Log.Information("Imported album {AlbumName} in {Elapsed:hh\\:mm\\:ss}", albumName, elapsed);
 
         return album;
     }
