@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Abstractions;
 using Database.Domain.Entities;
 using Domain.Enums;
@@ -5,6 +6,7 @@ using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Utilities;
 using PictureWorker.Domain.Interfaces;
+using Serilog;
 
 namespace Graph.Infrastructure.Commands;
 
@@ -33,6 +35,8 @@ public class ImportPicturesCommand : IImportPicturesCommand {
 
     public async Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath,
         IProgress<ImportProgress>? progress = null) {
+        var stopwatch = Stopwatch.StartNew();
+        
         // Task 1: Create the Album
         var album = await _albumService.CreateAsync(parentId, albumName, libraryPath);
         var albumPath = _fileSystem.Path.Combine(libraryPath, album.Uuid);
@@ -162,6 +166,10 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 }
             }
         }
+
+        stopwatch.Stop();
+        var elapsed = stopwatch.Elapsed;
+        Serilog.Log.Information("Imported album {AlbumName} in {Elapsed:hh\\:mm\\:ss}", albumName, elapsed);
 
         return album;
     }
