@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using System.IO.Abstractions;
 using Database.Domain.Entities;
 using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Commands;
 using Graph.Infrastructure.Utilities;
+using Serilog;
 
 namespace Graph.Infrastructure.Services;
 
@@ -13,9 +15,13 @@ public class ImportAlbumsService(
     IImportPicturesCommand importPicturesCommand
 ) : IImportAlbumsService {
     public async Task ImportRecursiveAsync(int? parentId, string sourcePath, string libraryPath, IProgress<ImportBatchProgress>? progress = null) {
+        var stopwatch = Stopwatch.StartNew();
         var totalAlbums = CountAlbumsRecursive(sourcePath);
         var processedAlbums = 0;
         await ProcessDirectoryAsync(parentId, sourcePath, libraryPath, progress, totalAlbums, processedAlbums);
+        stopwatch.Stop();
+        var elapsed = stopwatch.Elapsed;
+        Serilog.Log.Information("Batch import completed for {SourcePath} in {Elapsed:hh\\:mm\\:ss}", sourcePath, elapsed);
     }
 
     private int CountAlbumsRecursive(string path) {

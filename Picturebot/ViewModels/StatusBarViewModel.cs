@@ -7,10 +7,15 @@ using Microsoft.Extensions.Configuration;
 using Picturebot.Views;
 using SukiUI.Dialogs;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Picturebot.ViewModels;
 
 public partial class StatusBarViewModel : ViewModelBase {
-    public StatusBarViewModel(IConfiguration configuration) {
+    public SyncStatusViewModel SyncStatusVM { get; }
+
+    public StatusBarViewModel(IConfiguration configuration, IServiceScopeFactory scopeFactory) {
+        SyncStatusVM = new SyncStatusViewModel(scopeFactory);
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         AppVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.0.0";
 

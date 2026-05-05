@@ -7,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -23,13 +24,19 @@ using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
-public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMessage>, IRecipient<NodeCreatedMessage> {
+public partial class GalleryViewModel : ViewModelBase, 
+    IRecipient<NodeSelectedMessage>, 
+    IRecipient<NodeCreatedMessage>,
+    IRecipient<ProcessingProgressMessage>,
+    IRecipient<ProcessingCompletedMessage> {
     private readonly ICurationQueue _curationQueue;
     private readonly IPictureGroupingService _groupingService;
     private readonly INavigationService _navigationService;
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
+    private readonly HashSet<string> _pendingThumbnailRefreshes = new();
+    private readonly DispatcherTimer _refreshTimer;
 
     [ObservableProperty]
     private ObservableCollection<Node> _albumItems = new();
@@ -75,8 +82,31 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
         _navigationService = navigationService;
         _settingsService = settingsService;
         _curationQueue = curationQueue;
+
+        _refreshTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(500),
+            DispatcherPriority.ApplicationIdle,
+            (s, e) => ProcessPendingRefreshes());
+
         WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadInitialItemsAsync();
+    }
+
+    private void ProcessPendingRefreshes() {
+        List<string> itemsToRefresh;
+        lock (_pendingThumbnailRefreshes) {
+            itemsToRefresh = _pendingThumbnailRefreshes.ToList();
+            _pendingThumbnailRefreshes.Clear();
+            _refreshTimer.Stop();
+        }
+
+        foreach (var name in itemsToRefresh) {
+            var picVm = PicturesList.FirstOrDefault(p => p.Name == name);
+            if (picVm != null) {
+                picVm.ProcessingState = ProcessingState.Completed;
+                _ = picVm.LoadThumbnailAsync(250);
+            }
+        }
     }
 
     public void Receive(NodeCreatedMessage message) {
@@ -417,6 +447,30 @@ public partial class GalleryViewModel : ViewModelBase, IRecipient<NodeSelectedMe
     [RelayCommand]
     private void NavigateToChild(Node node) {
         _navigationService.NavigateTo(node);
+    }
+
+    public void Receive(ProcessingProgressMessage message) {
+        if (_currentNode?.Id != message.Value.AlbumId) {
+            return;
+        }
+
+        lock (_pendingThumbnailRefreshes) {
+            _pendingThumbnailRefreshes.Add(message.Value.CurrentItemName);
+            if (!_refreshTimer.IsEnabled) {
+                _refreshTimer.Start();
+            }
+        }
+    }
+
+    public void Receive(ProcessingCompletedMessage message) {
+        if (_currentNode?.Id != message.Value) {
+            return;
+        }
+
+        Log.Information("Processing completed for current album {Id}, refreshing gallery.", message.Value);
+        Dispatcher.UIThread.Post(() => {
+            _ = RefreshGalleryGrouping();
+        });
     }
 
     private enum Orientation {

@@ -1,4 +1,5 @@
 ﻿using ErrorOr;
+using System.IO.Abstractions;
 using PictureWorker.Infrastructure.Services;
 
 namespace PictureWorker.Test;
@@ -13,7 +14,7 @@ public class ExtractTimestampTests {
 
     [SetUp]
     public void Setup() {
-        _analyzer = new PictureAnalyzerService();
+        _analyzer = new PictureAnalyzerService(new FileSystem());
 
         var baseDir = TestContext.CurrentContext.TestDirectory;
 

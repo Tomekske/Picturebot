@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Abstractions;
 using CoenM.ImageHash.HashAlgorithms;
 using ErrorOr;
 using MetadataExtractor;
@@ -12,9 +13,15 @@ using Size = OpenCvSharp.Size;
 namespace PictureWorker.Infrastructure.Services;
 
 public class PictureAnalyzerService : IPictureAnalyzer {
+    private readonly IFileSystem _fileSystem;
+
+    public PictureAnalyzerService(IFileSystem fileSystem) {
+        _fileSystem = fileSystem;
+    }
+
     public async Task<ErrorOr<ulong>> CalculateHashAsync(string filePath) {
         // Check existence before allocating resources or starting I/O
-        if (!File.Exists(filePath)) {
+        if (!_fileSystem.File.Exists(filePath)) {
             return Error.NotFound(
                 "Picture.NotFound",
                 $"The file was not found at path: {filePath}");
@@ -23,7 +30,8 @@ public class PictureAnalyzerService : IPictureAnalyzer {
         try {
             var hashAlgorithm = new PerceptualHash();
 
-            using var picture = await Image.LoadAsync<Rgba32>(filePath);
+            await using var stream = _fileSystem.File.OpenRead(filePath);
+            using var picture = await Image.LoadAsync<Rgba32>(stream);
 
             return hashAlgorithm.Hash(picture);
         } catch (UnknownImageFormatException) {
@@ -39,7 +47,7 @@ public class PictureAnalyzerService : IPictureAnalyzer {
 
     public async Task<ErrorOr<int>> CalculateSharpnessAsync(string filePath) {
         // Check existence before allocating resources or starting I/O
-        if (!File.Exists(filePath)) {
+        if (!_fileSystem.File.Exists(filePath)) {
             return Error.NotFound(
                 "Picture.NotFound",
                 $"The file was not found at path: {filePath}");
@@ -95,7 +103,7 @@ public class PictureAnalyzerService : IPictureAnalyzer {
 
     public async Task<ErrorOr<DateTime>> ExtractTimestamp(string filePath) {
         // Check existence before starting I/O
-        if (!File.Exists(filePath)) {
+        if (!_fileSystem.File.Exists(filePath)) {
             return Error.NotFound(
                 "Picture.NotFound",
                 $"The file was not found at path: {filePath}");
@@ -104,7 +112,8 @@ public class PictureAnalyzerService : IPictureAnalyzer {
         try {
             // Offload metadata reading to a background thread as it involves synchronous I/O
             return await Task.Run<ErrorOr<DateTime>>(() => {
-                var directories = ImageMetadataReader.ReadMetadata(filePath);
+                using var stream = _fileSystem.File.OpenRead(filePath);
+                var directories = ImageMetadataReader.ReadMetadata(stream);
 
                 // 1. Prioritize ExifSubIfdDirectory for Date/Time Original
                 var subIfdDirectory = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
@@ -136,7 +145,7 @@ public class PictureAnalyzerService : IPictureAnalyzer {
     }
 
     public async Task<ErrorOr<(int Width, int Height)>> GetDimensionsAsync(string filePath) {
-        if (!File.Exists(filePath)) {
+        if (!_fileSystem.File.Exists(filePath)) {
             return Error.NotFound(
                 "Picture.NotFound",
                 $"The file was not found at path: {filePath}");
@@ -144,7 +153,8 @@ public class PictureAnalyzerService : IPictureAnalyzer {
 
         try {
             // Use ImageSharp's IdentifyAsync as it's very fast and efficient for just dimensions
-            var info = await Image.IdentifyAsync(filePath);
+            await using var stream = _fileSystem.File.OpenRead(filePath);
+            var info = await Image.IdentifyAsync(stream);
             if (info == null) {
                 return Error.Validation("Picture.InvalidFormat", "Failed to identify image dimensions.");
             }
@@ -155,7 +165,8 @@ public class PictureAnalyzerService : IPictureAnalyzer {
             // We need the orientation to know if we should swap width and height
             // We use MetadataExtractor here as it's already working in this service
             return await Task.Run<ErrorOr<(int Width, int Height)>>(() => {
-                var directories = ImageMetadataReader.ReadMetadata(filePath);
+                stream.Position = 0; // Reset stream position for MetadataExtractor
+                var directories = ImageMetadataReader.ReadMetadata(stream);
                 var ifd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
 
                 if (ifd0Directory != null && ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation, out var orientation)) {

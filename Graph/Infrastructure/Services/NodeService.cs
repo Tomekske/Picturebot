@@ -1,5 +1,6 @@
 using Database.Domain.Entities;
 using Database.Domain.Interfaces;
+using Domain.Enums;
 using Graph.Domain.Interfaces;
 using Graph.Domain.Strategies;
 
@@ -28,6 +29,10 @@ public class NodeService(
 
     public async Task<bool> IsPictureHashDuplicateAsync(int parentId, ulong hash) {
         return await nodeRepository.IsPictureHashDuplicateAsync(parentId, hash);
+    }
+
+    public async Task<bool> ExistsAsync(int? parentId, string name, NodeType type) {
+        return await nodeRepository.FindDuplicateAsync(parentId, name, type);
     }
 
     public async Task<List<Node>> LoadHydratedTreeAsync() {

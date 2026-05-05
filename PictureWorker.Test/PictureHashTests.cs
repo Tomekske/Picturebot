@@ -1,4 +1,5 @@
-﻿using ErrorOr;
+using ErrorOr;
+using System.IO.Abstractions;
 using PictureWorker.Infrastructure.Services;
 
 namespace PictureWorker.Test;
@@ -13,7 +14,8 @@ public class PictureHashTests {
 
     [SetUp]
     public void Setup() {
-        _analyzer = new PictureAnalyzerService();
+        _analyzer = new PictureAnalyzerService(new FileSystem());
+
 
         // NUnit provides the exact path to the bin/Debug folder where the DLL and resources live
         var baseDir = TestContext.CurrentContext.TestDirectory;

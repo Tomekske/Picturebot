@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:icons="using:Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="40"
+             x:DataType="vm:SyncStatusViewModel"
+             x:Class="Picturebot.Views.SyncStatusView">
+    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Panel IsVisible="{Binding IsProcessing}">
+            <icons:MaterialIcon Kind="Sync" Width="18" Height="18">
+                <icons:MaterialIcon.Styles>
+                    <Style Selector="icons|MaterialIcon">
+                        <Style.Animations>
+                            <Animation Duration="0:0:2" IterationCount="Infinite">
+                                <KeyFrame KeyTime="0:0:0">
+                                    <Setter Property="RotateTransform.Angle" Value="0" />
+                                </KeyFrame>
+                                <KeyFrame KeyTime="0:0:2">
+                                    <Setter Property="RotateTransform.Angle" Value="360" />
+                                </KeyFrame>
+                            </Animation>
+                        </Style.Animations>
+                    </Style>
+                </icons:MaterialIcon.Styles>
+            </icons:MaterialIcon>
+        </Panel>
+
+        <icons:MaterialIcon Kind="CheckCircleOutline" Width="18" Height="18"
+                            Foreground="Green"
+                            IsVisible="{Binding !IsProcessing}" />
+
+        <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="{Binding StatusText}" FontSize="11" MaxWidth="150" TextTrimming="CharacterEllipsis" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}"
+                         Height="2" IsVisible="{Binding IsProcessing}" />
+        </StackPanel>
+
+        <Button Classes="Basic" Command="{Binding ShowQueueCommand}" Padding="4">
+            <icons:MaterialIcon Kind="ChevronUp" Width="14" Height="14" />
+        </Button>
+    </StackPanel>
+</UserControl>

@@ -18,6 +18,9 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     private CurationStatus _curationStatus;
 
     [ObservableProperty]
+    private ProcessingState _processingState;
+
+    [ObservableProperty]
     private bool _isBest;
 
     [ObservableProperty]
@@ -29,6 +32,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;
+        _processingState = picture.ProcessingState;
     }
 
     public Picture Picture { get; }
