@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Database.Domain.Entities;
@@ -109,7 +110,7 @@ public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
             // Start the batch import in the background. Recursive import creates album nodes (copy phase).
             _ = Task.Run(async () => {
                 await _importAlbumsService.ImportRecursiveAsync(SelectedParent?.Id, SourcePath, libraryPath);
-                _onCompleted();
+                Dispatcher.UIThread.Post(() => _onCompleted());
             });
 
             Log.Information("Batch import started for: {sourcePath}", SourcePath);
