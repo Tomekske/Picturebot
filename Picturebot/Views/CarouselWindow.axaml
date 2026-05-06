@@ -43,7 +43,8 @@
 
         <StackPanel HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Margin="30" Spacing="10" ZIndex="100">
+                    Margin="30" Spacing="12" ZIndex="100">
+            <!-- Main Metadata Badge -->
             <Border Background="#CC000000" CornerRadius="20" Padding="20,10" BorderBrush="#33FFFFFF"
                     BorderThickness="1">
                 <StackPanel Orientation="Horizontal" Spacing="20">
@@ -54,6 +55,19 @@
                     <TextBlock Text="{Binding Sharpness, StringFormat='Sharpness: {0}'}"
                                FontSize="18"
                                Foreground="White" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+
+            <!-- Burst Context Badge (Secondary) -->
+            <Border Background="#CC000000" CornerRadius="15" Padding="15,8" BorderBrush="#33FFFFFF"
+                    BorderThickness="1"
+                    HorizontalAlignment="Right"
+                    IsVisible="{Binding CurrentGroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <icons:MaterialIcon Kind="BurstMode" Width="18" Height="18" Foreground="White" />
+                    <TextBlock Text="{Binding CurrentGroupName}"
+                               FontSize="16"
+                               Foreground="White" FontWeight="Bold" />
                 </StackPanel>
             </Border>
         </StackPanel>

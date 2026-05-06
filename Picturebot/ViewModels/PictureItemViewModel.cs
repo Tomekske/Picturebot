@@ -29,6 +29,9 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private Bitmap? _thumbnail;
 
+    [ObservableProperty]
+    private string? _groupName;
+
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;
