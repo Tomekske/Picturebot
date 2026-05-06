@@ -34,6 +34,9 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private PictureItemViewModel _currentPicture;
 
     [ObservableProperty]
+    private string? _currentGroupName;
+
+    [ObservableProperty]
     private ObservableCollection<Bitmap?> _previews = new();
 
     [ObservableProperty]
@@ -64,6 +67,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private void UpdateState() {
         CounterText = $"{CurrentIndex + 1} / {_pictures.Count}";
         Sharpness = CurrentPicture.Picture.Sharpness;
+        CurrentGroupName = CurrentPicture.GroupName;
         _ = LoadNearbyPreviewsAsync();
     }
 
