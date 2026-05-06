@@ -464,6 +464,22 @@ public partial class GalleryViewModel : ViewModelBase,
         _navigationService.NavigateTo(node);
     }
 
+    [RelayCommand]
+    private async Task SetCurationStatus(CurationStatus status) {
+        if (SelectedPicture == null) {
+            return;
+        }
+
+        try {
+            SelectedPicture.Picture.CurationStatus = status;
+            SelectedPicture.CurationStatus = status;
+            _curationQueue.Enqueue(SelectedPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update curation status in gallery for {Name}", SelectedPicture.Name);
+        }
+    }
+
     public void Receive(ProcessingProgressMessage message) {
         if (_currentNode?.Id != message.Value.AlbumId) {
             return;
