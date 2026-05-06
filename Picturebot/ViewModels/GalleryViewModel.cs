@@ -370,6 +370,8 @@ public partial class GalleryViewModel : ViewModelBase,
 
     private void UpdateGalleryItems(Node? currentNode, List<Node>? children) {
         _currentNode = currentNode;
+        IsBurstViewEnabled = false;
+
         // Clear collections to prevent ghosting
         Items.Clear();
         FolderItems.Clear();
