@@ -29,6 +29,18 @@ public partial class CarouselWindow : Window {
                 vm.NextCommand.Execute(null);
                 e.Handled = true;
                 break;
+            case Key.P:
+                vm.SetCurationStatusCommand.Execute(Domain.Enums.CurationStatus.Flagged);
+                e.Handled = true;
+                break;
+            case Key.X:
+                vm.SetCurationStatusCommand.Execute(Domain.Enums.CurationStatus.Rejected);
+                e.Handled = true;
+                break;
+            case Key.U:
+                vm.SetCurationStatusCommand.Execute(Domain.Enums.CurationStatus.Unflagged);
+                e.Handled = true;
+                break;
         }
     }
 }
