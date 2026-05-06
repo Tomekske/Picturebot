@@ -337,6 +337,12 @@ public partial class GalleryViewModel : ViewModelBase,
             new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, window.Close);
         window.DataContext = carouselVm;
 
+        window.Closed += (s, e) => {
+            if (window.DataContext is CarouselDialogViewModel cvm) {
+                SelectedPicture = cvm.CurrentPicture;
+            }
+        };
+
         if (MainWindow.Instance != null) {
             window.Show(MainWindow.Instance);
         } else {
@@ -349,9 +355,7 @@ public partial class GalleryViewModel : ViewModelBase,
             pic.IsSelected = pic == value;
         }
 
-        if (value != null) {
-            WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
-        }
+        WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
     }
 
     private async Task LoadInitialItemsAsync() {

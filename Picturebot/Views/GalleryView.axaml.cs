@@ -12,4 +12,12 @@ public partial class GalleryView : UserControl {
         InitializeComponent();
         DataContext = viewModel;
     }
+
+    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is PictureItemViewModel pic) {
+            if (DataContext is GalleryViewModel vm) {
+                vm.SelectedPicture = pic;
+            }
+        }
+    }
 }

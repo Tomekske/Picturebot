@@ -274,7 +274,8 @@
                                 </StackPanel>
 
                                 <ListBox ItemsSource="{Binding Pictures}"
-                                         SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture}"
+                                         SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture, Mode=OneWay}"
+                                         SelectionChanged="OnSelectionChanged"
                                          Background="Transparent"
                                          BorderThickness="0"
                                          Padding="0"

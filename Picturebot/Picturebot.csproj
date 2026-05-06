@@ -8,7 +8,7 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AssemblyName>Picturebot</AssemblyName>
         <RootNamespace>Picturebot</RootNamespace>
-        <Version>1.2.10</Version>
+        <Version>1.2.11</Version>
     </PropertyGroup>
 
     <ItemGroup>

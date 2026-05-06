@@ -3,4 +3,4 @@ using Picturebot.ViewModels;
 
 namespace Picturebot.Messages;
 
-public class PictureSelectedMessage(PictureItemViewModel picture) : ValueChangedMessage<PictureItemViewModel>(picture);
+public class PictureSelectedMessage(PictureItemViewModel? picture) : ValueChangedMessage<PictureItemViewModel?>(picture);
