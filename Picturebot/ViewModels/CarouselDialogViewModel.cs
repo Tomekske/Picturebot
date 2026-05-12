@@ -67,7 +67,13 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private void UpdateState() {
         CounterText = $"{CurrentIndex + 1} / {_pictures.Count}";
         Sharpness = CurrentPicture.Picture.Sharpness;
-        CurrentGroupName = CurrentPicture.GroupName;
+
+        if (CurrentPicture.BurstTotal > 1) {
+            CurrentGroupName = $"Burst {CurrentPicture.BurstIndex} ({CurrentPicture.BurstPosition}/{CurrentPicture.BurstTotal})";
+        } else {
+            CurrentGroupName = CurrentPicture.GroupName;
+        }
+
         _ = LoadNearbyPreviewsAsync();
     }
 
