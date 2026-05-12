@@ -196,6 +196,9 @@ public partial class GalleryViewModel : ViewModelBase,
             
             foreach (var pic in sortedGroup) {
                 pic.GroupName = null;
+                pic.BurstIndex = 0;
+                pic.BurstPosition = 0;
+                pic.BurstTotal = 0;
             }
 
             var groupVm = new PictureGroupViewModel(dateStr, header,
@@ -279,11 +282,17 @@ public partial class GalleryViewModel : ViewModelBase,
 
             // Format the header dynamically depending on if it's a sequence or a single shot
             var countSuffix = group.Count > 1 ? $"{group.Count} photos" : "Single";
-            var header = $"Burst {groupIndex++} ({countSuffix})";
+            var header = $"Burst {groupIndex} ({countSuffix})";
 
+            var position = 1;
             foreach (var pic in group) {
                 pic.GroupName = header;
+                pic.BurstIndex = groupIndex;
+                pic.BurstPosition = position++;
+                pic.BurstTotal = group.Count;
             }
+
+            groupIndex++;
 
             // Pass 'true' to ensure the UI treats every single one as a burst group
             GroupedPictures.Add(new PictureGroupViewModel(header, header,

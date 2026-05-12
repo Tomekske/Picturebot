@@ -32,6 +32,15 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private string? _groupName;
 
+    [ObservableProperty]
+    private int _burstIndex;
+
+    [ObservableProperty]
+    private int _burstPosition;
+
+    [ObservableProperty]
+    private int _burstTotal;
+
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;

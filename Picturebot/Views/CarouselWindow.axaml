@@ -64,10 +64,11 @@
                     HorizontalAlignment="Right"
                     IsVisible="{Binding CurrentGroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                    <icons:MaterialIcon Kind="BurstMode" Width="18" Height="18" Foreground="White" />
+                    <icons:MaterialIcon Kind="BurstMode" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding CurrentGroupName}"
                                FontSize="16"
-                               Foreground="White" FontWeight="Bold" />
+                               Foreground="White" FontWeight="Bold"
+                               VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
         </StackPanel>
