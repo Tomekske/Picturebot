@@ -20,7 +20,9 @@ using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
-public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCreatedMessage> {
+public partial class NavigationPaneViewModel : ViewModelBase, 
+    IRecipient<NodeCreatedMessage>,
+    IRecipient<NodeDeletedMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly IImportAlbumsService _importAlbumsService;
@@ -49,10 +51,15 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
         _scopeFactory = scopeFactory;
         _ = LoadFoldersAsync();
 
-        WeakReferenceMessenger.Default.Register(this);
+        WeakReferenceMessenger.Default.RegisterAll(this);
     }
 
     public void Receive(NodeCreatedMessage message) {
+        // Refresh the navigation pane
+        _ = LoadFoldersAsync();
+    }
+
+    public void Receive(NodeDeletedMessage message) {
         // Refresh the navigation pane
         _ = LoadFoldersAsync();
     }

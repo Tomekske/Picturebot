@@ -116,7 +116,9 @@
                     </Button>
                 </StackPanel>
 
-                <Button Grid.Column="1" Classes="Basic" ToolTip.Tip="Delete" Foreground="Red">
+                <Button Grid.Column="1" Classes="Basic" ToolTip.Tip="Delete" Foreground="Red"
+                        Command="{Binding DeleteCurrentNodeCommand}"
+                        IsVisible="{Binding !IsLibraryRoot}">
                     <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
                 </Button>
             </Grid>

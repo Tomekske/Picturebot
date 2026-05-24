@@ -1,11 +1,15 @@
 using System.IO.Abstractions;
 using Database.Domain.Entities;
 using Domain.Enums;
+using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 
 namespace Graph.Infrastructure.Services;
 
-public class AlbumService(INodeService nodeService, IFileSystem fileSystem) : IAlbumService {
+public class AlbumService(
+    INodeService nodeService,
+    IFileSystem fileSystem,
+    ISettingsService settingsService) : IAlbumService {
     public async Task<Album> CreateAsync(int? parentId, string albumName, string path) {
         var album = new Album {
             Name = albumName,
@@ -31,5 +35,33 @@ public class AlbumService(INodeService nodeService, IFileSystem fileSystem) : IA
         fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "Picked"));
 
         return album;
+    }
+
+    public async Task DeleteAsync(Album album) {
+        var settings = settingsService.Current;
+        var libraryPath = settings.LibraryPath;
+
+        if (string.IsNullOrEmpty(libraryPath)) {
+            throw new InvalidOperationException("Library path is not configured.");
+        }
+
+        if (string.IsNullOrEmpty(album.Uuid)) {
+            throw new InvalidOperationException("Album UUID is missing.");
+        }
+
+        var sourcePath = fileSystem.Path.Combine(libraryPath, album.Uuid);
+        var deletedRoot = fileSystem.Path.Combine(libraryPath, "deleted");
+        var destinationPath = fileSystem.Path.Combine(deletedRoot, album.Uuid);
+
+        if (fileSystem.Directory.Exists(sourcePath)) {
+            if (!fileSystem.Directory.Exists(deletedRoot)) {
+                fileSystem.Directory.CreateDirectory(deletedRoot);
+            }
+
+            // Move the directory to the retention path
+            fileSystem.Directory.Move(sourcePath, destinationPath);
+        }
+
+        await nodeService.DeleteNodeAsync(album);
     }
 }

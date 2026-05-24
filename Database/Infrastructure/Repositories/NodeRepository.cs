@@ -76,4 +76,16 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         
         await context.SaveChangesAsync();
     }
+
+    public async Task DeleteAsync(Node node) {
+        if (node is Album) {
+            var children = await context.Nodes
+                .Where(n => n.ParentId == node.Id)
+                .ToListAsync();
+            context.Nodes.RemoveRange(children);
+        }
+
+        context.Nodes.Remove(node);
+        await context.SaveChangesAsync();
+    }
 }

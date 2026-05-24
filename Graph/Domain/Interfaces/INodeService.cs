@@ -45,4 +45,11 @@ public interface INodeService {
     /// <param name="node">The node entity with updated values.</param>
     /// <returns>A Task representing the asynchronous update operation.</returns>
     Task UpdateNodeAsync(Node node);
+
+    /// <summary>
+    ///     Removes a node from the hierarchy.
+    /// </summary>
+    /// <param name="node">The node entity to delete.</param>
+    /// <returns>A Task representing the asynchronous deletion operation.</returns>
+    Task DeleteNodeAsync(Node node);
 }

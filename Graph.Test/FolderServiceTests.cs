@@ -36,4 +36,33 @@ public class FolderServiceTests {
         Assert.That(result[0].Name, Is.EqualTo("Real Folder"));
         Assert.That(result[0].Type, Is.EqualTo(NodeType.Folder));
     }
+
+    [Test]
+    public async Task DeleteAsync_WhenFolderIsEmpty_ShouldCallDeleteNode() {
+        // Arrange
+        var folder = new Folder { Id = 1, Name = "Empty Folder", Type = NodeType.Folder };
+        _nodeServiceMock.Setup(s => s.LoadHydratedTreeAsync()).ReturnsAsync(new List<Node> { folder });
+
+        // Act
+        await _folderService.DeleteAsync(folder);
+
+        // Assert
+        _nodeServiceMock.Verify(s => s.DeleteNodeAsync(folder), Times.Once);
+    }
+
+    [Test]
+    public void DeleteAsync_WhenFolderIsNotEmpty_ShouldThrowInvalidOperationException() {
+        // Arrange
+        var folder = new Folder { 
+            Id = 1, 
+            Name = "Not Empty", 
+            Type = NodeType.Folder,
+            Children = new List<Node> { new Album { Id = 2, Name = "Child" } }
+        };
+        _nodeServiceMock.Setup(s => s.LoadHydratedTreeAsync()).ReturnsAsync(new List<Node> { folder });
+
+        // Act & Assert
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await _folderService.DeleteAsync(folder));
+        _nodeServiceMock.Verify(s => s.DeleteNodeAsync(It.IsAny<Folder>()), Times.Never);
+    }
 }

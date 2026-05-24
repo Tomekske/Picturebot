@@ -15,4 +15,6 @@ public interface IFolderService {
     Task<Folder> CreateAsync(int? parentId, string folderName);
 
     Task<List<Folder>> FindAllAsync();
+
+    Task DeleteAsync(Folder folder);
 }
