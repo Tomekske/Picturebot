@@ -99,10 +99,8 @@ public partial class EditNodeDialogViewModel : ViewModelBase {
         if (string.IsNullOrWhiteSpace(NewFolderName)) return;
 
         try {
-            // Create the new folder at root for now, or we could ask for parent of new folder...
-            // User said "create new parent folder on the fly". 
-            // Usually this means sibling of root or under current root.
-            var newFolder = await _folderService.CreateAsync(null, NewFolderName);
+            // Create the new folder under the same parent as the current node
+            var newFolder = await _folderService.CreateAsync(_nodeToEdit.ParentId, NewFolderName);
             
             // Refresh the entire nodes list to include the new folder in hierarchy
             var updatedNodes = await _nodeService.LoadHydratedTreeAsync();
