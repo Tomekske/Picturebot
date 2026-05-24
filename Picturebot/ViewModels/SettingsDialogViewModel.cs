@@ -152,6 +152,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         MainWindow.ToastManager.CreateToast()
             .WithTitle("Settings")
             .WithContent("Your preferences have been updated successfully.")
+            .Dismiss().ByClicking()
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .Queue();
 

@@ -14,4 +14,6 @@ public interface IAlbumService {
     /// <param name="path">The base path where the album directory should be created.</param>
     /// <returns>A Task that returns the created Album entity.</returns>
     Task<Album> CreateAsync(int? parentId, string albumName, string path);
+
+    Task DeleteAsync(Album album);
 }

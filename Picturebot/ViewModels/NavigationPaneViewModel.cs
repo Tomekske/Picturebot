@@ -20,7 +20,10 @@ using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
-public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCreatedMessage> {
+public partial class NavigationPaneViewModel : ViewModelBase, 
+    IRecipient<NodeCreatedMessage>,
+    IRecipient<NodeDeletedMessage>,
+    IRecipient<NodeUpdatedMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly IImportAlbumsService _importAlbumsService;
@@ -49,10 +52,20 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
         _scopeFactory = scopeFactory;
         _ = LoadFoldersAsync();
 
-        WeakReferenceMessenger.Default.Register(this);
+        WeakReferenceMessenger.Default.RegisterAll(this);
     }
 
     public void Receive(NodeCreatedMessage message) {
+        // Refresh the navigation pane
+        _ = LoadFoldersAsync();
+    }
+
+    public void Receive(NodeDeletedMessage message) {
+        // Refresh the navigation pane
+        _ = LoadFoldersAsync();
+    }
+
+    public void Receive(NodeUpdatedMessage message) {
         // Refresh the navigation pane
         _ = LoadFoldersAsync();
     }
@@ -71,6 +84,7 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
                 MainWindow.ToastManager.CreateToast()
                     .WithTitle("Success")
                     .WithContent($"Folder '{result.Name}' has been created.")
+                    .Dismiss().ByClicking()
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .Queue();
             }
@@ -98,6 +112,7 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
                 MainWindow.ToastManager.CreateToast()
                     .WithTitle("Success")
                     .WithContent($"Album '{result.Name}' import has completed.")
+                    .Dismiss().ByClicking()
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .Queue();
             }
@@ -123,6 +138,7 @@ public partial class NavigationPaneViewModel : ViewModelBase, IRecipient<NodeCre
                 MainWindow.ToastManager.CreateToast()
                     .WithTitle("Success")
                     .WithContent("Batch import of albums has completed.")
+                    .Dismiss().ByClicking()
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .Queue();
             }

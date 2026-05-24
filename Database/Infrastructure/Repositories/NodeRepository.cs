@@ -76,4 +76,27 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         
         await context.SaveChangesAsync();
     }
+
+    public async Task DeleteAsync(Node node) {
+        var trackedEntity = context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
+
+        if (node is Album) {
+            var children = await context.Nodes
+                .Where(n => n.ParentId == node.Id)
+                .ToListAsync();
+            context.Nodes.RemoveRange(children);
+        }
+
+        if (trackedEntity != null) {
+            context.Nodes.Remove(trackedEntity);
+        } else {
+            // Detach navigation properties to prevent EF from trying to track the entire graph,
+            // which causes identity conflicts if the parent or children are already tracked.
+            node.Parent = null;
+            node.Children = null;
+            context.Nodes.Remove(node);
+        }
+
+        await context.SaveChangesAsync();
+    }
 }

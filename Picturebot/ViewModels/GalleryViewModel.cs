@@ -20,6 +20,7 @@ using Picturebot.Messages;
 using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
+using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
@@ -27,8 +28,12 @@ namespace Picturebot.ViewModels;
 public partial class GalleryViewModel : ViewModelBase, 
     IRecipient<NodeSelectedMessage>, 
     IRecipient<NodeCreatedMessage>,
+    IRecipient<NodeDeletedMessage>,
+    IRecipient<NodeUpdatedMessage>,
     IRecipient<ProcessingProgressMessage>,
     IRecipient<ProcessingCompletedMessage> {
+    private readonly IAlbumService _albumService;
+    private readonly IFolderService _folderService;
     private readonly ICurationQueue _curationQueue;
     private readonly IPictureGroupingService _groupingService;
     private readonly INavigationService _navigationService;
@@ -65,6 +70,9 @@ public partial class GalleryViewModel : ViewModelBase,
     private bool _isShowingAlbum;
 
     [ObservableProperty]
+    private bool _isLibraryRoot;
+
+    [ObservableProperty]
     private ObservableCollection<Node> _items = new();
 
     [ObservableProperty]
@@ -75,13 +83,16 @@ public partial class GalleryViewModel : ViewModelBase,
 
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
         IPictureGroupingService groupingService, INavigationService navigationService,
-        ISettingsService settingsService, ICurationQueue curationQueue) {
+        ISettingsService settingsService, ICurationQueue curationQueue,
+        IAlbumService albumService, IFolderService folderService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
         _navigationService = navigationService;
         _settingsService = settingsService;
         _curationQueue = curationQueue;
+        _albumService = albumService;
+        _folderService = folderService;
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -125,6 +136,66 @@ public partial class GalleryViewModel : ViewModelBase,
                 } else if (newNode is Album) {
                     AlbumItems.Add(newNode);
                 }
+            }
+        }
+    }
+
+    public void Receive(NodeDeletedMessage message) {
+        var deletedNode = message.Value;
+
+        // If we are in the parent folder, remove the deleted node
+        if (_currentNode?.Id == deletedNode.ParentId || (_currentNode == null && deletedNode.ParentId == null)) {
+            var itemToRemove = Items.FirstOrDefault(i => i.Id == deletedNode.Id);
+            if (itemToRemove != null) {
+                Items.Remove(itemToRemove);
+                if (deletedNode is Folder) {
+                    FolderItems.Remove(itemToRemove);
+                } else if (deletedNode is Album) {
+                    AlbumItems.Remove(itemToRemove);
+                }
+            }
+        }
+    }
+
+    public void Receive(NodeUpdatedMessage message) {
+        var updatedNode = message.Value;
+
+        // If the updated node is the current node, we might need to refresh breadcrumbs or title
+        if (_currentNode?.Id == updatedNode.Id) {
+            _currentNode.Name = updatedNode.Name;
+            _currentNode.ParentId = updatedNode.ParentId;
+            UpdateBreadcrumbs(_currentNode);
+        }
+
+        // If we are in the parent folder of the updated node, refresh its name in the items list
+        if (_currentNode?.Id == updatedNode.ParentId || (_currentNode == null && updatedNode.ParentId == null)) {
+            var itemToUpdate = Items.FirstOrDefault(i => i.Id == updatedNode.Id);
+            if (itemToUpdate != null) {
+                var index = Items.IndexOf(itemToUpdate);
+                if (index != -1) {
+                    Items[index] = updatedNode;
+                }
+                
+                if (updatedNode is Folder) {
+                    var fIndex = FolderItems.IndexOf(itemToUpdate);
+                    if (fIndex != -1) FolderItems[fIndex] = updatedNode;
+                } else if (updatedNode is Album) {
+                    var aIndex = AlbumItems.IndexOf(itemToUpdate);
+                    if (aIndex != -1) AlbumItems[aIndex] = updatedNode;
+                }
+            } else {
+                // It might have been moved INTO this folder
+                Items.Add(updatedNode);
+                if (updatedNode is Folder) FolderItems.Add(updatedNode);
+                else if (updatedNode is Album) AlbumItems.Add(updatedNode);
+            }
+        } else {
+            // It might have been moved OUT of this folder
+            var itemToRemove = Items.FirstOrDefault(i => i.Id == updatedNode.Id);
+            if (itemToRemove != null) {
+                Items.Remove(itemToRemove);
+                if (updatedNode is Folder) FolderItems.Remove(itemToRemove);
+                else if (updatedNode is Album) AlbumItems.Remove(itemToRemove);
             }
         }
     }
@@ -317,6 +388,7 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Library path is not configured.")
+                .Dismiss().ByClicking()
                 .Queue();
             return;
         }
@@ -327,6 +399,7 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Album directory does not exist or is inaccessible.")
+                .Dismiss().ByClicking()
                 .Queue();
             return;
         }
@@ -344,6 +417,7 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Failed to open File Explorer.")
+                .Dismiss().ByClicking()
                 .Queue();
         }
     }
@@ -376,6 +450,73 @@ public partial class GalleryViewModel : ViewModelBase,
         WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
     }
 
+    [RelayCommand]
+    private async Task EditCurrentNodeAsync() {
+        if (_currentNode == null) return;
+
+        var allNodes = await _nodeService.LoadHydratedTreeAsync();
+        var vm = new EditNodeDialogViewModel(_nodeService, _folderService, _currentNode, allNodes, result => {
+            if (result != null) {
+                // Broadcast update to refresh the UI elsewhere
+                WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
+            }
+        });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new EditNodeDialog { DataContext = vm })
+            .TryShow();
+    }
+
+    [RelayCommand]
+    private async Task DeleteCurrentNodeAsync() {
+        if (_currentNode == null) return;
+
+        var title = $"Delete {_currentNode.Type}";
+        var message = _currentNode.Type == NodeType.Folder
+            ? $"Are you sure you want to delete the folder '{_currentNode.Name}'? Only empty folders can be deleted."
+            : $"Are you sure you want to delete the album '{_currentNode.Name}'? This will move the physical directory to the 'deleted' folder and remove all picture records from the database.";
+
+        var vm = new ConfirmDeleteDialogViewModel(title, message, async result => {
+            if (result) {
+                try {
+                    var nodeToDelete = _currentNode;
+                    if (nodeToDelete is Folder folder) {
+                        await _folderService.DeleteAsync(folder);
+                    } else if (nodeToDelete is Album album) {
+                        await _albumService.DeleteAsync(album);
+                    }
+
+                    Log.Information("{Type} deleted: {Name}", nodeToDelete.Type, nodeToDelete.Name);
+
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"{nodeToDelete.Type} '{nodeToDelete.Name}' has been deleted.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+
+                    // Navigate back to parent
+                    var parent = nodeToDelete.Parent;
+                    _navigationService.NavigateTo(parent);
+
+                    // Broadcast deletion to refresh the tree
+                    WeakReferenceMessenger.Default.Send(new NodeDeletedMessage(nodeToDelete));
+                } catch (Exception ex) {
+                    Log.Error(ex, "Failed to delete {Type}", _currentNode.Type);
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Error")
+                        .WithContent(ex.Message)
+                        .Dismiss().ByClicking()
+                        .Queue();
+                }
+            }
+        });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new ConfirmDeleteDialog { DataContext = vm })
+            .TryShow();
+    }
+
     private async Task LoadInitialItemsAsync() {
         var roots = await _nodeService.LoadHydratedTreeAsync();
         UpdateGalleryItems(null, roots);
@@ -393,6 +534,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private void UpdateGalleryItems(Node? currentNode, List<Node>? children) {
         _currentNode = currentNode;
         IsBurstViewEnabled = false;
+        IsLibraryRoot = currentNode == null;
 
         // Clear collections to prevent ghosting
         Items.Clear();

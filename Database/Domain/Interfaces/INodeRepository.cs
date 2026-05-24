@@ -64,4 +64,11 @@ public interface INodeRepository {
     /// <param name="node">The node entity with updated values.</param>
     /// <returns>A task that represents the asynchronous update operation.</returns>
     Task UpdateAsync(Node node);
+
+    /// <summary>
+    ///     Removes a node and its associated data from the data store.
+    /// </summary>
+    /// <param name="node">The node entity to delete.</param>
+    /// <returns>A task that represents the asynchronous deletion operation.</returns>
+    Task DeleteAsync(Node node);
 }

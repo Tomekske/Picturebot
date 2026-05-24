@@ -62,4 +62,8 @@ public class NodeService(
     public async Task UpdateNodeAsync(Node node) {
         await nodeRepository.UpdateAsync(node);
     }
+
+    public async Task DeleteNodeAsync(Node node) {
+        await nodeRepository.DeleteAsync(node);
+    }
 }

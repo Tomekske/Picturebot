@@ -23,4 +23,26 @@ public class FolderService(INodeService nodeService) : IFolderService {
             .Where(n => n.Type == NodeType.Folder)
             .ToList();
     }
+
+    public async Task DeleteAsync(Folder folder) {
+        var hydratedTree = await nodeService.LoadHydratedTreeAsync();
+        var nodeInTree = FindNode(hydratedTree, folder.Id);
+
+        if (nodeInTree?.Children != null && nodeInTree.Children.Any()) {
+            throw new InvalidOperationException("Cannot delete a folder that is not empty.");
+        }
+
+        await nodeService.DeleteNodeAsync(folder);
+    }
+
+    private Node? FindNode(List<Node> nodes, int id) {
+        foreach (var node in nodes) {
+            if (node.Id == id) return node;
+            if (node.Children != null) {
+                var found = FindNode(node.Children.ToList(), id);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
 }

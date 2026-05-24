@@ -1,6 +1,8 @@
 using System.IO.Abstractions.TestingHelpers;
 using Database.Domain.Entities;
 using Domain.Enums;
+using Domain.Interfaces;
+using Domain.Models;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Services;
 using Moq;
@@ -11,13 +13,20 @@ namespace Graph.Test;
 public class AlbumServiceTests {
     private MockFileSystem _mockFileSystem;
     private Mock<INodeService> _mockNodeService;
+    private Mock<ISettingsService> _mockSettingsService;
     private AlbumService _albumService;
 
     [SetUp]
     public void Setup() {
         _mockFileSystem = new MockFileSystem();
         _mockNodeService = new Mock<INodeService>();
-        _albumService = new AlbumService(_mockNodeService.Object, _mockFileSystem);
+        _mockSettingsService = new Mock<ISettingsService>();
+        
+        _mockSettingsService.Setup(s => s.Current).Returns(new SettingsModel {
+            LibraryPath = @"C:\Photos"
+        });
+
+        _albumService = new AlbumService(_mockNodeService.Object, _mockFileSystem, _mockSettingsService.Object);
 
         // Configure mock NodeService to simulate the strategy's Prepare behavior
         _mockNodeService
@@ -86,6 +95,31 @@ public class AlbumServiceTests {
         Assert.Multiple(() => {
             Assert.That(result.ParentId, Is.Null);
             _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Album>(a => a.ParentId == null)), Times.Once);
+        });
+    }
+
+    [Test]
+    public async Task DeleteAsync_ShouldMoveDirectoryToDeletedFolderAndCallDeleteNode() {
+        // Arrange
+        var libraryPath = @"C:\Photos";
+        var albumUuid = Guid.NewGuid().ToString();
+        var album = new Album { Id = 10, Uuid = albumUuid, Name = "Deleted Album" };
+        var albumPath = Path.Combine(libraryPath, albumUuid);
+        
+        _mockFileSystem.AddDirectory(albumPath);
+        _mockFileSystem.AddFile(Path.Combine(albumPath, "test.txt"), new MockFileData("test"));
+
+        // Act
+        await _albumService.DeleteAsync(album);
+
+        // Assert
+        var expectedDeletedPath = Path.Combine(libraryPath, "deleted", albumUuid);
+        Assert.Multiple(() => {
+            Assert.That(_mockFileSystem.Directory.Exists(albumPath), Is.False, "Original album directory should be moved.");
+            Assert.That(_mockFileSystem.Directory.Exists(expectedDeletedPath), Is.True, "Album directory should exist in the 'deleted' folder.");
+            Assert.That(_mockFileSystem.File.Exists(Path.Combine(expectedDeletedPath, "test.txt")), Is.True, "Contents should be preserved.");
+            
+            _mockNodeService.Verify(s => s.DeleteNodeAsync(album), Times.Once);
         });
     }
 }

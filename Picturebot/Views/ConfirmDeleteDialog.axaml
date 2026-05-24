@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Picturebot.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="250"
+             x:Class="Picturebot.Views.ConfirmDeleteDialog"
+             x:DataType="vm:ConfirmDeleteDialogViewModel">
+    
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20" Width="350">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,15">
+            <icons:MaterialIcon Kind="AlertCircle" Width="24" Height="24" Foreground="Red" />
+            <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+        </StackPanel>
+        
+        <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" FontSize="16" Margin="0,0,0,20" />
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Classes="Basic" Content="Cancel" Command="{Binding CancelCommand}" />
+            <Button Classes="Flat" Content="Delete" Command="{Binding ConfirmCommand}" Background="Red" Foreground="White" />
+        </StackPanel>
+    </Grid>
+</UserControl>
