@@ -344,6 +344,7 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Library path is not configured.")
+                .Dismiss().ByClicking()
                 .Queue();
             return;
         }
@@ -354,6 +355,7 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Album directory does not exist or is inaccessible.")
+                .Dismiss().ByClicking()
                 .Queue();
             return;
         }
@@ -371,6 +373,7 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Failed to open File Explorer.")
+                .Dismiss().ByClicking()
                 .Queue();
         }
     }
@@ -427,6 +430,7 @@ public partial class GalleryViewModel : ViewModelBase,
                     MainWindow.ToastManager.CreateToast()
                         .WithTitle("Success")
                         .WithContent($"{nodeToDelete.Type} '{nodeToDelete.Name}' has been deleted.")
+                        .Dismiss().ByClicking()
                         .Dismiss().After(TimeSpan.FromSeconds(3))
                         .Queue();
 
@@ -441,6 +445,7 @@ public partial class GalleryViewModel : ViewModelBase,
                     MainWindow.ToastManager.CreateToast()
                         .WithTitle("Error")
                         .WithContent(ex.Message)
+                        .Dismiss().ByClicking()
                         .Queue();
                 }
             }

@@ -100,6 +100,7 @@ public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Library path is not set in settings.")
+                .Dismiss().ByClicking()
                 .Queue();
             return;
         }
