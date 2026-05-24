@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Picturebot.ViewModels"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+             x:Class="Picturebot.Views.EditNodeDialog"
+             x:DataType="vm:EditNodeDialogViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.Action">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
+        </Style>
+    </UserControl.Styles>
+    
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20" Width="400">
+        <TextBlock Grid.Row="0" Text="{Binding Title}" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" />
+        
+        <StackPanel Grid.Row="1" Spacing="15">
+            <StackPanel Spacing="5">
+                <TextBlock Text="Name" FontWeight="SemiBold" />
+                <TextBox Text="{Binding NodeName, Mode=TwoWay}" Watermark="Enter name..." />
+            </StackPanel>
+            
+            <StackPanel Spacing="5">
+                <TextBlock Text="Parent Location" FontWeight="SemiBold" />
+                <ComboBox ItemsSource="{Binding Parents}"
+                          SelectedItem="{Binding SelectedParent}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.Styles>
+                        <Style Selector="ComboBoxItem" x:DataType="vm:LocationItem">
+                            <Setter Property="IsEnabled" Value="{Binding !IsSeparator}" />
+                            <Setter Property="Padding" Value="0" />
+                        </Style>
+                    </ComboBox.Styles>
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LocationItem">
+                            <Panel>
+                                <Separator IsVisible="{Binding IsSeparator}" Margin="0" />
+                                <TextBlock IsVisible="{Binding !IsSeparator}" 
+                                           Text="{Binding Name}" 
+                                           Padding="12,8"
+                                           Classes.Action="{Binding IsAction}" />
+                            </Panel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Inline Quick-Add Folder Input -->
+            <Border IsVisible="{Binding IsCreatingNewFolder}"
+                    Padding="15"
+                    Background="{DynamicResource SukiGlassCardBackground}"
+                    BorderBrush="{DynamicResource SukiBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="New Parent Folder Name" FontWeight="SemiBold" FontSize="14" />
+                    <TextBox Text="{Binding NewFolderName, Mode=TwoWay}" 
+                             Watermark="Folder name..."
+                             Classes="Simple" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Classes="Basic" Content="Cancel" Command="{Binding CancelNewFolderCommand}" Padding="8,4" />
+                        <Button Classes="Flat" Content="Create" Command="{Binding ConfirmNewFolderCommand}" Padding="12,4" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Classes="Basic" Content="Cancel" Command="{Binding CancelCommand}" />
+            <Button Classes="Flat" Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding !IsCreatingNewFolder}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

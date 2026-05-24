@@ -116,11 +116,17 @@
                     </Button>
                 </StackPanel>
 
-                <Button Grid.Column="1" Classes="Basic" ToolTip.Tip="Delete" Foreground="Red"
-                        Command="{Binding DeleteCurrentNodeCommand}"
-                        IsVisible="{Binding !IsLibraryRoot}">
-                    <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
-                </Button>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding !IsLibraryRoot}">
+                    <Button Classes="Basic" ToolTip.Tip="Edit"
+                            Command="{Binding EditCurrentNodeCommand}">
+                        <icons:MaterialIcon Kind="PencilOutline" Width="20" Height="20" />
+                    </Button>
+
+                    <Button Classes="Basic" ToolTip.Tip="Delete" Foreground="Red"
+                            Command="{Binding DeleteCurrentNodeCommand}">
+                        <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 

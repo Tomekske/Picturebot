@@ -29,6 +29,7 @@ public partial class GalleryViewModel : ViewModelBase,
     IRecipient<NodeSelectedMessage>, 
     IRecipient<NodeCreatedMessage>,
     IRecipient<NodeDeletedMessage>,
+    IRecipient<NodeUpdatedMessage>,
     IRecipient<ProcessingProgressMessage>,
     IRecipient<ProcessingCompletedMessage> {
     private readonly IAlbumService _albumService;
@@ -152,6 +153,49 @@ public partial class GalleryViewModel : ViewModelBase,
                 } else if (deletedNode is Album) {
                     AlbumItems.Remove(itemToRemove);
                 }
+            }
+        }
+    }
+
+    public void Receive(NodeUpdatedMessage message) {
+        var updatedNode = message.Value;
+
+        // If the updated node is the current node, we might need to refresh breadcrumbs or title
+        if (_currentNode?.Id == updatedNode.Id) {
+            _currentNode.Name = updatedNode.Name;
+            _currentNode.ParentId = updatedNode.ParentId;
+            UpdateBreadcrumbs(_currentNode);
+        }
+
+        // If we are in the parent folder of the updated node, refresh its name in the items list
+        if (_currentNode?.Id == updatedNode.ParentId || (_currentNode == null && updatedNode.ParentId == null)) {
+            var itemToUpdate = Items.FirstOrDefault(i => i.Id == updatedNode.Id);
+            if (itemToUpdate != null) {
+                var index = Items.IndexOf(itemToUpdate);
+                if (index != -1) {
+                    Items[index] = updatedNode;
+                }
+                
+                if (updatedNode is Folder) {
+                    var fIndex = FolderItems.IndexOf(itemToUpdate);
+                    if (fIndex != -1) FolderItems[fIndex] = updatedNode;
+                } else if (updatedNode is Album) {
+                    var aIndex = AlbumItems.IndexOf(itemToUpdate);
+                    if (aIndex != -1) AlbumItems[aIndex] = updatedNode;
+                }
+            } else {
+                // It might have been moved INTO this folder
+                Items.Add(updatedNode);
+                if (updatedNode is Folder) FolderItems.Add(updatedNode);
+                else if (updatedNode is Album) AlbumItems.Add(updatedNode);
+            }
+        } else {
+            // It might have been moved OUT of this folder
+            var itemToRemove = Items.FirstOrDefault(i => i.Id == updatedNode.Id);
+            if (itemToRemove != null) {
+                Items.Remove(itemToRemove);
+                if (updatedNode is Folder) FolderItems.Remove(itemToRemove);
+                else if (updatedNode is Album) AlbumItems.Remove(itemToRemove);
             }
         }
     }
@@ -404,6 +448,23 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
+    }
+
+    [RelayCommand]
+    private async Task EditCurrentNodeAsync() {
+        if (_currentNode == null) return;
+
+        var allNodes = await _nodeService.LoadHydratedTreeAsync();
+        var vm = new EditNodeDialogViewModel(_nodeService, _folderService, _currentNode, allNodes, result => {
+            if (result != null) {
+                // Broadcast update to refresh the UI elsewhere
+                WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
+            }
+        });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new EditNodeDialog { DataContext = vm })
+            .TryShow();
     }
 
     [RelayCommand]

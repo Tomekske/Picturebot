@@ -22,7 +22,8 @@ namespace Picturebot.ViewModels;
 
 public partial class NavigationPaneViewModel : ViewModelBase, 
     IRecipient<NodeCreatedMessage>,
-    IRecipient<NodeDeletedMessage> {
+    IRecipient<NodeDeletedMessage>,
+    IRecipient<NodeUpdatedMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly IImportAlbumsService _importAlbumsService;
@@ -60,6 +61,11 @@ public partial class NavigationPaneViewModel : ViewModelBase,
     }
 
     public void Receive(NodeDeletedMessage message) {
+        // Refresh the navigation pane
+        _ = LoadFoldersAsync();
+    }
+
+    public void Receive(NodeUpdatedMessage message) {
         // Refresh the navigation pane
         _ = LoadFoldersAsync();
     }
