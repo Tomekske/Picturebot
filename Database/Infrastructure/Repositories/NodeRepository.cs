@@ -78,14 +78,23 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     }
 
     public async Task DeleteAsync(Node node) {
-        if (node is Album) {
+        var trackedEntity = context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
+        var entityToRemove = trackedEntity ?? node;
+
+        if (entityToRemove is Album) {
             var children = await context.Nodes
-                .Where(n => n.ParentId == node.Id)
+                .Where(n => n.ParentId == entityToRemove.Id)
                 .ToListAsync();
             context.Nodes.RemoveRange(children);
         }
 
-        context.Nodes.Remove(node);
+        if (trackedEntity != null) {
+            context.Nodes.Remove(trackedEntity);
+        } else {
+            context.Nodes.Attach(entityToRemove);
+            context.Nodes.Remove(entityToRemove);
+        }
+
         await context.SaveChangesAsync();
     }
 }
