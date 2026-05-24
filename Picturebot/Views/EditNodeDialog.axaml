@@ -9,6 +9,9 @@
              x:DataType="vm:EditNodeDialogViewModel">
 
     <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        </Style>
         <Style Selector="TextBlock.Action">
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
