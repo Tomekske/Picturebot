@@ -18,6 +18,7 @@
         <converters:ColorLabelToBrushConverter x:Key="ColorLabelToBrushConverter" />
         <converters:RatingToBrushConverter x:Key="RatingToBrushConverter" />
         <converters:ColorLabelToStrokeThicknessConverter x:Key="ColorLabelToStrokeThicknessConverter" />
+        <converters:RatingToBooleanConverter x:Key="RatingToBooleanConverter" />
     </UserControl.Resources>
 
     <Grid>

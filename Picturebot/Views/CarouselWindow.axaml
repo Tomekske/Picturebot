@@ -21,6 +21,10 @@
 
     <Window.Resources>
         <converters:CurationStatusToBrushConverter x:Key="CurationStatusToBrushConverter" />
+        <converters:ColorLabelToBrushConverter x:Key="ColorLabelToBrushConverter" />
+        <converters:RatingToBrushConverter x:Key="RatingToBrushConverter" />
+        <converters:RatingToBooleanConverter x:Key="RatingToBooleanConverter" />
+        <converters:ColorLabelToStrokeThicknessConverter x:Key="ColorLabelToStrokeThicknessConverter" />
     </Window.Resources>
 
     <Grid>
@@ -130,6 +134,61 @@
                         <TextBlock Text="Rejected" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
+
+                <Separator Width="1" Height="40" Background="#44FFFFFF" Margin="10,0" />
+
+                <!-- Star Rating -->
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="1" Padding="6">
+                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                                            Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=1}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="2" Padding="6">
+                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                                            Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=2}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="3" Padding="6">
+                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                                            Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=3}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="4" Padding="6">
+                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                                            Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=4}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="5" Padding="6">
+                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                                            Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=5}" />
+                    </Button>
+                </StackPanel>
+
+                <Separator Width="1" Height="40" Background="#44FFFFFF" Margin="10,0" />
+
+                <!-- Color Labels -->
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="5,0">
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Red}" Padding="0">
+                        <Ellipse Width="24" Height="24" Fill="#CC3333" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Red}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Yellow}" Padding="0">
+                        <Ellipse Width="24" Height="24" Fill="#CCCC33" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Yellow}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Green}" Padding="0">
+                        <Ellipse Width="24" Height="24" Fill="#33CC33" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Green}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Blue}" Padding="0">
+                        <Ellipse Width="24" Height="24" Fill="#3333CC" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Blue}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Purple}" Padding="0">
+                        <Ellipse Width="24" Height="24" Fill="#CC33CC" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Purple}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.None}" Padding="6">
+                        <icons:MaterialIcon Kind="LabelOffOutline" Width="24" Height="24" Foreground="White" />
+                    </Button>
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>
