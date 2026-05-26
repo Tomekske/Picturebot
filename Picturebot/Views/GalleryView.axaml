@@ -376,23 +376,27 @@
                                                                     <!-- Rating Indicator -->
                                                                     <StackPanel HorizontalAlignment="Center"
                                                                                 Orientation="Horizontal"
-                                                                                Spacing="1"
-                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}">
-                                                                        <icons:MaterialIcon Kind="Star" Width="10" Height="10" 
-                                                                                            Foreground="Gold" 
-                                                                                            IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}" />
-                                                                        <icons:MaterialIcon Kind="Star" Width="10" Height="10" 
-                                                                                            Foreground="Gold" 
-                                                                                            IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=2}" />
-                                                                        <icons:MaterialIcon Kind="Star" Width="10" Height="10" 
-                                                                                            Foreground="Gold" 
-                                                                                            IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=3}" />
-                                                                        <icons:MaterialIcon Kind="Star" Width="10" Height="10" 
-                                                                                            Foreground="Gold" 
-                                                                                            IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=4}" />
-                                                                        <icons:MaterialIcon Kind="Star" Width="10" Height="10" 
-                                                                                            Foreground="Gold" 
-                                                                                            IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=5}" />
+                                                                                Spacing="1">
+                                                                        <Panel>
+                                                                            <icons:MaterialIcon Kind="StarOutline" Width="10" Height="10" Foreground="Gray" Opacity="0.5" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!1}" />
+                                                                            <icons:MaterialIcon Kind="Star" Width="10" Height="10" Foreground="Gold" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}" />
+                                                                        </Panel>
+                                                                        <Panel>
+                                                                            <icons:MaterialIcon Kind="StarOutline" Width="10" Height="10" Foreground="Gray" Opacity="0.5" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!2}" />
+                                                                            <icons:MaterialIcon Kind="Star" Width="10" Height="10" Foreground="Gold" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=2}" />
+                                                                        </Panel>
+                                                                        <Panel>
+                                                                            <icons:MaterialIcon Kind="StarOutline" Width="10" Height="10" Foreground="Gray" Opacity="0.5" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!3}" />
+                                                                            <icons:MaterialIcon Kind="Star" Width="10" Height="10" Foreground="Gold" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=3}" />
+                                                                        </Panel>
+                                                                        <Panel>
+                                                                            <icons:MaterialIcon Kind="StarOutline" Width="10" Height="10" Foreground="Gray" Opacity="0.5" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!4}" />
+                                                                            <icons:MaterialIcon Kind="Star" Width="10" Height="10" Foreground="Gold" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=4}" />
+                                                                        </Panel>
+                                                                        <Panel>
+                                                                            <icons:MaterialIcon Kind="StarOutline" Width="10" Height="10" Foreground="Gray" Opacity="0.5" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!5}" />
+                                                                            <icons:MaterialIcon Kind="Star" Width="10" Height="10" Foreground="Gold" IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=5}" />
+                                                                        </Panel>
                                                                     </StackPanel>
 
                                                                     <TextBlock Text="{Binding Name}"
