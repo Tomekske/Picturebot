@@ -333,11 +333,11 @@
                                         <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
                                             <Setter Property="Padding" Value="0" />
                                             <Setter Property="Margin" Value="0" />
-                                            <Setter Property="Width" Value="200" />
+                                            <Setter Property="Width" Value="240" />
                                             <Setter Property="Background" Value="Transparent" />
                                             <Setter Property="Template">
                                                 <ControlTemplate>
-                                                    <controls:AspectRatioPanel Ratio="0.75" Margin="8">
+                                                    <controls:AspectRatioPanel Ratio="0.85" Margin="8">
                                                         <!-- The 'Matted Print' Border -->
                                                         <Border Name="PART_AspectBorder"
                                                                 Background="#1C232E"
@@ -349,7 +349,7 @@
                                                                 <!-- Color Label Background Overlay -->
                                                                 <Border Grid.RowSpan="2"
                                                                         Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}" 
-                                                                        Opacity="0.4" />
+                                                                        Opacity="0.15" />
                                                                 
                                                                 <Panel Grid.Row="0" Margin="8">
                                                                     <Image Source="{Binding Thumbnail}"
