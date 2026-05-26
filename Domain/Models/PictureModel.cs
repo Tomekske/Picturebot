@@ -11,5 +11,9 @@ public class PictureModel : NodeModel {
 
     public CurationStatus CurationStatus { get; set; } = CurationStatus.Unflagged;
 
+    public ColorLabel ColorLabel { get; set; } = ColorLabel.None;
+
+    public int Rating { get; set; } = 0;
+
     public SubFolderModel? SubFolder { get; set; }
 }

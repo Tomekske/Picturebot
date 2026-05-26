@@ -23,4 +23,10 @@ public class SettingsModel {
     public int BurstFallbackTimeThresholdSeconds { get; set; } = 10;
 
     public bool LaunchMaximized { get; set; } = false;
+
+    public string RedLabelName { get; set; } = "Red";
+    public string YellowLabelName { get; set; } = "Yellow";
+    public string GreenLabelName { get; set; } = "Green";
+    public string BlueLabelName { get; set; } = "Blue";
+    public string PurpleLabelName { get; set; } = "Purple";
 }

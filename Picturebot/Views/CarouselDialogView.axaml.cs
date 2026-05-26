@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Domain.Enums;
 using Picturebot.ViewModels;
 
 namespace Picturebot.Views;
@@ -33,6 +34,55 @@ public partial class CarouselDialogView : UserControl {
                 break;
             case Key.Right:
                 vm.NextCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.D1:
+            case Key.NumPad1:
+                vm.SetRatingCommand.Execute(1);
+                e.Handled = true;
+                break;
+            case Key.D2:
+            case Key.NumPad2:
+                vm.SetRatingCommand.Execute(2);
+                e.Handled = true;
+                break;
+            case Key.D3:
+            case Key.NumPad3:
+                vm.SetRatingCommand.Execute(3);
+                e.Handled = true;
+                break;
+            case Key.D4:
+            case Key.NumPad4:
+                vm.SetRatingCommand.Execute(4);
+                e.Handled = true;
+                break;
+            case Key.D5:
+            case Key.NumPad5:
+                vm.SetRatingCommand.Execute(5);
+                e.Handled = true;
+                break;
+            case Key.D6:
+            case Key.NumPad6:
+                vm.SetColorLabelCommand.Execute(ColorLabel.Red);
+                e.Handled = true;
+                break;
+            case Key.D7:
+            case Key.NumPad7:
+                vm.SetColorLabelCommand.Execute(ColorLabel.Yellow);
+                e.Handled = true;
+                break;
+            case Key.D8:
+            case Key.NumPad8:
+                vm.SetColorLabelCommand.Execute(ColorLabel.Green);
+                e.Handled = true;
+                break;
+            case Key.D9:
+            case Key.NumPad9:
+                vm.SetColorLabelCommand.Execute(ColorLabel.Blue);
+                e.Handled = true;
+                break;
+            case Key.Multiply:
+                vm.SetColorLabelCommand.Execute(ColorLabel.Purple);
                 e.Handled = true;
                 break;
         }

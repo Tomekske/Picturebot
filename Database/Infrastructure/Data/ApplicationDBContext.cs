@@ -62,6 +62,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
             .HasConversion<string>();
 
         modelBuilder.Entity<Picture>()
+            .Property(p => p.ColorLabel)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Picture>()
             .Property(p => p.ProcessingState)
             .HasConversion<string>();
 
@@ -74,7 +78,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 GroupingThreshold = 8,
                 BurstTimeThresholdSeconds = 3,
                 BurstFallbackTimeThresholdSeconds = 10,
-                LaunchMaximized = false
+                LaunchMaximized = false,
+                RedLabelName = "Red",
+                YellowLabelName = "Yellow",
+                GreenLabelName = "Green",
+                BlueLabelName = "Blue",
+                PurpleLabelName = "Purple"
             }
         );
 

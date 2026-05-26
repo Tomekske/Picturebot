@@ -631,6 +631,38 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    [RelayCommand]
+    private async Task SetColorLabel(ColorLabel label) {
+        if (SelectedPicture == null) {
+            return;
+        }
+
+        try {
+            SelectedPicture.Picture.ColorLabel = label;
+            SelectedPicture.ColorLabel = label;
+            _curationQueue.Enqueue(SelectedPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update color label in gallery for {Name}", SelectedPicture.Name);
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetRating(string ratingStr) {
+        if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
+            return;
+        }
+
+        try {
+            SelectedPicture.Picture.Rating = rating;
+            SelectedPicture.Rating = rating;
+            _curationQueue.Enqueue(SelectedPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update rating in gallery for {Name}", SelectedPicture.Name);
+        }
+    }
+
     public void Receive(ProcessingProgressMessage message) {
         if (_currentNode?.Id != message.Value.AlbumId) {
             return;

@@ -18,6 +18,12 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     private CurationStatus _curationStatus;
 
     [ObservableProperty]
+    private ColorLabel _colorLabel;
+
+    [ObservableProperty]
+    private int _rating;
+
+    [ObservableProperty]
     private ProcessingState _processingState;
 
     [ObservableProperty]
@@ -44,6 +50,8 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;
+        _colorLabel = picture.ColorLabel;
+        _rating = picture.Rating;
         _processingState = picture.ProcessingState;
     }
 
