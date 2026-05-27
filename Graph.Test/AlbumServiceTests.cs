@@ -1,3 +1,4 @@
+using Database.Domain.Interfaces;
 using System.IO.Abstractions.TestingHelpers;
 using Database.Domain.Entities;
 using Domain.Enums;
@@ -14,6 +15,8 @@ public class AlbumServiceTests {
     private MockFileSystem _mockFileSystem;
     private Mock<INodeService> _mockNodeService;
     private Mock<ISettingsService> _mockSettingsService;
+    private Mock<IPictureRepository> _mockPictureRepository;
+    private Mock<IPathService> _mockPathService;
     private AlbumService _albumService;
 
     [SetUp]
@@ -21,12 +24,14 @@ public class AlbumServiceTests {
         _mockFileSystem = new MockFileSystem();
         _mockNodeService = new Mock<INodeService>();
         _mockSettingsService = new Mock<ISettingsService>();
+        _mockPictureRepository = new Mock<IPictureRepository>();
+        _mockPathService = new Mock<IPathService>();
         
         _mockSettingsService.Setup(s => s.Current).Returns(new SettingsModel {
             LibraryPath = @"C:\Photos"
         });
 
-        _albumService = new AlbumService(_mockNodeService.Object, _mockFileSystem, _mockSettingsService.Object);
+        _albumService = new AlbumService(_mockNodeService.Object, _mockFileSystem, _mockSettingsService.Object, _mockPictureRepository.Object, _mockPathService.Object);
 
         // Configure mock NodeService to simulate the strategy's Prepare behavior
         _mockNodeService

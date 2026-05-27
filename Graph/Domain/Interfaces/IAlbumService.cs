@@ -16,4 +16,11 @@ public interface IAlbumService {
     Task<Album> CreateAsync(int? parentId, string albumName, string path);
 
     Task DeleteAsync(Album album);
+
+    /// <summary>
+    ///     Synchronizes the database curation status of pictures within the album based on the presence of files in the physical 'Picked' subfolder.
+    /// </summary>
+    /// <param name="album">The album to synchronize.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    Task SyncPickedStatusAsync(Album album);
 }

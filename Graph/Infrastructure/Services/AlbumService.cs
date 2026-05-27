@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using Database.Domain.Entities;
+using Database.Domain.Interfaces;
 using Domain.Enums;
 using Domain.Interfaces;
 using Graph.Domain.Interfaces;
@@ -9,7 +10,9 @@ namespace Graph.Infrastructure.Services;
 public class AlbumService(
     INodeService nodeService,
     IFileSystem fileSystem,
-    ISettingsService settingsService) : IAlbumService {
+    ISettingsService settingsService,
+    IPictureRepository pictureRepository,
+    IPathService pathService) : IAlbumService {
     public async Task<Album> CreateAsync(int? parentId, string albumName, string path) {
         var album = new Album {
             Name = albumName,
@@ -63,5 +66,35 @@ public class AlbumService(
         }
 
         await nodeService.DeleteNodeAsync(album);
+    }
+
+    public async Task SyncPickedStatusAsync(Album album) {
+        var pickedPath = pathService.GetAlbumPickedPath(album);
+        if (string.IsNullOrEmpty(pickedPath) || !fileSystem.Directory.Exists(pickedPath)) {
+            return;
+        }
+
+        var pickedFiles = fileSystem.Directory.GetFiles(pickedPath);
+        var pickedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in pickedFiles) {
+            var fileNameWithoutExtension = fileSystem.Path.GetFileNameWithoutExtension(file);
+            pickedFileNames.Add(fileNameWithoutExtension);
+        }
+
+        var pictures = await pictureRepository.FindByHierarchyIdAsync(album.Id);
+
+        foreach (var picture in pictures) {
+            bool isPickedOnDisk = pickedFileNames.Contains(picture.Name);
+            bool isFlaggedInDb = picture.CurationStatus == CurationStatus.Flagged;
+
+            if (isPickedOnDisk && !isFlaggedInDb) {
+                picture.CurationStatus = CurationStatus.Flagged;
+                await pictureRepository.UpdateAsync(picture);
+            } else if (!isPickedOnDisk && isFlaggedInDb) {
+                picture.CurationStatus = CurationStatus.Unflagged;
+                await pictureRepository.UpdateAsync(picture);
+            }
+        }
     }
 }

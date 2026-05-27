@@ -453,6 +453,32 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private async Task SyncCurationStatusWithPickedFolderAsync() {
+        if (_currentNode is not Album album) return;
+
+        try {
+            await _albumService.SyncPickedStatusAsync(album);
+
+            // Re-fetch children to get the updated entities and refresh the view
+            var children = await _nodeService.FindChildrenAsync(album.Id);
+            UpdateGalleryItems(album, children);
+            
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Complete")
+                .WithContent($"Successfully synchronized curation status with the Picked folder for '{album.Name}'.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to sync curation status with Picked folder for album {AlbumId}", album.Id);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Error")
+                .WithContent("Failed to synchronize with Picked folder.")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
     private void PlayCarousel() {
         var window = new CarouselWindow();
         var carouselVm =

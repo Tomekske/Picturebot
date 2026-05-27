@@ -38,6 +38,8 @@ public interface INodeService {
     Task<List<Node>> LoadHydratedTreeAsync();
 
     Task<List<Node>> GetAllNodesAsync();
+    
+    Task<List<Node>> FindChildrenAsync(int parentId);
 
     /// <summary>
     ///     Updates an existing node's information within the hierarchy.

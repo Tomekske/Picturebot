@@ -59,6 +59,10 @@ public class NodeService(
         return await nodeRepository.FindAllAsync();
     }
 
+    public async Task<List<Node>> FindChildrenAsync(int parentId) {
+        return await nodeRepository.FindChildrenAsync(parentId);
+    }
+
     public async Task UpdateNodeAsync(Node node) {
         await nodeRepository.UpdateAsync(node);
     }
