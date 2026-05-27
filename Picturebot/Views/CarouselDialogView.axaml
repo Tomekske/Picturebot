@@ -136,11 +136,15 @@
                 <!-- Color Labels -->
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="5,0">
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Red}" Padding="0">
-                        <Ellipse Width="18" Height="18" Fill="#CC3333" 
+                        <Ellipse Width="18" Height="18" Fill="#B71C1C" 
                                  Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Red}" />
                     </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Orange}" Padding="0">
+                        <Ellipse Width="18" Height="18" Fill="#E67E22" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Orange}" />
+                    </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Yellow}" Padding="0">
-                        <Ellipse Width="18" Height="18" Fill="#CCCC33" 
+                        <Ellipse Width="18" Height="18" Fill="#FDD835" 
                                  Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Yellow}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Green}" Padding="0">
@@ -150,6 +154,10 @@
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Blue}" Padding="0">
                         <Ellipse Width="18" Height="18" Fill="#3333CC" 
                                  Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Blue}" />
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Pink}" Padding="0">
+                        <Ellipse Width="18" Height="18" Fill="#F06292" 
+                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Pink}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Purple}" Padding="0">
                         <Ellipse Width="18" Height="18" Fill="#CC33CC" 

@@ -10,10 +10,12 @@ public class ColorLabelToBrushConverter : IValueConverter {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is ColorLabel label) {
             return label switch {
-                ColorLabel.Red => Brush.Parse("#CC3333"),
-                ColorLabel.Yellow => Brush.Parse("#CCCC33"),
+                ColorLabel.Red => Brush.Parse("#B71C1C"),
+                ColorLabel.Orange => Brush.Parse("#E67E22"),
+                ColorLabel.Yellow => Brush.Parse("#FDD835"),
                 ColorLabel.Green => Brush.Parse("#33CC33"),
                 ColorLabel.Blue => Brush.Parse("#3333CC"),
+                ColorLabel.Pink => Brush.Parse("#F06292"),
                 ColorLabel.Purple => Brush.Parse("#CC33CC"),
                 _ => Brushes.Transparent
             };

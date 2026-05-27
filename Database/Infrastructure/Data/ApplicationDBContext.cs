@@ -80,9 +80,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 BurstFallbackTimeThresholdSeconds = 10,
                 LaunchMaximized = false,
                 RedLabelName = "Red",
+                OrangeLabelName = "Orange",
                 YellowLabelName = "Yellow",
                 GreenLabelName = "Green",
                 BlueLabelName = "Blue",
+                PinkLabelName = "Pink",
                 PurpleLabelName = "Purple"
             }
         );

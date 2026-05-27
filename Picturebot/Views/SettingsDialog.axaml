@@ -112,12 +112,14 @@
         <StackPanel Spacing="10">
             <TextBlock Text="COLOR LABEL NAMES" FontSize="11" FontWeight="Bold"
                        Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4">
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,4">
                 <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding RedLabelName}" Watermark="Red Label" Margin="0,0,4,8" />
-                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding YellowLabelName}" Watermark="Yellow Label" Margin="4,0,0,8" />
-                <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding GreenLabelName}" Watermark="Green Label" Margin="0,0,4,8" />
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BlueLabelName}" Watermark="Blue Label" Margin="4,0,0,8" />
-                <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding PurpleLabelName}" Watermark="Purple Label" Margin="0,0,4,0" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OrangeLabelName}" Watermark="Orange Label" Margin="4,0,0,8" />
+                <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding YellowLabelName}" Watermark="Yellow Label" Margin="0,0,4,8" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding GreenLabelName}" Watermark="Green Label" Margin="4,0,0,8" />
+                <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding BlueLabelName}" Watermark="Blue Label" Margin="0,0,4,8" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PinkLabelName}" Watermark="Pink Label" Margin="4,0,0,8" />
+                <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding PurpleLabelName}" Watermark="Purple Label" Margin="0,0,4,0" />
             </Grid>
         </StackPanel>
 
