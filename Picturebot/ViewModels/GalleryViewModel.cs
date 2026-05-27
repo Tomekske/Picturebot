@@ -54,24 +54,25 @@ public partial class GalleryViewModel : ViewModelBase,
     private ObservableCollection<ColorLabel> _filterColors = new();
 
     // Boolean properties for UI bindings
-    public bool IsFlaggedFilterActive => FilterStatuses.Contains(CurationStatus.Flagged);
-    public bool IsUnflaggedFilterActive => FilterStatuses.Contains(CurationStatus.Unflagged);
-    public bool IsRejectedFilterActive => FilterStatuses.Contains(CurationStatus.Rejected);
+    public bool IsFlaggedFilterActive { get => FilterStatuses.Contains(CurationStatus.Flagged); set => ToggleStatusFilter(CurationStatus.Flagged, value); }
+    public bool IsUnflaggedFilterActive { get => FilterStatuses.Contains(CurationStatus.Unflagged); set => ToggleStatusFilter(CurationStatus.Unflagged, value); }
+    public bool IsRejectedFilterActive { get => FilterStatuses.Contains(CurationStatus.Rejected); set => ToggleStatusFilter(CurationStatus.Rejected, value); }
 
-    public bool IsOneStarFilterActive => FilterRatings.Contains(1);
-    public bool IsTwoStarFilterActive => FilterRatings.Contains(2);
-    public bool IsThreeStarFilterActive => FilterRatings.Contains(3);
-    public bool IsFourStarFilterActive => FilterRatings.Contains(4);
-    public bool IsFiveStarFilterActive => FilterRatings.Contains(5);
+    public bool IsOneStarFilterActive { get => FilterRatings.Contains(1); set => ToggleRatingFilter(1, value); }
+    public bool IsTwoStarFilterActive { get => FilterRatings.Contains(2); set => ToggleRatingFilter(2, value); }
+    public bool IsThreeStarFilterActive { get => FilterRatings.Contains(3); set => ToggleRatingFilter(3, value); }
+    public bool IsFourStarFilterActive { get => FilterRatings.Contains(4); set => ToggleRatingFilter(4, value); }
+    public bool IsFiveStarFilterActive { get => FilterRatings.Contains(5); set => ToggleRatingFilter(5, value); }
+    public bool IsZeroStarFilterActive { get => FilterRatings.Contains(0); set => ToggleRatingFilter(0, value); }
 
-    public bool IsNoneColorFilterActive => FilterColors.Contains(ColorLabel.None);
-    public bool IsRedColorFilterActive => FilterColors.Contains(ColorLabel.Red);
-    public bool IsOrangeColorFilterActive => FilterColors.Contains(ColorLabel.Orange);
-    public bool IsYellowColorFilterActive => FilterColors.Contains(ColorLabel.Yellow);
-    public bool IsGreenColorFilterActive => FilterColors.Contains(ColorLabel.Green);
-    public bool IsBlueColorFilterActive => FilterColors.Contains(ColorLabel.Blue);
-    public bool IsPinkColorFilterActive => FilterColors.Contains(ColorLabel.Pink);
-    public bool IsPurpleColorFilterActive => FilterColors.Contains(ColorLabel.Purple);
+    public bool IsNoneColorFilterActive { get => FilterColors.Contains(ColorLabel.None); set => ToggleColorFilter(ColorLabel.None, value); }
+    public bool IsRedColorFilterActive { get => FilterColors.Contains(ColorLabel.Red); set => ToggleColorFilter(ColorLabel.Red, value); }
+    public bool IsOrangeColorFilterActive { get => FilterColors.Contains(ColorLabel.Orange); set => ToggleColorFilter(ColorLabel.Orange, value); }
+    public bool IsYellowColorFilterActive { get => FilterColors.Contains(ColorLabel.Yellow); set => ToggleColorFilter(ColorLabel.Yellow, value); }
+    public bool IsGreenColorFilterActive { get => FilterColors.Contains(ColorLabel.Green); set => ToggleColorFilter(ColorLabel.Green, value); }
+    public bool IsBlueColorFilterActive { get => FilterColors.Contains(ColorLabel.Blue); set => ToggleColorFilter(ColorLabel.Blue, value); }
+    public bool IsPinkColorFilterActive { get => FilterColors.Contains(ColorLabel.Pink); set => ToggleColorFilter(ColorLabel.Pink, value); }
+    public bool IsPurpleColorFilterActive { get => FilterColors.Contains(ColorLabel.Purple); set => ToggleColorFilter(ColorLabel.Purple, value); }
 
     [ObservableProperty]
     private ObservableCollection<Node> _albumItems = new();
@@ -258,6 +259,8 @@ public partial class GalleryViewModel : ViewModelBase,
             // Enqueue for background persistence and Picked sync
             _curationQueue.Enqueue(picVm.Picture);
         }
+
+        ApplyFilters();
 
         Log.Information("Auto-flagged {Count} best shots across burst groups", bestPictures.Count);
     }
@@ -622,6 +625,16 @@ public partial class GalleryViewModel : ViewModelBase,
                     _ = picVm.LoadThumbnailAsync(250);
                 }
 
+                bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
+                if (hasPicked) {
+                    FilterStatuses.Clear();
+                    FilterStatuses.Add(CurationStatus.Flagged);
+                } else {
+                    FilterStatuses.Clear();
+                    FilterRatings.Clear();
+                    FilterColors.Clear();
+                }
+
                 ApplyFilters();
             } else {
                 var list = children.Where(n => n is Folder || n is Album).ToList();
@@ -639,25 +652,30 @@ public partial class GalleryViewModel : ViewModelBase,
         UpdateBreadcrumbs(currentNode);
     }
 
-    [RelayCommand]
-    private void ToggleStatusFilter(CurationStatus status) {
-        if (FilterStatuses.Contains(status)) FilterStatuses.Remove(status);
-        else FilterStatuses.Add(status);
+    private void ToggleStatusFilter(CurationStatus status, bool isActive) {
+        if (isActive && !FilterStatuses.Contains(status)) FilterStatuses.Add(status);
+        else if (!isActive) FilterStatuses.Remove(status);
+        ApplyFilters();
+    }
+
+    private void ToggleRatingFilter(int rating, bool isActive) {
+        if (isActive && !FilterRatings.Contains(rating)) FilterRatings.Add(rating);
+        else if (!isActive) FilterRatings.Remove(rating);
+        ApplyFilters();
+    }
+
+    private void ToggleColorFilter(ColorLabel color, bool isActive) {
+        if (isActive && !FilterColors.Contains(color)) FilterColors.Add(color);
+        else if (!isActive) FilterColors.Remove(color);
         ApplyFilters();
     }
 
     [RelayCommand]
-    private void ToggleRatingFilter(string ratingStr) {
-        if (!int.TryParse(ratingStr, out var rating)) return;
-        if (FilterRatings.Contains(rating)) FilterRatings.Remove(rating);
-        else FilterRatings.Add(rating);
-        ApplyFilters();
-    }
-
-    [RelayCommand]
-    private void ToggleColorFilter(ColorLabel color) {
-        if (FilterColors.Contains(color)) FilterColors.Remove(color);
-        else FilterColors.Add(color);
+    private void ShowPickedOnly() {
+        FilterStatuses.Clear();
+        FilterRatings.Clear();
+        FilterColors.Clear();
+        FilterStatuses.Add(CurationStatus.Flagged);
         ApplyFilters();
     }
 
@@ -705,6 +723,7 @@ public partial class GalleryViewModel : ViewModelBase,
         OnPropertyChanged(nameof(IsThreeStarFilterActive));
         OnPropertyChanged(nameof(IsFourStarFilterActive));
         OnPropertyChanged(nameof(IsFiveStarFilterActive));
+        OnPropertyChanged(nameof(IsZeroStarFilterActive));
 
         OnPropertyChanged(nameof(IsNoneColorFilterActive));
         OnPropertyChanged(nameof(IsRedColorFilterActive));
@@ -761,6 +780,7 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Picture.CurationStatus = status;
             SelectedPicture.CurationStatus = status;
             _curationQueue.Enqueue(SelectedPicture.Picture);
+            ApplyFilters();
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update curation status in gallery for {Name}", SelectedPicture.Name);
@@ -777,6 +797,7 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Picture.ColorLabel = label;
             SelectedPicture.ColorLabel = label;
             _curationQueue.Enqueue(SelectedPicture.Picture);
+            ApplyFilters();
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update color label in gallery for {Name}", SelectedPicture.Name);
@@ -793,6 +814,7 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Picture.Rating = rating;
             SelectedPicture.Rating = rating;
             _curationQueue.Enqueue(SelectedPicture.Picture);
+            ApplyFilters();
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in gallery for {Name}", SelectedPicture.Name);
