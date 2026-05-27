@@ -151,10 +151,10 @@
                     </Button>
 
                     <Button Classes="Basic" ToolTip.Tip="Filter">
-                        <icons:MaterialIcon Kind="FilterVariant" Width="20" Height="20" />
+                        <icons:MaterialIcon Kind="Filter" Width="20" Height="20" />
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedLeft">
-                                <Border Background="{DynamicResource SukiGlassCardBackground}" 
+                                <Border Background="{DynamicResource SukiCardBackground}" 
                                         BorderBrush="{DynamicResource SukiBorderBrush}"
                                         BorderThickness="1" CornerRadius="8" Padding="8">
                                     <ScrollViewer MaxHeight="500">
