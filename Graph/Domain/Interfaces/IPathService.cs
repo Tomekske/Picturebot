@@ -5,4 +5,5 @@ namespace Graph.Domain.Interfaces;
 public interface IPathService {
     void PopulatePaths(Picture picture);
     void PopulatePaths(IEnumerable<Picture> pictures);
+    string? GetAlbumPickedPath(Album album);
 }
