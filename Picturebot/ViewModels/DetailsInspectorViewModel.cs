@@ -54,12 +54,12 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     public List<ColorLabelOption> ColorLabelOptions => new() {
         new(ColorLabel.None, "None", "Transparent"),
-        new(ColorLabel.Red, RedLabelName, "#CC3333"),
+        new(ColorLabel.Red, RedLabelName, "#B71C1C"),
         new(ColorLabel.Orange, OrangeLabelName, "#E67E22"),
-        new(ColorLabel.Yellow, YellowLabelName, "#CCCC33"),
+        new(ColorLabel.Yellow, YellowLabelName, "#FDD835"),
         new(ColorLabel.Green, GreenLabelName, "#33CC33"),
         new(ColorLabel.Blue, BlueLabelName, "#3333CC"),
-        new(ColorLabel.Pink, PinkLabelName, "#E91E63"),
+        new(ColorLabel.Pink, PinkLabelName, "#F06292"),
         new(ColorLabel.Purple, PurpleLabelName, "#CC33CC")
     };
 
