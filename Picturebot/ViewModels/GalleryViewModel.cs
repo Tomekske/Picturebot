@@ -670,6 +670,8 @@ public partial class GalleryViewModel : ViewModelBase,
     [RelayCommand]
     private void ShowPickedOnly() {
         FilterStatuses.Clear();
+        FilterRatings.Clear();
+        FilterColors.Clear();
         FilterStatuses.Add(CurationStatus.Flagged);
         ApplyFilters();
     }
