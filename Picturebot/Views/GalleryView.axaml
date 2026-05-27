@@ -13,65 +13,7 @@
              x:Class="Picturebot.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
 
-    <UserControl.KeyBindings>
-        <KeyBinding Gesture="Shift+P" Command="{Binding ShowPickedOnlyCommand}" />
-        <KeyBinding Gesture="Shift+R" Command="{Binding ClearAllFiltersCommand}" />
-
-        <KeyBinding Gesture="P" Command="{Binding SetCurationStatusCommand}"
-                    CommandParameter="{x:Static enums:CurationStatus.Flagged}" />
-        <KeyBinding Gesture="X" Command="{Binding SetCurationStatusCommand}"
-                    CommandParameter="{x:Static enums:CurationStatus.Rejected}" />
-        <KeyBinding Gesture="U" Command="{Binding SetCurationStatusCommand}"
-                    CommandParameter="{x:Static enums:CurationStatus.Unflagged}" />
-
-        <KeyBinding Gesture="D1" Command="{Binding SetRatingCommand}" CommandParameter="1" />
-        <KeyBinding Gesture="D2" Command="{Binding SetRatingCommand}" CommandParameter="2" />
-        <KeyBinding Gesture="D3" Command="{Binding SetRatingCommand}" CommandParameter="3" />
-        <KeyBinding Gesture="D4" Command="{Binding SetRatingCommand}" CommandParameter="4" />
-        <KeyBinding Gesture="D5" Command="{Binding SetRatingCommand}" CommandParameter="5" />
-        <KeyBinding Gesture="D0" Command="{Binding SetRatingCommand}" CommandParameter="0" />
-
-        <KeyBinding Gesture="NumPad1" Command="{Binding SetRatingCommand}" CommandParameter="1" />
-        <KeyBinding Gesture="NumPad2" Command="{Binding SetRatingCommand}" CommandParameter="2" />
-        <KeyBinding Gesture="NumPad3" Command="{Binding SetRatingCommand}" CommandParameter="3" />
-        <KeyBinding Gesture="NumPad4" Command="{Binding SetRatingCommand}" CommandParameter="4" />
-        <KeyBinding Gesture="NumPad5" Command="{Binding SetRatingCommand}" CommandParameter="5" />
-        <KeyBinding Gesture="NumPad0" Command="{Binding SetRatingCommand}" CommandParameter="0" />
-
-        <KeyBinding Gesture="Ctrl+D1" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Red}" />
-        <KeyBinding Gesture="Ctrl+D2" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Orange}" />
-        <KeyBinding Gesture="Ctrl+D3" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Yellow}" />
-        <KeyBinding Gesture="Ctrl+D4" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Green}" />
-        <KeyBinding Gesture="Ctrl+D5" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Blue}" />
-        <KeyBinding Gesture="Ctrl+D6" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Pink}" />
-        <KeyBinding Gesture="Ctrl+D7" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Purple}" />
-        <KeyBinding Gesture="Ctrl+D0" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.None}" />
-
-        <KeyBinding Gesture="Ctrl+NumPad1" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Red}" />
-        <KeyBinding Gesture="Ctrl+NumPad2" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Orange}" />
-        <KeyBinding Gesture="Ctrl+NumPad3" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Yellow}" />
-        <KeyBinding Gesture="Ctrl+NumPad4" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Green}" />
-        <KeyBinding Gesture="Ctrl+NumPad5" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Blue}" />
-        <KeyBinding Gesture="Ctrl+NumPad6" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Pink}" />
-        <KeyBinding Gesture="Ctrl+NumPad7" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Purple}" />
-        <KeyBinding Gesture="Ctrl+NumPad0" Command="{Binding SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.None}" />
-    </UserControl.KeyBindings>
+    
 
     <UserControl.Resources>
         <converters:NodeTypeToBooleanConverter x:Key="NodeTypeToBooleanConverter" />
@@ -141,7 +83,7 @@
                     </Button>
                     <ToggleButton Classes="Basic"
                                   ToolTip.Tip="Toggle Burst Grouping"
-                                  IsChecked="{Binding IsBurstViewEnabled}"
+                                  IsChecked="{Binding IsBurstViewEnabled, Mode=TwoWay}"
                                   Command="{Binding ToggleGroupingModeCommand}"
                                   IsEnabled="{Binding CanPlayCarousel}">
                         <Panel>
@@ -171,6 +113,10 @@
                                 <Border Background="{DynamicResource SukiCardBackground}"
                                         BorderBrush="{DynamicResource SukiBorderBrush}"
                                         BorderThickness="1" CornerRadius="8" Padding="8">
+                                    <Border.KeyBindings>
+                                        <KeyBinding Gesture="Shift+P" Command="{Binding ShowPickedOnlyCommand}" />
+                                        <KeyBinding Gesture="Shift+R" Command="{Binding ClearAllFiltersCommand}" />
+                                    </Border.KeyBindings>
                                     <ScrollViewer MaxHeight="500">
                                         <StackPanel Spacing="4" Width="220">
                                             
@@ -186,7 +132,7 @@
                                             <TextBlock Text="Curation Status" FontSize="11" FontWeight="Bold"
                                                        Margin="8,4" Foreground="{DynamicResource SukiLowText}" />
 
-                                            <CheckBox IsChecked="{Binding IsFlaggedFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsFlaggedFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Flag" Foreground="#4CAF50" Width="18"
@@ -195,7 +141,7 @@
                                                 </StackPanel>
                                             </CheckBox>
 
-                                            <CheckBox IsChecked="{Binding IsUnflaggedFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsUnflaggedFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="CircleOutline" Foreground="Gray"
@@ -204,7 +150,7 @@
                                                 </StackPanel>
                                             </CheckBox>
 
-                                            <CheckBox IsChecked="{Binding IsRejectedFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsRejectedFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="CloseCircle" Foreground="#F44336"
@@ -221,7 +167,7 @@
                                                        Foreground="{DynamicResource SukiLowText}" />
 
                                             <!-- 5 Stars -->
-                                            <CheckBox IsChecked="{Binding IsFiveStarFilterActive}" HorizontalAlignment="Stretch" Padding="8,4">
+                                            <CheckBox IsChecked="{Binding IsFiveStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="2">
                                                     <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
                                                                         Height="14" />
@@ -237,7 +183,7 @@
                                             </CheckBox>
 
                                             <!-- 4 Stars -->
-                                            <CheckBox IsChecked="{Binding IsFourStarFilterActive}" HorizontalAlignment="Stretch" Padding="8,4">
+                                            <CheckBox IsChecked="{Binding IsFourStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="2">
                                                     <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
                                                                         Height="14" />
@@ -251,7 +197,7 @@
                                             </CheckBox>
 
                                             <!-- 3 Stars -->
-                                            <CheckBox IsChecked="{Binding IsThreeStarFilterActive}" HorizontalAlignment="Stretch" Padding="8,4">
+                                            <CheckBox IsChecked="{Binding IsThreeStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="2">
                                                     <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
                                                                         Height="14" />
@@ -263,7 +209,7 @@
                                             </CheckBox>
 
                                             <!-- 2 Stars -->
-                                            <CheckBox IsChecked="{Binding IsTwoStarFilterActive}" HorizontalAlignment="Stretch" Padding="8,4">
+                                            <CheckBox IsChecked="{Binding IsTwoStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="2">
                                                     <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
                                                                         Height="14" />
@@ -273,7 +219,7 @@
                                             </CheckBox>
 
                                             <!-- 1 Star -->
-                                            <CheckBox IsChecked="{Binding IsOneStarFilterActive}" HorizontalAlignment="Stretch" Padding="8,4">
+                                            <CheckBox IsChecked="{Binding IsOneStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="2">
                                                     <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
                                                                         Height="14" />
@@ -288,7 +234,7 @@
                                                        Foreground="{DynamicResource SukiLowText}" />
 
                                             <!-- None -->
-                                            <CheckBox IsChecked="{Binding IsNoneColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsNoneColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="CircleOutline"
@@ -299,7 +245,7 @@
                                             </CheckBox>
 
                                             <!-- Red -->
-                                            <CheckBox IsChecked="{Binding IsRedColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsRedColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="18"
@@ -309,7 +255,7 @@
                                             </CheckBox>
 
                                             <!-- Orange -->
-                                            <CheckBox IsChecked="{Binding IsOrangeColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsOrangeColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="18"
@@ -319,7 +265,7 @@
                                             </CheckBox>
 
                                             <!-- Yellow -->
-                                            <CheckBox IsChecked="{Binding IsYellowColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsYellowColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#CCCC33" Width="18"
@@ -329,7 +275,7 @@
                                             </CheckBox>
 
                                             <!-- Green -->
-                                            <CheckBox IsChecked="{Binding IsGreenColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsGreenColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="18"
@@ -339,7 +285,7 @@
                                             </CheckBox>
 
                                             <!-- Blue -->
-                                            <CheckBox IsChecked="{Binding IsBlueColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsBlueColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="18"
@@ -349,7 +295,7 @@
                                             </CheckBox>
 
                                             <!-- Pink -->
-                                            <CheckBox IsChecked="{Binding IsPinkColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsPinkColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#F06292" Width="18"
@@ -359,7 +305,7 @@
                                             </CheckBox>
 
                                             <!-- Purple -->
-                                            <CheckBox IsChecked="{Binding IsPurpleColorFilterActive}"
+                                            <CheckBox IsChecked="{Binding IsPurpleColorFilterActive, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" Padding="8,4">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <icons:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="18"
