@@ -38,6 +38,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _redLabelName = "Red";
 
     [ObservableProperty]
+    private string _orangeLabelName = "Orange";
+
+    [ObservableProperty]
     private string _yellowLabelName = "Yellow";
 
     [ObservableProperty]
@@ -45,6 +48,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [ObservableProperty]
     private string _blueLabelName = "Blue";
+
+    [ObservableProperty]
+    private string _pinkLabelName = "Pink";
 
     [ObservableProperty]
     private string _purpleLabelName = "Purple";
@@ -81,9 +87,11 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         BurstFallbackThreshold = settings.BurstFallbackTimeThresholdSeconds;
         LaunchFullScreen = settings.LaunchMaximized;
         RedLabelName = settings.RedLabelName;
+        OrangeLabelName = settings.OrangeLabelName;
         YellowLabelName = settings.YellowLabelName;
         GreenLabelName = settings.GreenLabelName;
         BlueLabelName = settings.BlueLabelName;
+        PinkLabelName = settings.PinkLabelName;
         PurpleLabelName = settings.PurpleLabelName;
 
         ThemeIndex = settings.ThemeMode switch {
@@ -161,9 +169,11 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             BurstFallbackTimeThresholdSeconds = BurstFallbackThreshold,
             LaunchMaximized = LaunchFullScreen,
             RedLabelName = RedLabelName,
+            OrangeLabelName = OrangeLabelName,
             YellowLabelName = YellowLabelName,
             GreenLabelName = GreenLabelName,
             BlueLabelName = BlueLabelName,
+            PinkLabelName = PinkLabelName,
             PurpleLabelName = PurpleLabelName,
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,
