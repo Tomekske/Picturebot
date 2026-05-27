@@ -14,6 +14,9 @@
              x:DataType="vm:GalleryViewModel">
 
     <UserControl.KeyBindings>
+        <KeyBinding Gesture="Shift+P" Command="{Binding ShowPickedOnlyCommand}" />
+        <KeyBinding Gesture="Shift+R" Command="{Binding ClearAllFiltersCommand}" />
+
         <KeyBinding Gesture="P" Command="{Binding SetCurationStatusCommand}"
                     CommandParameter="{x:Static enums:CurationStatus.Flagged}" />
         <KeyBinding Gesture="X" Command="{Binding SetCurationStatusCommand}"

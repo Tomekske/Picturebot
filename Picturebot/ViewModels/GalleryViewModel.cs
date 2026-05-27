@@ -622,6 +622,16 @@ public partial class GalleryViewModel : ViewModelBase,
                     _ = picVm.LoadThumbnailAsync(250);
                 }
 
+                bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
+                if (hasPicked) {
+                    FilterStatuses.Clear();
+                    FilterStatuses.Add(CurationStatus.Flagged);
+                } else {
+                    FilterStatuses.Clear();
+                    FilterRatings.Clear();
+                    FilterColors.Clear();
+                }
+
                 ApplyFilters();
             } else {
                 var list = children.Where(n => n is Folder || n is Album).ToList();
@@ -658,6 +668,13 @@ public partial class GalleryViewModel : ViewModelBase,
     private void ToggleColorFilter(ColorLabel color) {
         if (FilterColors.Contains(color)) FilterColors.Remove(color);
         else FilterColors.Add(color);
+        ApplyFilters();
+    }
+
+    [RelayCommand]
+    private void ShowPickedOnly() {
+        FilterStatuses.Clear();
+        FilterStatuses.Add(CurationStatus.Flagged);
         ApplyFilters();
     }
 
