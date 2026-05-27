@@ -113,13 +113,41 @@
             <TextBlock Text="COLOR LABEL NAMES" FontSize="11" FontWeight="Bold"
                        Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,4">
-                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding RedLabelName}" Watermark="Red Label" Margin="0,0,4,8" />
-                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OrangeLabelName}" Watermark="Orange Label" Margin="4,0,0,8" />
-                <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding YellowLabelName}" Watermark="Yellow Label" Margin="0,0,4,8" />
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding GreenLabelName}" Watermark="Green Label" Margin="4,0,0,8" />
-                <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding BlueLabelName}" Watermark="Blue Label" Margin="0,0,4,8" />
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PinkLabelName}" Watermark="Pink Label" Margin="4,0,0,8" />
-                <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding PurpleLabelName}" Watermark="Purple Label" Margin="0,0,4,0" />
+                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding RedLabelName}" Watermark="Red Label" Margin="0,0,4,8">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OrangeLabelName}" Watermark="Orange Label" Margin="4,0,0,8">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding YellowLabelName}" Watermark="Yellow Label" Margin="0,0,4,8">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding GreenLabelName}" Watermark="Green Label" Margin="4,0,0,8">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding BlueLabelName}" Watermark="Blue Label" Margin="0,0,4,8">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PinkLabelName}" Watermark="Pink Label" Margin="4,0,0,8">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#F06292" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding PurpleLabelName}" Watermark="Purple Label" Margin="0,0,4,0">
+                    <TextBox.InnerLeftContent>
+                        <material:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="14" Height="14" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
             </Grid>
         </StackPanel>
 
