@@ -170,6 +170,15 @@
                                         BorderThickness="1" CornerRadius="8" Padding="8">
                                     <ScrollViewer MaxHeight="500">
                                         <StackPanel Spacing="4" Width="220">
+                                            
+                                            <!-- Reset Filters -->
+                                            <Button Classes="Basic" Command="{Binding ClearAllFiltersCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="8,4" Margin="0,0,0,4">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <icons:MaterialIcon Kind="FilterRemoveOutline" Width="18" Height="18" Foreground="{DynamicResource SukiLowText}"/>
+                                                    <TextBlock Text="Reset Filters" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </Button>
+
                                             <!-- Section 1: Curation Status -->
                                             <TextBlock Text="Curation Status" FontSize="11" FontWeight="Bold"
                                                        Margin="8,4" Foreground="{DynamicResource SukiLowText}" />

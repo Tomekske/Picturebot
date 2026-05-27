@@ -661,6 +661,14 @@ public partial class GalleryViewModel : ViewModelBase,
         ApplyFilters();
     }
 
+    [RelayCommand]
+    private void ClearAllFilters() {
+        FilterStatuses.Clear();
+        FilterRatings.Clear();
+        FilterColors.Clear();
+        ApplyFilters();
+    }
+
     private void ApplyFilters() {
         var filtered = _allPictures.AsEnumerable();
 
