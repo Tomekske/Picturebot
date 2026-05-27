@@ -12,6 +12,11 @@ public partial class CarouselWindow : Window {
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
+        if (FocusManager?.GetFocusedElement() is TextBox) {
+            base.OnKeyDown(e);
+            return;
+        }
+
         base.OnKeyDown(e);
 
         if (DataContext is not CarouselDialogViewModel vm) {

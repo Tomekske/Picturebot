@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Services;
@@ -19,6 +20,14 @@ public partial class MainWindow : SukiWindow {
     }
 
     public static MainWindow? Instance { get; private set; }
+
+    protected override void OnKeyDown(KeyEventArgs e) {
+        if (FocusManager?.GetFocusedElement() is TextBox) {
+            return;
+        }
+        
+        base.OnKeyDown(e);
+    }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e) {
         base.OnPointerPressed(e);

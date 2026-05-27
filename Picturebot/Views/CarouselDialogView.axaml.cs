@@ -19,6 +19,12 @@ public partial class CarouselDialogView : UserControl {
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
+        var focusManager = TopLevel.GetTopLevel(this)?.FocusManager;
+        if (focusManager?.GetFocusedElement() is TextBox) {
+            base.OnKeyDown(e);
+            return;
+        }
+
         base.OnKeyDown(e);
 
         if (DataContext is not CarouselDialogViewModel vm) {
