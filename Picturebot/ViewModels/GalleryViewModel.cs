@@ -63,6 +63,7 @@ public partial class GalleryViewModel : ViewModelBase,
     public bool IsThreeStarFilterActive { get => FilterRatings.Contains(3); set => ToggleRatingFilter(3, value); }
     public bool IsFourStarFilterActive { get => FilterRatings.Contains(4); set => ToggleRatingFilter(4, value); }
     public bool IsFiveStarFilterActive { get => FilterRatings.Contains(5); set => ToggleRatingFilter(5, value); }
+    public bool IsZeroStarFilterActive { get => FilterRatings.Contains(0); set => ToggleRatingFilter(0, value); }
 
     public bool IsNoneColorFilterActive { get => FilterColors.Contains(ColorLabel.None); set => ToggleColorFilter(ColorLabel.None, value); }
     public bool IsRedColorFilterActive { get => FilterColors.Contains(ColorLabel.Red); set => ToggleColorFilter(ColorLabel.Red, value); }
@@ -720,6 +721,7 @@ public partial class GalleryViewModel : ViewModelBase,
         OnPropertyChanged(nameof(IsThreeStarFilterActive));
         OnPropertyChanged(nameof(IsFourStarFilterActive));
         OnPropertyChanged(nameof(IsFiveStarFilterActive));
+        OnPropertyChanged(nameof(IsZeroStarFilterActive));
 
         OnPropertyChanged(nameof(IsNoneColorFilterActive));
         OnPropertyChanged(nameof(IsRedColorFilterActive));

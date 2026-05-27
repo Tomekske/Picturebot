@@ -226,6 +226,15 @@
                                                 </StackPanel>
                                             </CheckBox>
 
+                                            <!-- 0 Stars (Unrated) -->
+                                            <CheckBox IsChecked="{Binding IsZeroStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
+                                                <StackPanel Orientation="Horizontal" Spacing="2">
+                                                    <icons:MaterialIcon Kind="StarOffOutline" Foreground="{DynamicResource SukiLowText}" Width="14"
+                                                                        Height="14" />
+                                                    <TextBlock Text="Unrated" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </CheckBox>
+
                                             <Separator Height="1" Background="{DynamicResource SukiBorderBrush}"
                                                        Margin="0,4" />
 
