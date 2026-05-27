@@ -46,8 +46,10 @@ public class Settings {
     public bool LaunchMaximized { get; set; }
 
     public string RedLabelName { get; set; } = "Red";
+    public string OrangeLabelName { get; set; } = "Orange";
     public string YellowLabelName { get; set; } = "Yellow";
     public string GreenLabelName { get; set; } = "Green";
     public string BlueLabelName { get; set; } = "Blue";
+    public string PinkLabelName { get; set; } = "Pink";
     public string PurpleLabelName { get; set; } = "Purple";
 }

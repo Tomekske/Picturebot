@@ -11,9 +11,11 @@ public class ColorLabelToBrushConverter : IValueConverter {
         if (value is ColorLabel label) {
             return label switch {
                 ColorLabel.Red => Brush.Parse("#CC3333"),
+                ColorLabel.Orange => Brush.Parse("#E67E22"),
                 ColorLabel.Yellow => Brush.Parse("#CCCC33"),
                 ColorLabel.Green => Brush.Parse("#33CC33"),
                 ColorLabel.Blue => Brush.Parse("#3333CC"),
+                ColorLabel.Pink => Brush.Parse("#E91E63"),
                 ColorLabel.Purple => Brush.Parse("#CC33CC"),
                 _ => Brushes.Transparent
             };

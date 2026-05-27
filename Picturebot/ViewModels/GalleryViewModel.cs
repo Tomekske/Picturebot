@@ -42,6 +42,36 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly ISettingsService _settingsService;
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
+    private readonly List<PictureItemViewModel> _allPictures = new();
+
+    [ObservableProperty]
+    private ObservableCollection<CurationStatus> _filterStatuses = new();
+
+    [ObservableProperty]
+    private ObservableCollection<int> _filterRatings = new();
+
+    [ObservableProperty]
+    private ObservableCollection<ColorLabel> _filterColors = new();
+
+    // Boolean properties for UI bindings
+    public bool IsFlaggedFilterActive => FilterStatuses.Contains(CurationStatus.Flagged);
+    public bool IsUnflaggedFilterActive => FilterStatuses.Contains(CurationStatus.Unflagged);
+    public bool IsRejectedFilterActive => FilterStatuses.Contains(CurationStatus.Rejected);
+
+    public bool IsOneStarFilterActive => FilterRatings.Contains(1);
+    public bool IsTwoStarFilterActive => FilterRatings.Contains(2);
+    public bool IsThreeStarFilterActive => FilterRatings.Contains(3);
+    public bool IsFourStarFilterActive => FilterRatings.Contains(4);
+    public bool IsFiveStarFilterActive => FilterRatings.Contains(5);
+
+    public bool IsNoneColorFilterActive => FilterColors.Contains(ColorLabel.None);
+    public bool IsRedColorFilterActive => FilterColors.Contains(ColorLabel.Red);
+    public bool IsOrangeColorFilterActive => FilterColors.Contains(ColorLabel.Orange);
+    public bool IsYellowColorFilterActive => FilterColors.Contains(ColorLabel.Yellow);
+    public bool IsGreenColorFilterActive => FilterColors.Contains(ColorLabel.Green);
+    public bool IsBlueColorFilterActive => FilterColors.Contains(ColorLabel.Blue);
+    public bool IsPinkColorFilterActive => FilterColors.Contains(ColorLabel.Pink);
+    public bool IsPurpleColorFilterActive => FilterColors.Contains(ColorLabel.Purple);
 
     [ObservableProperty]
     private ObservableCollection<Node> _albumItems = new();
@@ -541,10 +571,11 @@ public partial class GalleryViewModel : ViewModelBase,
         FolderItems.Clear();
         AlbumItems.Clear();
 
-        foreach (var picVm in PicturesList) {
+        foreach (var picVm in _allPictures) {
             picVm.Dispose();
         }
 
+        _allPictures.Clear();
         PicturesList.Clear();
         GroupedPictures.Clear();
 
@@ -561,11 +592,11 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
-                    PicturesList.Add(picVm);
+                    _allPictures.Add(picVm);
                     _ = picVm.LoadThumbnailAsync(250);
                 }
 
-                _ = RefreshGalleryGrouping();
+                ApplyFilters();
             } else {
                 var list = children.Where(n => n is Folder || n is Album).ToList();
                 foreach (var child in list) {
@@ -580,6 +611,77 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         UpdateBreadcrumbs(currentNode);
+    }
+
+    [RelayCommand]
+    private void ToggleStatusFilter(CurationStatus status) {
+        if (FilterStatuses.Contains(status)) FilterStatuses.Remove(status);
+        else FilterStatuses.Add(status);
+        ApplyFilters();
+    }
+
+    [RelayCommand]
+    private void ToggleRatingFilter(string ratingStr) {
+        if (!int.TryParse(ratingStr, out var rating)) return;
+        if (FilterRatings.Contains(rating)) FilterRatings.Remove(rating);
+        else FilterRatings.Add(rating);
+        ApplyFilters();
+    }
+
+    [RelayCommand]
+    private void ToggleColorFilter(ColorLabel color) {
+        if (FilterColors.Contains(color)) FilterColors.Remove(color);
+        else FilterColors.Add(color);
+        ApplyFilters();
+    }
+
+    private void ApplyFilters() {
+        var filtered = _allPictures.AsEnumerable();
+
+        if (FilterStatuses.Any()) {
+            filtered = filtered.Where(p => FilterStatuses.Contains(p.CurationStatus));
+        }
+
+        if (FilterRatings.Any()) {
+            filtered = filtered.Where(p => FilterRatings.Contains(p.Rating));
+        }
+
+        if (FilterColors.Any()) {
+            filtered = filtered.Where(p => FilterColors.Contains(p.ColorLabel));
+        }
+
+        var filteredList = filtered.ToList();
+
+        PicturesList.Clear();
+        foreach (var pic in filteredList) {
+            PicturesList.Add(pic);
+        }
+
+        if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
+            SelectedPicture = PicturesList.FirstOrDefault();
+        }
+
+        // Notify UI about filter state changes
+        OnPropertyChanged(nameof(IsFlaggedFilterActive));
+        OnPropertyChanged(nameof(IsUnflaggedFilterActive));
+        OnPropertyChanged(nameof(IsRejectedFilterActive));
+
+        OnPropertyChanged(nameof(IsOneStarFilterActive));
+        OnPropertyChanged(nameof(IsTwoStarFilterActive));
+        OnPropertyChanged(nameof(IsThreeStarFilterActive));
+        OnPropertyChanged(nameof(IsFourStarFilterActive));
+        OnPropertyChanged(nameof(IsFiveStarFilterActive));
+
+        OnPropertyChanged(nameof(IsNoneColorFilterActive));
+        OnPropertyChanged(nameof(IsRedColorFilterActive));
+        OnPropertyChanged(nameof(IsOrangeColorFilterActive));
+        OnPropertyChanged(nameof(IsYellowColorFilterActive));
+        OnPropertyChanged(nameof(IsGreenColorFilterActive));
+        OnPropertyChanged(nameof(IsBlueColorFilterActive));
+        OnPropertyChanged(nameof(IsPinkColorFilterActive));
+        OnPropertyChanged(nameof(IsPurpleColorFilterActive));
+
+        _ = RefreshGalleryGrouping();
     }
 
     private void UpdateBreadcrumbs(Node? node) {
