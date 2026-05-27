@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
@@ -7,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Domain.Enums;
+using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Picturebot.Messages;
 using Picturebot.Utilities;
@@ -14,9 +17,12 @@ using Serilog;
 
 namespace Picturebot.ViewModels;
 
+public record ColorLabelOption(ColorLabel Label, string Name, string HexColor);
+
 public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<PictureSelectedMessage> {
     private readonly INodeService _nodeService;
     private readonly ICurationQueue _curationQueue;
+    private readonly ISettingsService _settingsService;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -28,11 +34,30 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
-    public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue) {
+    [ObservableProperty]
+    private ColorLabelOption? _selectedColorLabelOption;
+
+    public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue, ISettingsService settingsService) {
         _nodeService = nodeService;
         _curationQueue = curationQueue;
+        _settingsService = settingsService;
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
+
+    public string RedLabelName => _settingsService.Current.RedLabelName;
+    public string YellowLabelName => _settingsService.Current.YellowLabelName;
+    public string GreenLabelName => _settingsService.Current.GreenLabelName;
+    public string BlueLabelName => _settingsService.Current.BlueLabelName;
+    public string PurpleLabelName => _settingsService.Current.PurpleLabelName;
+
+    public List<ColorLabelOption> ColorLabelOptions => new() {
+        new(ColorLabel.None, "None", "Transparent"),
+        new(ColorLabel.Red, RedLabelName, "#CC3333"),
+        new(ColorLabel.Yellow, YellowLabelName, "#CCCC33"),
+        new(ColorLabel.Green, GreenLabelName, "#33CC33"),
+        new(ColorLabel.Blue, BlueLabelName, "#3333CC"),
+        new(ColorLabel.Purple, PurpleLabelName, "#CC33CC")
+    };
 
     public void Receive(PictureSelectedMessage message) {
         SelectedPicture = message.Value;
@@ -43,10 +68,18 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         PreviewImage = null;
 
         if (value == null) {
+            SelectedColorLabelOption = null;
             return;
         }
 
+        SelectedColorLabelOption = ColorLabelOptions.FirstOrDefault(o => o.Label == value.ColorLabel);
         await LoadPreviewAsync(value);
+    }
+
+    partial void OnSelectedColorLabelOptionChanged(ColorLabelOption? value) {
+        if (value != null && SelectedPicture != null && SelectedPicture.ColorLabel != value.Label) {
+            _ = SetColorLabel(value.Label);
+        }
     }
 
     private async Task LoadPreviewAsync(PictureItemViewModel picVm) {
@@ -81,13 +114,42 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
             _curationQueue.Enqueue(SelectedPicture.Picture);
             await Task.CompletedTask;
-
-            // Success indicator: Brief icon glow or toast notification?
-            // For now, let's just assume the UI binding handles the "visual active state"
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update curation status for {Name}", SelectedPicture.Name);
         } finally {
             IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetColorLabel(ColorLabel label) {
+        if (SelectedPicture == null) {
+            return;
+        }
+
+        try {
+            SelectedPicture.Picture.ColorLabel = label;
+            SelectedPicture.ColorLabel = label;
+            _curationQueue.Enqueue(SelectedPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update color label for {Name}", SelectedPicture.Name);
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetRating(string ratingStr) {
+        if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
+            return;
+        }
+
+        try {
+            SelectedPicture.Picture.Rating = rating;
+            SelectedPicture.Rating = rating;
+            _curationQueue.Enqueue(SelectedPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update rating for {Name}", SelectedPicture.Name);
         }
     }
 

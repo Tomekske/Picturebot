@@ -51,6 +51,16 @@ public class Picture : Node {
     public CurationStatus CurationStatus { get; set; } = CurationStatus.Unflagged;
 
     /// <summary>
+    ///     The color label assigned to the picture.
+    /// </summary>
+    public ColorLabel ColorLabel { get; set; } = ColorLabel.None;
+
+    /// <summary>
+    ///     The star rating of the picture (0-5).
+    /// </summary>
+    public int Rating { get; set; }
+
+    /// <summary>
     ///     The extension of the raw picture file (e.g., .ARW, .CR2).
     /// </summary>
     public string? Extension { get; set; }

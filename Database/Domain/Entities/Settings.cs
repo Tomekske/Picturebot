@@ -44,4 +44,10 @@ public class Settings {
     ///     Indicates whether the application should launch in a maximized window state.
     /// </summary>
     public bool LaunchMaximized { get; set; }
+
+    public string RedLabelName { get; set; } = "Red";
+    public string YellowLabelName { get; set; } = "Yellow";
+    public string GreenLabelName { get; set; } = "Green";
+    public string BlueLabelName { get; set; } = "Blue";
+    public string PurpleLabelName { get; set; } = "Purple";
 }

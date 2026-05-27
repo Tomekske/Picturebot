@@ -150,6 +150,34 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     }
 
     [RelayCommand]
+    private async Task SetColorLabel(ColorLabel label) {
+        try {
+            CurrentPicture.Picture.ColorLabel = label;
+            CurrentPicture.ColorLabel = label;
+            _curationQueue.Enqueue(CurrentPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update color label in carousel for {Name}", CurrentPicture.Name);
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetRating(string ratingStr) {
+        if (!int.TryParse(ratingStr, out var rating)) {
+            return;
+        }
+
+        try {
+            CurrentPicture.Picture.Rating = rating;
+            CurrentPicture.Rating = rating;
+            _curationQueue.Enqueue(CurrentPicture.Picture);
+            await Task.CompletedTask;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to update rating in carousel for {Name}", CurrentPicture.Name);
+        }
+    }
+
+    [RelayCommand]
     private void Close() {
         if (_closeAction != null) {
             _closeAction.Invoke();
