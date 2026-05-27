@@ -260,6 +260,8 @@ public partial class GalleryViewModel : ViewModelBase,
             _curationQueue.Enqueue(picVm.Picture);
         }
 
+        ApplyFilters();
+
         Log.Information("Auto-flagged {Count} best shots across burst groups", bestPictures.Count);
     }
 
@@ -778,6 +780,7 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Picture.CurationStatus = status;
             SelectedPicture.CurationStatus = status;
             _curationQueue.Enqueue(SelectedPicture.Picture);
+            ApplyFilters();
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update curation status in gallery for {Name}", SelectedPicture.Name);
@@ -794,6 +797,7 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Picture.ColorLabel = label;
             SelectedPicture.ColorLabel = label;
             _curationQueue.Enqueue(SelectedPicture.Picture);
+            ApplyFilters();
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update color label in gallery for {Name}", SelectedPicture.Name);
@@ -810,6 +814,7 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Picture.Rating = rating;
             SelectedPicture.Rating = rating;
             _curationQueue.Enqueue(SelectedPicture.Picture);
+            ApplyFilters();
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in gallery for {Name}", SelectedPicture.Name);
