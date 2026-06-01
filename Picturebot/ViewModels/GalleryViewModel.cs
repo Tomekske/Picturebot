@@ -267,7 +267,6 @@ public partial class GalleryViewModel : ViewModelBase,
 
     [RelayCommand]
     private async Task ToggleGroupingMode() {
-        IsBurstViewEnabled = !IsBurstViewEnabled;
         await RefreshGalleryGrouping();
     }
 
