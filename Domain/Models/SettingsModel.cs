@@ -31,4 +31,7 @@ public class SettingsModel {
     public string BlueLabelName { get; set; } = "Blue";
     public string PinkLabelName { get; set; } = "Pink";
     public string PurpleLabelName { get; set; } = "Purple";
+
+    public string? EditFolderPath { get; set; }
+    public string? PrintFolderPath { get; set; }
 }

@@ -66,6 +66,38 @@
         </StackPanel>
 
         <StackPanel Spacing="10">
+            <TextBlock Text="EDIT DESTINATION FOLDER" FontSize="11" FontWeight="Bold"
+                       Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
+            <DockPanel LastChildFill="True">
+                <Button Command="{Binding BrowseEditFolderCommand}"
+                        Content="Browse"
+                        DockPanel.Dock="Right"
+                        Margin="12,0,0,0"
+                        Padding="16,0" />
+                <TextBox Text="{Binding EditFolderPath}"
+                         Watermark="Select a folder for RAW files to be edited (Ctrl+E)"
+                         Height="40"
+                         VerticalContentAlignment="Center" />
+            </DockPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+            <TextBlock Text="PRINT DESTINATION FOLDER" FontSize="11" FontWeight="Bold"
+                       Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
+            <DockPanel LastChildFill="True">
+                <Button Command="{Binding BrowsePrintFolderCommand}"
+                        Content="Browse"
+                        DockPanel.Dock="Right"
+                        Margin="12,0,0,0"
+                        Padding="16,0" />
+                <TextBox Text="{Binding PrintFolderPath}"
+                         Watermark="Select a folder for JPG files to be printed (Shift+E)"
+                         Height="40"
+                         VerticalContentAlignment="Center" />
+            </DockPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="10">
             <TextBlock Text="GROUPING THRESHOLD" FontSize="11" FontWeight="Bold"
                        Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
             <NumericUpDown Value="{Binding GroupingThreshold}"

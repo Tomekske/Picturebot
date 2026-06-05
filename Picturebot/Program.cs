@@ -73,6 +73,7 @@ internal sealed class Program {
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddScoped<IPathService, PathService>();
+            services.AddScoped<ICopyService, CopyService>();
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();
             services.AddSingleton<IPickedService, PickedService>();
