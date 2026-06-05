@@ -28,23 +28,42 @@
         <Separator Height="1" Background="{DynamicResource SukiBorderBrush}" />
 
         <ScrollViewer MaxHeight="300">
-            <ItemsControl ItemsSource="{Binding QueueItems}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:AlbumQueueItem">
-                        <Border Padding="10" Margin="0,0,0,8"
-                                Background="{DynamicResource SukiGlassCardBackground}"
-                                CornerRadius="8">
-                            <Grid ColumnDefinitions="*, Auto">
-                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding PendingCount, StringFormat='{}{0} items'}"
-                                           FontSize="12" Foreground="{DynamicResource SukiLowText}"
-                                           VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel Spacing="8">
+                <!-- Curation Sync Section -->
+                <Border Padding="10" IsVisible="{Binding HasCurationItems}"
+                        Background="{DynamicResource SukiPrimaryColor10}"
+                        BorderBrush="{DynamicResource SukiPrimaryColor}"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <icons:MaterialIcon Kind="Sync" Width="20" Height="20" Margin="0,0,10,0"
+                                            Foreground="{DynamicResource SukiPrimaryColor}" />
+                        <TextBlock Grid.Column="1" Text="Curation Sync" FontWeight="Bold"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding CurationQueueCount, StringFormat='{}{0} pending'}"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding QueueItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AlbumQueueItem">
+                            <Border Padding="10" Margin="0,0,0,8"
+                                    Background="{DynamicResource SukiGlassCardBackground}"
+                                    CornerRadius="8">
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding PendingCount, StringFormat='{}{0} items'}"
+                                               FontSize="12" Foreground="{DynamicResource SukiLowText}"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </ScrollViewer>
 
         <TextBlock IsVisible="{Binding !QueueItems.Count}"

@@ -17,6 +17,7 @@ using Database.Domain.Interfaces;
 using Domain.Enums;
 using Domain.Interfaces;
 using Graph.Domain.Interfaces;
+using Domain.Messages;
 using Picturebot.Messages;
 using Picturebot.Services;
 using Picturebot.Views;
@@ -32,7 +33,8 @@ public partial class GalleryViewModel : ViewModelBase,
     IRecipient<NodeDeletedMessage>,
     IRecipient<NodeUpdatedMessage>,
     IRecipient<ProcessingProgressMessage>,
-    IRecipient<ProcessingCompletedMessage> {
+    IRecipient<ProcessingCompletedMessage>,
+    IRecipient<CurationCompletedMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly ICurationQueue _curationQueue;
@@ -44,6 +46,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
+    private int _pendingAutoFlagBatchCount;
 
     [ObservableProperty]
     private ObservableCollection<CurationStatus> _filterStatuses = new();
@@ -252,6 +255,8 @@ public partial class GalleryViewModel : ViewModelBase,
             return;
         }
 
+        _pendingAutoFlagBatchCount += bestPictures.Count;
+
         foreach (var picVm in bestPictures) {
             // Update to Flagged status
             picVm.CurationStatus = CurationStatus.Flagged;
@@ -263,7 +268,36 @@ public partial class GalleryViewModel : ViewModelBase,
 
         ApplyFilters();
 
-        Log.Information("Auto-flagged {Count} best shots across burst groups", bestPictures.Count);
+        Log.Information("Auto-flagged {Count} best shots across burst groups. Waiting for background sync...", bestPictures.Count);
+
+        MainWindow.ToastManager.CreateToast()
+            .WithTitle("Syncing Curation")
+            .WithContent($"Syncing {bestPictures.Count} best shots to database and Picked folders...")
+            .Dismiss().After(TimeSpan.FromSeconds(2))
+            .Queue();
+    }
+
+    public void Receive(CurationCompletedMessage message) {
+        if (_pendingAutoFlagBatchCount <= 0) {
+            return;
+        }
+
+        _pendingAutoFlagBatchCount -= message.Count;
+        
+        if (_pendingAutoFlagBatchCount > 0) {
+            Log.Information("Curation sync progress: {Count} items remaining in current auto-flag batch.", _pendingAutoFlagBatchCount);
+            return;
+        }
+
+        Log.Information("Curation sync batch complete.");
+        
+        MainWindow.ToastManager.CreateToast()
+            .WithTitle("Sync Complete")
+            .WithContent("Successfully synced best shots to database and Picked folders.")
+            .Dismiss().After(TimeSpan.FromSeconds(3))
+            .Queue();
+
+        _pendingAutoFlagBatchCount = 0;
     }
 
     [RelayCommand]

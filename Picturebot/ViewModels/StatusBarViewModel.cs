@@ -8,14 +8,15 @@ using Picturebot.Views;
 using SukiUI.Dialogs;
 
 using Microsoft.Extensions.DependencyInjection;
+using Graph.Domain.Interfaces;
 
 namespace Picturebot.ViewModels;
 
 public partial class StatusBarViewModel : ViewModelBase {
     public SyncStatusViewModel SyncStatusVM { get; }
 
-    public StatusBarViewModel(IConfiguration configuration, IServiceScopeFactory scopeFactory) {
-        SyncStatusVM = new SyncStatusViewModel(scopeFactory);
+    public StatusBarViewModel(IConfiguration configuration, IServiceScopeFactory scopeFactory, ICurationQueue curationQueue) {
+        SyncStatusVM = new SyncStatusViewModel(scopeFactory, curationQueue);
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         AppVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.0.0";
 

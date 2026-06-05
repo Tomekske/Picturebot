@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using Graph.Domain.Interfaces;
 using Picturebot.Messages;
 using Picturebot.Views;
 using Serilog;
@@ -14,6 +15,7 @@ public partial class SyncStatusViewModel : ViewModelBase,
     IRecipient<ProcessingProgressMessage>,
     IRecipient<ProcessingCompletedMessage> {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ICurationQueue _curationQueue;
 
     [ObservableProperty]
     private bool _isProcessing;
@@ -27,8 +29,9 @@ public partial class SyncStatusViewModel : ViewModelBase,
     [ObservableProperty]
     private string _statusText = "Idle";
 
-    public SyncStatusViewModel(IServiceScopeFactory scopeFactory) {
+    public SyncStatusViewModel(IServiceScopeFactory scopeFactory, ICurationQueue curationQueue) {
         _scopeFactory = scopeFactory;
+        _curationQueue = curationQueue;
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
 
@@ -56,7 +59,7 @@ public partial class SyncStatusViewModel : ViewModelBase,
         Log.Information("Show Queue clicked");
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new ProcessingQueueView {
-                DataContext = new ProcessingQueueViewModel(_scopeFactory)
+                DataContext = new ProcessingQueueViewModel(_scopeFactory, _curationQueue)
             })
             .TryShow();
     }
