@@ -16,7 +16,8 @@ public partial class GalleryView : UserControl {
 
     protected override void OnKeyDown(KeyEventArgs e) {
         var focusManager = TopLevel.GetTopLevel(this)?.FocusManager;
-        if (focusManager?.GetFocusedElement() is TextBox) {
+        var focusedElement = focusManager?.GetFocusedElement();
+        if (focusedElement is TextBox || focusedElement is NumericUpDown || focusedElement is ComboBox) {
             return;
         }
 

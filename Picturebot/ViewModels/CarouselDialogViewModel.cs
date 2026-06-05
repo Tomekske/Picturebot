@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Domain.Enums;
@@ -118,7 +119,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void Next() {
         if (CurrentIndex < _pictures.Count - 1) {
             CurrentIndex++;
@@ -127,7 +128,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void Previous() {
         if (CurrentIndex > 0) {
             CurrentIndex--;
@@ -136,7 +137,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetCurationStatus(CurationStatus status) {
         try {
             CurrentPicture.Picture.CurationStatus = status;
@@ -149,7 +150,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetColorLabel(ColorLabel label) {
         try {
             CurrentPicture.Picture.ColorLabel = label;
@@ -161,7 +162,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetRating(string ratingStr) {
         if (!int.TryParse(ratingStr, out var rating)) {
             return;
@@ -175,6 +176,12 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in carousel for {Name}", CurrentPicture.Name);
         }
+    }
+
+    private bool CanExecuteShortcuts() {
+        var focusManager = MainWindow.Instance?.FocusManager;
+        var focused = focusManager?.GetFocusedElement();
+        return focused is not TextBox && focused is not NumericUpDown && focused is not ComboBox;
     }
 
     [RelayCommand]

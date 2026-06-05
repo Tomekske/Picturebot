@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -403,13 +404,15 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    [RelayCommand(CanExecute = nameof(CanExecuteGroupSimilar))]
     private async Task GroupSimilarPictures() {
         IsBurstViewEnabled = true;
         await RefreshGalleryGrouping();
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private bool CanExecuteGroupSimilar() => CanPlayCarousel && CanExecuteShortcuts();
+
+    [RelayCommand(CanExecute = nameof(CanExecuteOpenInExplorer))]
     private void OpenInExplorer() {
         if (_currentNode is not Album album || string.IsNullOrEmpty(album.Uuid)) {
             return;
@@ -454,7 +457,9 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private bool CanExecuteOpenInExplorer() => CanPlayCarousel && CanExecuteShortcuts();
+
+    [RelayCommand(CanExecute = nameof(CanExecuteSyncPicked))]
     private async Task SyncCurationStatusWithPickedFolderAsync() {
         if (_currentNode is not Album album) return;
 
@@ -480,7 +485,9 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private bool CanExecuteSyncPicked() => CanPlayCarousel && CanExecuteShortcuts();
+
+    [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
     private void PlayCarousel() {
         var window = new CarouselWindow();
         var carouselVm =
@@ -499,6 +506,8 @@ public partial class GalleryViewModel : ViewModelBase,
             window.Show();
         }
     }
+
+    private bool CanExecutePlayCarousel() => CanPlayCarousel && CanExecuteShortcuts();
 
     partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
         foreach (var pic in PicturesList) {
@@ -669,7 +678,7 @@ public partial class GalleryViewModel : ViewModelBase,
         ApplyFilters();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ShowPickedOnly() {
         FilterStatuses.Clear();
         FilterRatings.Clear();
@@ -678,12 +687,18 @@ public partial class GalleryViewModel : ViewModelBase,
         ApplyFilters();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ClearAllFilters() {
         FilterStatuses.Clear();
         FilterRatings.Clear();
         FilterColors.Clear();
         ApplyFilters();
+    }
+
+    private bool CanExecuteShortcuts() {
+        var focusManager = MainWindow.Instance?.FocusManager;
+        var focused = focusManager?.GetFocusedElement();
+        return focused is not TextBox && focused is not NumericUpDown && focused is not ComboBox;
     }
 
     private void ApplyFilters() {
@@ -769,7 +784,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _navigationService.NavigateTo(node);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetCurationStatus(CurationStatus status) {
         if (SelectedPicture == null) {
             return;
@@ -786,7 +801,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetColorLabel(ColorLabel label) {
         if (SelectedPicture == null) {
             return;
@@ -803,7 +818,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetRating(string ratingStr) {
         if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
             return;
