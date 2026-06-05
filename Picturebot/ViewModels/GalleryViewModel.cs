@@ -404,13 +404,15 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    [RelayCommand(CanExecute = nameof(CanExecuteGroupSimilar))]
     private async Task GroupSimilarPictures() {
         IsBurstViewEnabled = true;
         await RefreshGalleryGrouping();
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private bool CanExecuteGroupSimilar() => CanPlayCarousel && CanExecuteShortcuts();
+
+    [RelayCommand(CanExecute = nameof(CanExecuteOpenInExplorer))]
     private void OpenInExplorer() {
         if (_currentNode is not Album album || string.IsNullOrEmpty(album.Uuid)) {
             return;
@@ -455,7 +457,9 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private bool CanExecuteOpenInExplorer() => CanPlayCarousel && CanExecuteShortcuts();
+
+    [RelayCommand(CanExecute = nameof(CanExecuteSyncPicked))]
     private async Task SyncCurationStatusWithPickedFolderAsync() {
         if (_currentNode is not Album album) return;
 
@@ -481,7 +485,9 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayCarousel))]
+    private bool CanExecuteSyncPicked() => CanPlayCarousel && CanExecuteShortcuts();
+
+    [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
     private void PlayCarousel() {
         var window = new CarouselWindow();
         var carouselVm =
@@ -500,6 +506,8 @@ public partial class GalleryViewModel : ViewModelBase,
             window.Show();
         }
     }
+
+    private bool CanExecutePlayCarousel() => CanPlayCarousel && CanExecuteShortcuts();
 
     partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
         foreach (var pic in PicturesList) {
