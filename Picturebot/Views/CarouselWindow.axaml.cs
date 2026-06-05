@@ -118,6 +118,15 @@ public partial class CarouselWindow : Window {
                 vm.SetCurationStatusCommand.Execute(CurationStatus.Unflagged);
                 e.Handled = true;
                 break;
+            case Key.E:
+                if (e.KeyModifiers.HasFlag(KeyModifiers.Control)) {
+                    vm.CopyToEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (e.KeyModifiers.HasFlag(KeyModifiers.Shift)) {
+                    vm.CopyToPrintCommand.Execute(null);
+                    e.Handled = true;
+                }
+                break;
         }
     }
 }

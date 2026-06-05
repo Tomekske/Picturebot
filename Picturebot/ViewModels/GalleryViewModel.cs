@@ -529,7 +529,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private void PlayCarousel() {
         var window = new CarouselWindow();
         var carouselVm =
-            new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, window.Close);
+            new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, _copyService, window.Close);
         window.DataContext = carouselVm;
 
         window.Closed += (s, e) => {
