@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -669,7 +670,7 @@ public partial class GalleryViewModel : ViewModelBase,
         ApplyFilters();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ShowPickedOnly() {
         FilterStatuses.Clear();
         FilterRatings.Clear();
@@ -678,12 +679,18 @@ public partial class GalleryViewModel : ViewModelBase,
         ApplyFilters();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ClearAllFilters() {
         FilterStatuses.Clear();
         FilterRatings.Clear();
         FilterColors.Clear();
         ApplyFilters();
+    }
+
+    private bool CanExecuteShortcuts() {
+        var focusManager = MainWindow.Instance?.FocusManager;
+        var focused = focusManager?.GetFocusedElement();
+        return focused is not TextBox && focused is not NumericUpDown && focused is not ComboBox;
     }
 
     private void ApplyFilters() {
@@ -769,7 +776,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _navigationService.NavigateTo(node);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetCurationStatus(CurationStatus status) {
         if (SelectedPicture == null) {
             return;
@@ -786,7 +793,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetColorLabel(ColorLabel label) {
         if (SelectedPicture == null) {
             return;
@@ -803,7 +810,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private async Task SetRating(string ratingStr) {
         if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
             return;

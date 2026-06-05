@@ -22,7 +22,8 @@ public partial class MainWindow : SukiWindow {
     public static MainWindow? Instance { get; private set; }
 
     protected override void OnKeyDown(KeyEventArgs e) {
-        if (FocusManager?.GetFocusedElement() is TextBox) {
+        var focusedElement = FocusManager?.GetFocusedElement();
+        if (focusedElement is TextBox || focusedElement is NumericUpDown || focusedElement is ComboBox) {
             return;
         }
         

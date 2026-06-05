@@ -12,8 +12,8 @@ public partial class CarouselWindow : Window {
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
-        if (FocusManager?.GetFocusedElement() is TextBox) {
-            base.OnKeyDown(e);
+        var focusedElement = FocusManager?.GetFocusedElement();
+        if (focusedElement is TextBox || focusedElement is NumericUpDown || focusedElement is ComboBox) {
             return;
         }
 
