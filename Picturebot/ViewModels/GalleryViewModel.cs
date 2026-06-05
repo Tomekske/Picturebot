@@ -237,7 +237,7 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     [RelayCommand]
-    private async Task AutoFlagBestPictures() {
+    private void AutoFlagBestPictures() {
         if (!IsBurstViewEnabled) {
             return;
         }
@@ -785,7 +785,7 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
-    private async Task SetCurationStatus(CurationStatus status) {
+    private void SetCurationStatus(CurationStatus status) {
         if (SelectedPicture == null) {
             return;
         }
@@ -795,14 +795,13 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.CurationStatus = status;
             _curationQueue.Enqueue(SelectedPicture.Picture);
             ApplyFilters();
-            await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update curation status in gallery for {Name}", SelectedPicture.Name);
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
-    private async Task SetColorLabel(ColorLabel label) {
+    private void SetColorLabel(ColorLabel label) {
         if (SelectedPicture == null) {
             return;
         }
@@ -812,14 +811,13 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.ColorLabel = label;
             _curationQueue.Enqueue(SelectedPicture.Picture);
             ApplyFilters();
-            await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update color label in gallery for {Name}", SelectedPicture.Name);
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
-    private async Task SetRating(string ratingStr) {
+    private void SetRating(string ratingStr) {
         if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
             return;
         }
@@ -829,7 +827,6 @@ public partial class GalleryViewModel : ViewModelBase,
             SelectedPicture.Rating = rating;
             _curationQueue.Enqueue(SelectedPicture.Picture);
             ApplyFilters();
-            await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in gallery for {Name}", SelectedPicture.Name);
         }

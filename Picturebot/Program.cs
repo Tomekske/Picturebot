@@ -76,7 +76,9 @@ internal sealed class Program {
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();
             services.AddSingleton<IPickedService, PickedService>();
-            services.AddSingleton<ICurationQueue, CurationQueue>();
+            services.AddSingleton<CurationQueue>();
+            services.AddSingleton<ICurationQueue>(sp => sp.GetRequiredService<CurationQueue>());
+            services.AddHostedService(sp => sp.GetRequiredService<CurationQueue>());
             services.AddHostedService<PictureWorkerService>();
 
             // Graph Services
