@@ -51,34 +51,41 @@ public class CurationQueue : ICurationQueue, IHostedService, IDisposable {
     }
 
     private async Task ProcessQueueAsync() {
-        // We do NOT pass a cancellation token to ReadAllAsync because we want to drain
-        // the channel after the writer is completed during StopAsync.
-        while (await _channel.Reader.WaitToReadAsync()) {
-            while (_channel.Reader.TryRead(out var picture)) {
-                try {
-                    using var scope = _scopeFactory.CreateScope();
-                    var nodeService = scope.ServiceProvider.GetRequiredService<INodeService>();
-                    var pickedService = scope.ServiceProvider.GetRequiredService<IPickedService>();
+        try {
+            // We do NOT pass a cancellation token to ReadAllAsync because we want to drain
+            // the channel after the writer is completed during StopAsync.
+            while (await _channel.Reader.WaitToReadAsync()) {
+                while (_channel.Reader.TryRead(out var picture)) {
+                    try {
+                        Log.Debug("Synchronizing curation for {Name}...", picture.Name);
+                        using var scope = _scopeFactory.CreateScope();
+                        var nodeService = scope.ServiceProvider.GetRequiredService<INodeService>();
+                        var pickedService = scope.ServiceProvider.GetRequiredService<IPickedService>();
 
-                    // 1. Adds the curated picture 'preview' to the database 
-                    await nodeService.UpdateNodeAsync(picture);
+                        // 1. Adds the curated picture 'preview' to the database 
+                        await nodeService.UpdateNodeAsync(picture);
 
-                    // 2. copy to the 'Picked' folder
-                    await pickedService.SyncToPickedAsync(picture);
-                    
-                    Log.Information("Successfully synchronized curation for {Name}", picture.Name);
-                    _processedInBatch++;
-                } catch (Exception ex) {
-                    Log.Error(ex, "Error processing curation sync for {Name}", picture.Name);
+                        // 2. copy to the 'Picked' folder
+                        await pickedService.SyncToPickedAsync(picture);
+                        
+                        Log.Information("Successfully synchronized curation for {Name}", picture.Name);
+                        _processedInBatch++;
+                    } catch (Exception ex) {
+                        Log.Error(ex, "Error processing curation sync for {Name}", picture.Name);
+                    }
+                }
+
+                // Queue is now empty (at least momentarily)
+                if (_processedInBatch > 0 && _channel.Reader.Count == 0) {
+                    Log.Information("Curation batch complete. Processed {Count} items.", _processedInBatch);
+                    WeakReferenceMessenger.Default.Send(new CurationCompletedMessage(_processedInBatch));
+                    _processedInBatch = 0;
                 }
             }
-
-            // Queue is now empty (at least momentarily)
-            if (_processedInBatch > 0 && _channel.Reader.Count == 0) {
-                Log.Information("Curation batch complete. Processed {Count} items.", _processedInBatch);
-                WeakReferenceMessenger.Default.Send(new CurationCompletedMessage(_processedInBatch));
-                _processedInBatch = 0;
-            }
+        } catch (Exception ex) {
+            Log.Fatal(ex, "CurationQueue background processor crashed unexpectedly");
+        } finally {
+            Log.Information("CurationQueue background processor stopped.");
         }
     }
 

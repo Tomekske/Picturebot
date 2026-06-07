@@ -7,6 +7,7 @@ using Picturebot.Messages;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Dialogs;
+using Avalonia.Threading;
 using WeakReferenceMessenger = CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger;
 
 namespace Picturebot.ViewModels;
@@ -36,22 +37,26 @@ public partial class SyncStatusViewModel : ViewModelBase,
     }
 
     public void Receive(ProcessingCompletedMessage message) {
-        if (message.Value == -1) {
-            IsProcessing = false;
-            ProgressValue = 0;
-            StatusText = "Idle";
-        }
+        Dispatcher.UIThread.Post(() => {
+            if (message.Value == -1) {
+                IsProcessing = false;
+                ProgressValue = 0;
+                StatusText = "Idle";
+            }
+        });
     }
 
     public void Receive(ProcessingProgressMessage message) {
-        IsProcessing = true;
-        var progress = message.Value;
+        Dispatcher.UIThread.Post(() => {
+            IsProcessing = true;
+            var progress = message.Value;
 
-        if (progress.TotalCount > 0) {
-            ProgressValue = (double)progress.ProcessedCount / progress.TotalCount * 100;
-        }
+            if (progress.TotalCount > 0) {
+                ProgressValue = (double)progress.ProcessedCount / progress.TotalCount * 100;
+            }
 
-        StatusText = $"Processing {progress.CurrentItemName}";
+            StatusText = $"Processing {progress.CurrentItemName}";
+        });
     }
 
     [RelayCommand]

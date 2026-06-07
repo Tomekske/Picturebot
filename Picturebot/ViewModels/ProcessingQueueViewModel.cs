@@ -12,6 +12,7 @@ using Domain.Messages;
 using Picturebot.Messages;
 using Graph.Domain.Interfaces;
 using Picturebot.Views;
+using Avalonia.Threading;
 
 namespace Picturebot.ViewModels;
 
@@ -47,18 +48,22 @@ public partial class ProcessingQueueViewModel : ViewModelBase,
     }
 
     public void Receive(CurationCompletedMessage message) {
-        UpdateCurationCount();
+        Dispatcher.UIThread.Post(UpdateCurationCount);
     }
 
     public void Receive(ProcessingProgressMessage message) {
         // Simple refresh for now, could be optimized to update specific items
-        _ = LoadQueueAsync();
-        UpdateCurationCount();
+        Dispatcher.UIThread.Post(() => {
+            _ = LoadQueueAsync();
+            UpdateCurationCount();
+        });
     }
 
     public void Receive(ProcessingCompletedMessage message) {
-        _ = LoadQueueAsync();
-        UpdateCurationCount();
+        Dispatcher.UIThread.Post(() => {
+            _ = LoadQueueAsync();
+            UpdateCurationCount();
+        });
     }
 
     public async Task LoadQueueAsync() {
