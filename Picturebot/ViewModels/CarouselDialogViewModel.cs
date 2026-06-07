@@ -14,6 +14,7 @@ using Graph.Domain.Interfaces;
 using Picturebot.Utilities;
 using Picturebot.Views;
 using Serilog;
+using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
@@ -21,6 +22,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private readonly Action? _closeAction;
     private readonly INodeService _nodeService;
     private readonly ICurationQueue _curationQueue;
+    private readonly ICopyService _copyService;
     private readonly List<PictureItemViewModel> _pictures;
 
     [ObservableProperty]
@@ -44,9 +46,10 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private int _sharpness;
 
     public CarouselDialogViewModel(IEnumerable<PictureItemViewModel> pictures, PictureItemViewModel? selectedPicture,
-        INodeService nodeService, ICurationQueue curationQueue, Action? closeAction = null) {
+        INodeService nodeService, ICurationQueue curationQueue, ICopyService copyService, Action? closeAction = null) {
         _nodeService = nodeService;
         _curationQueue = curationQueue;
+        _copyService = copyService;
         _closeAction = closeAction;
         _pictures = pictures.ToList();
 
@@ -175,6 +178,60 @@ public partial class CarouselDialogViewModel : ViewModelBase {
             await Task.CompletedTask;
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in carousel for {Name}", CurrentPicture.Name);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
+    private async Task CopyToEdit() {
+        try {
+            var result = await _copyService.CopyToEditAsync(CurrentPicture.Picture);
+            if (!result) {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Copy skipped")
+                    .WithContent("File already exists in the destination folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+            } else {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Success")
+                    .WithContent($"Copied {CurrentPicture.Name} RAW to edit folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(2))
+                    .Queue();
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to copy to edit folder in carousel");
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Failed to copy file to edit folder.")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
+    private async Task CopyToPrint() {
+        try {
+            var result = await _copyService.CopyToPrintAsync(CurrentPicture.Picture);
+            if (!result) {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Copy skipped")
+                    .WithContent("File already exists in the destination folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+            } else {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Success")
+                    .WithContent($"Copied {CurrentPicture.Name} JPG to print folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(2))
+                    .Queue();
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to copy to print folder in carousel");
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Failed to copy file to print folder.")
+                .Dismiss().ByClicking()
+                .Queue();
         }
     }
 

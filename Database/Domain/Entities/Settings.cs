@@ -52,4 +52,14 @@ public class Settings {
     public string BlueLabelName { get; set; } = "Blue";
     public string PinkLabelName { get; set; } = "Pink";
     public string PurpleLabelName { get; set; } = "Purple";
+
+    /// <summary>
+    ///     The destination folder for files copied for editing.
+    /// </summary>
+    public string EditFolderPath { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The destination folder for files copied for printing.
+    /// </summary>
+    public string PrintFolderPath { get; set; } = string.Empty;
 }

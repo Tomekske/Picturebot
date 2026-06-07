@@ -38,6 +38,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly ICurationQueue _curationQueue;
+    private readonly ICopyService _copyService;
     private readonly IPictureGroupingService _groupingService;
     private readonly INavigationService _navigationService;
     private readonly INodeService _nodeService;
@@ -88,6 +89,8 @@ public partial class GalleryViewModel : ViewModelBase,
     [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
     [NotifyCanExecuteChangedFor(nameof(GroupSimilarPicturesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInExplorerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyToEditCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyToPrintCommand))]
     private bool _canPlayCarousel;
 
     private Node? _currentNode;
@@ -119,7 +122,7 @@ public partial class GalleryViewModel : ViewModelBase,
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
         IPictureGroupingService groupingService, INavigationService navigationService,
         ISettingsService settingsService, ICurationQueue curationQueue,
-        IAlbumService albumService, IFolderService folderService) {
+        IAlbumService albumService, IFolderService folderService, ICopyService copyService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
@@ -128,6 +131,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _curationQueue = curationQueue;
         _albumService = albumService;
         _folderService = folderService;
+        _copyService = copyService;
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -525,7 +529,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private void PlayCarousel() {
         var window = new CarouselWindow();
         var carouselVm =
-            new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, window.Close);
+            new CarouselDialogViewModel(PicturesList, SelectedPicture, _nodeService, _curationQueue, _copyService, window.Close);
         window.DataContext = carouselVm;
 
         window.Closed += (s, e) => {
@@ -538,6 +542,64 @@ public partial class GalleryViewModel : ViewModelBase,
             window.Show(MainWindow.Instance);
         } else {
             window.Show();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
+    private async Task CopyToEdit() {
+        if (SelectedPicture == null) return;
+
+        try {
+            var result = await _copyService.CopyToEditAsync(SelectedPicture.Picture);
+            if (!result) {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Copy skipped")
+                    .WithContent("File already exists in the destination folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+            } else {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Success")
+                    .WithContent($"Copied {SelectedPicture.Name} RAW to edit folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(2))
+                    .Queue();
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to copy to edit folder");
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Failed to copy file to edit folder.")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
+    private async Task CopyToPrint() {
+        if (SelectedPicture == null) return;
+
+        try {
+            var result = await _copyService.CopyToPrintAsync(SelectedPicture.Picture);
+            if (!result) {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Copy skipped")
+                    .WithContent("File already exists in the destination folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+            } else {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Success")
+                    .WithContent($"Copied {SelectedPicture.Name} JPG to print folder.")
+                    .Dismiss().After(TimeSpan.FromSeconds(2))
+                    .Queue();
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to copy to print folder");
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent("Failed to copy file to print folder.")
+                .Dismiss().ByClicking()
+                .Queue();
         }
     }
 

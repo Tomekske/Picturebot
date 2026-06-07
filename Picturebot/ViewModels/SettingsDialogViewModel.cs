@@ -56,6 +56,12 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _purpleLabelName = "Purple";
 
     [ObservableProperty]
+    private string _editFolderPath = string.Empty;
+
+    [ObservableProperty]
+    private string _printFolderPath = string.Empty;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLightActive))]
     [NotifyPropertyChangedFor(nameof(IsDarkActive))]
     [NotifyPropertyChangedFor(nameof(IsSystemActive))]
@@ -93,6 +99,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         BlueLabelName = settings.BlueLabelName;
         PinkLabelName = settings.PinkLabelName;
         PurpleLabelName = settings.PurpleLabelName;
+        EditFolderPath = settings.EditFolderPath ?? string.Empty;
+        PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
         ThemeIndex = settings.ThemeMode switch {
             ThemeMode.Light => 0,
@@ -118,19 +126,32 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private async Task BrowseLibraryLocation() {
+        LibraryLocation = await BrowseFolder(LibraryLocation, "Select Library Location") ?? LibraryLocation;
+    }
+
+    [RelayCommand]
+    private async Task BrowseEditFolder() {
+        EditFolderPath = await BrowseFolder(EditFolderPath, "Select Edit Destination Folder") ?? EditFolderPath;
+    }
+
+    [RelayCommand]
+    private async Task BrowsePrintFolder() {
+        PrintFolderPath = await BrowseFolder(PrintFolderPath, "Select Print Destination Folder") ?? PrintFolderPath;
+    }
+
+    private async Task<string?> BrowseFolder(string currentPath, string title) {
         try {
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
                 desktop.MainWindow is not Window window) {
-                return;
+                return null;
             }
 
             var options = new FolderPickerOpenOptions {
-                Title = "Select Library Location",
+                Title = title,
                 AllowMultiple = false
             };
 
-            // Try to set a valid starting location to avoid platform-specific initialization crashes
-            var startPath = LibraryLocation;
+            var startPath = currentPath;
             if (string.IsNullOrWhiteSpace(startPath) || !Directory.Exists(startPath)) {
                 startPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
                 if (!Directory.Exists(startPath)) {
@@ -149,11 +170,13 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             var folders = await window.StorageProvider.OpenFolderPickerAsync(options);
 
             if (folders != null && folders.Count > 0) {
-                LibraryLocation = folders[0].Path.LocalPath;
+                return folders[0].Path.LocalPath;
             }
         } catch (Exception ex) {
-            Log.Error(ex, "Error browsing library location");
+            Log.Error(ex, "Error browsing folder for {Title}", title);
         }
+
+        return null;
     }
 
     [RelayCommand]
@@ -175,6 +198,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             BlueLabelName = BlueLabelName,
             PinkLabelName = PinkLabelName,
             PurpleLabelName = PurpleLabelName,
+            EditFolderPath = EditFolderPath,
+            PrintFolderPath = PrintFolderPath,
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,
                 1 => ThemeMode.Dark,

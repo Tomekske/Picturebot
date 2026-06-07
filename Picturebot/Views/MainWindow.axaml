@@ -24,6 +24,9 @@
         <KeyBinding Gesture="U" Command="{Binding GalleryVM.SetCurationStatusCommand}"
                     CommandParameter="{x:Static enums:CurationStatus.Unflagged}" />
 
+        <KeyBinding Gesture="Ctrl+E" Command="{Binding GalleryVM.CopyToEditCommand}" />
+        <KeyBinding Gesture="Shift+E" Command="{Binding GalleryVM.CopyToPrintCommand}" />
+
         <KeyBinding Gesture="D1" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="1" />
         <KeyBinding Gesture="D2" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="2" />
         <KeyBinding Gesture="D3" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="3" />
