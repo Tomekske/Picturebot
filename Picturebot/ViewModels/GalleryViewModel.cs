@@ -295,11 +295,13 @@ public partial class GalleryViewModel : ViewModelBase,
 
         Log.Information("Curation sync batch complete.");
         
-        MainWindow.ToastManager.CreateToast()
-            .WithTitle("Sync Complete")
-            .WithContent("Successfully synced best shots to database and Picked folders.")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Queue();
+        Dispatcher.UIThread.Post(() => {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Complete")
+                .WithContent("Successfully synced best shots to database and Picked folders.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        });
 
         _pendingAutoFlagBatchCount = 0;
     }
@@ -936,7 +938,11 @@ public partial class GalleryViewModel : ViewModelBase,
         lock (_pendingThumbnailRefreshes) {
             _pendingThumbnailRefreshes.Add(message.Value.CurrentItemName);
             if (!_refreshTimer.IsEnabled) {
-                _refreshTimer.Start();
+                Dispatcher.UIThread.Post(() => {
+                    if (!_refreshTimer.IsEnabled) {
+                        _refreshTimer.Start();
+                    }
+                });
             }
         }
     }
