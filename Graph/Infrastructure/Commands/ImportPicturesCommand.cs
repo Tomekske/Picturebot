@@ -17,16 +17,22 @@ public class ImportPicturesCommand : IImportPicturesCommand {
     private readonly IFileSystem _fileSystem;
     private readonly INodeService _nodeService;
     private readonly IPictureAnalyzer _pictureAnalyzer;
+    private readonly IXmpService _xmpService;
+    private readonly IPathService _pathService;
 
     public ImportPicturesCommand(
         IAlbumService albumService,
         INodeService nodeService,
         IFileSystem fileSystem,
-        IPictureAnalyzer pictureAnalyzer) {
+        IPictureAnalyzer pictureAnalyzer,
+        IXmpService xmpService,
+        IPathService pathService) {
         _albumService = albumService;
         _nodeService = nodeService;
         _fileSystem = fileSystem;
         _pictureAnalyzer = pictureAnalyzer;
+        _xmpService = xmpService;
+        _pathService = pathService;
     }
 
     public async Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath,
@@ -149,6 +155,10 @@ public class ImportPicturesCommand : IImportPicturesCommand {
             };
 
             await _nodeService.CreateNodeAsync(pictureNode);
+
+            pictureNode.Parent = album;
+            _pathService.PopulatePaths(pictureNode);
+            await _xmpService.SaveMetadataAsync(pictureNode);
 
             album.Children ??= new List<Node>();
             if (!album.Children.Contains(pictureNode)) {

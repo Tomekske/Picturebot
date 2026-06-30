@@ -65,6 +65,10 @@ public class CurationQueue : ICurationQueue, IHostedService, IDisposable {
                         // 1. Adds the curated picture 'preview' to the database 
                         await nodeService.UpdateNodeAsync(picture);
 
+                        // 1.5. Save metadata to XMP file
+                        var xmpService = scope.ServiceProvider.GetRequiredService<IXmpService>();
+                        await xmpService.SaveMetadataAsync(picture);
+
                         // 2. copy to the 'Picked' folder
                         await pickedService.SyncToPickedAsync(picture);
                         

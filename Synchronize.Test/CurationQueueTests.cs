@@ -11,6 +11,7 @@ namespace Synchronize.Test;
 public class CurationQueueTests {
     private Mock<IPickedService> _mockPickedService;
     private Mock<INodeService> _mockNodeService;
+    private Mock<IXmpService> _mockXmpService;
     private Mock<IServiceScopeFactory> _mockScopeFactory;
     private Mock<IServiceScope> _mockScope;
     private Mock<IServiceProvider> _mockServiceProvider;
@@ -20,6 +21,7 @@ public class CurationQueueTests {
     public void Setup() {
         _mockPickedService = new Mock<IPickedService>();
         _mockNodeService = new Mock<INodeService>();
+        _mockXmpService = new Mock<IXmpService>();
         _mockScopeFactory = new Mock<IServiceScopeFactory>();
         _mockScope = new Mock<IServiceScope>();
         _mockServiceProvider = new Mock<IServiceProvider>();
@@ -28,6 +30,7 @@ public class CurationQueueTests {
         _mockScope.Setup(s => s.ServiceProvider).Returns(_mockServiceProvider.Object);
         _mockServiceProvider.Setup(s => s.GetService(typeof(INodeService))).Returns(_mockNodeService.Object);
         _mockServiceProvider.Setup(s => s.GetService(typeof(IPickedService))).Returns(_mockPickedService.Object);
+        _mockServiceProvider.Setup(s => s.GetService(typeof(IXmpService))).Returns(_mockXmpService.Object);
 
         _curationQueue = new CurationQueue(_mockScopeFactory.Object);
     }

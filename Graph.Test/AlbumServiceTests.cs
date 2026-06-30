@@ -17,6 +17,7 @@ public class AlbumServiceTests {
     private Mock<ISettingsService> _mockSettingsService;
     private Mock<IPictureRepository> _mockPictureRepository;
     private Mock<IPathService> _mockPathService;
+    private Mock<IXmpService> _mockXmpService;
     private AlbumService _albumService;
 
     [SetUp]
@@ -26,12 +27,13 @@ public class AlbumServiceTests {
         _mockSettingsService = new Mock<ISettingsService>();
         _mockPictureRepository = new Mock<IPictureRepository>();
         _mockPathService = new Mock<IPathService>();
+        _mockXmpService = new Mock<IXmpService>();
         
         _mockSettingsService.Setup(s => s.Current).Returns(new SettingsModel {
             LibraryPath = @"C:\Photos"
         });
 
-        _albumService = new AlbumService(_mockNodeService.Object, _mockFileSystem, _mockSettingsService.Object, _mockPictureRepository.Object, _mockPathService.Object);
+        _albumService = new AlbumService(_mockNodeService.Object, _mockFileSystem, _mockSettingsService.Object, _mockPictureRepository.Object, _mockPathService.Object, _mockXmpService.Object);
 
         // Configure mock NodeService to simulate the strategy's Prepare behavior
         _mockNodeService

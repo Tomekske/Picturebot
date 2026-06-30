@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
@@ -73,6 +73,7 @@ internal sealed class Program {
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddScoped<IPathService, PathService>();
+            services.AddScoped<IXmpService, XmpService>();
             services.AddScoped<ICopyService, CopyService>();
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();

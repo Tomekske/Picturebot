@@ -12,7 +12,8 @@ public class AlbumService(
     IFileSystem fileSystem,
     ISettingsService settingsService,
     IPictureRepository pictureRepository,
-    IPathService pathService) : IAlbumService {
+    IPathService pathService,
+    IXmpService xmpService) : IAlbumService {
     public async Task<Album> CreateAsync(int? parentId, string albumName, string path) {
         var album = new Album {
             Name = albumName,
@@ -83,17 +84,23 @@ public class AlbumService(
         }
 
         var pictures = await pictureRepository.FindByHierarchyIdAsync(album.Id);
+        foreach (var picture in pictures) {
+            picture.Parent = album;
+        }
+        pathService.PopulatePaths(pictures);
 
         foreach (var picture in pictures) {
-            bool isPickedOnDisk = pickedFileNames.Contains(picture.Name);
-            bool isFlaggedInDb = picture.CurationStatus == CurationStatus.Flagged;
+            await xmpService.LoadMetadataAsync(picture);
 
-            if (isPickedOnDisk && !isFlaggedInDb) {
+            bool isPickedOnDisk = pickedFileNames.Contains(picture.Name);
+            bool isFlagged = picture.CurationStatus == CurationStatus.Flagged;
+
+            if (isPickedOnDisk && !isFlagged) {
                 picture.CurationStatus = CurationStatus.Flagged;
-                await pictureRepository.UpdateAsync(picture);
-            } else if (!isPickedOnDisk && isFlaggedInDb) {
+                await xmpService.SaveMetadataAsync(picture);
+            } else if (!isPickedOnDisk && isFlagged) {
                 picture.CurationStatus = CurationStatus.Unflagged;
-                await pictureRepository.UpdateAsync(picture);
+                await xmpService.SaveMetadataAsync(picture);
             }
         }
     }
