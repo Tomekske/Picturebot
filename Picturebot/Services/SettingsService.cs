@@ -9,14 +9,16 @@ using Domain.Interfaces;
 using Domain.Models;
 using SukiUI;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Picturebot.Services;
 
 public class SettingsService : ISettingsService {
-    private readonly ISettingsRepository _repository;
+    private readonly IServiceScopeFactory _scopeFactory;
     private SettingsModel _current = new();
 
-    public SettingsService(ISettingsRepository repository) {
-        _repository = repository;
+    public SettingsService(IServiceScopeFactory scopeFactory) {
+        _scopeFactory = scopeFactory;
     }
 
     public SettingsModel Current {
@@ -34,13 +36,17 @@ public class SettingsService : ISettingsService {
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public async Task InitializeAsync() {
-        var settings = await _repository.LoadAsync();
+        using var scope = _scopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ISettingsRepository>();
+        var settings = await repository.LoadAsync();
         Current = settings;
         ApplyTheme(settings.ThemeMode);
     }
 
     public async Task UpdateAsync(SettingsModel settings) {
-        await _repository.UpdateAsync(settings);
+        using var scope = _scopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ISettingsRepository>();
+        await repository.UpdateAsync(settings);
         Current = settings;
         ApplyTheme(settings.ThemeMode);
     }

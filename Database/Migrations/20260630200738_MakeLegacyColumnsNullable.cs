@@ -10,7 +10,7 @@ namespace Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("PRAGMA foreign_keys=OFF;");
+            migrationBuilder.Sql("PRAGMA foreign_keys=OFF;", suppressTransaction: true);
             
             migrationBuilder.Sql(@"
                 CREATE TABLE ""pictures_new"" (
@@ -28,22 +28,22 @@ namespace Database.Migrations
                     ""ColorLabel"" TEXT NULL,
                     ""Rating"" INTEGER NULL,
                     CONSTRAINT ""FK_pictures_nodes_Id"" FOREIGN KEY (""Id"") REFERENCES ""nodes"" (""Id"") ON DELETE CASCADE
-                );");
+                );", suppressTransaction: true);
 
             migrationBuilder.Sql(@"
                 INSERT INTO ""pictures_new"" (""Id"", ""CapturedAt"", ""Extension"", ""Hash"", ""Height"", ""LastErrorMessage"", ""ProcessingState"", ""RetryCount"", ""Sharpness"", ""Width"", ""CurationStatus"", ""ColorLabel"", ""Rating"")
                 SELECT ""Id"", ""CapturedAt"", ""Extension"", ""Hash"", ""Height"", ""LastErrorMessage"", ""ProcessingState"", ""RetryCount"", ""Sharpness"", ""Width"", ""CurationStatus"", ""ColorLabel"", ""Rating""
-                FROM ""pictures"";");
+                FROM ""pictures"";", suppressTransaction: true);
 
-            migrationBuilder.Sql("DROP TABLE \"pictures\";");
-            migrationBuilder.Sql("ALTER TABLE \"pictures_new\" RENAME TO \"pictures\";");
+            migrationBuilder.Sql("DROP TABLE \"pictures\";", suppressTransaction: true);
+            migrationBuilder.Sql("ALTER TABLE \"pictures_new\" RENAME TO \"pictures\";", suppressTransaction: true);
             
-            migrationBuilder.Sql("PRAGMA foreign_keys=ON;");
+            migrationBuilder.Sql("PRAGMA foreign_keys=ON;", suppressTransaction: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("PRAGMA foreign_keys=OFF;");
+            migrationBuilder.Sql("PRAGMA foreign_keys=OFF;", suppressTransaction: true);
             
             migrationBuilder.Sql(@"
                 CREATE TABLE ""pictures_new"" (
@@ -61,7 +61,7 @@ namespace Database.Migrations
                     ""ColorLabel"" TEXT NOT NULL,
                     ""Rating"" INTEGER NOT NULL,
                     CONSTRAINT ""FK_pictures_nodes_Id"" FOREIGN KEY (""Id"") REFERENCES ""nodes"" (""Id"") ON DELETE CASCADE
-                );");
+                );", suppressTransaction: true);
 
             migrationBuilder.Sql(@"
                 INSERT INTO ""pictures_new"" (""Id"", ""CapturedAt"", ""Extension"", ""Hash"", ""Height"", ""LastErrorMessage"", ""ProcessingState"", ""RetryCount"", ""Sharpness"", ""Width"", ""CurationStatus"", ""ColorLabel"", ""Rating"")
@@ -69,12 +69,12 @@ namespace Database.Migrations
                        COALESCE(""CurationStatus"", 'Unflagged'), 
                        COALESCE(""ColorLabel"", 'None'), 
                        COALESCE(""Rating"", 0)
-                FROM ""pictures"";");
+                FROM ""pictures"";", suppressTransaction: true);
 
-            migrationBuilder.Sql("DROP TABLE \"pictures\";");
-            migrationBuilder.Sql("ALTER TABLE \"pictures_new\" RENAME TO \"pictures\";");
+            migrationBuilder.Sql("DROP TABLE \"pictures\";", suppressTransaction: true);
+            migrationBuilder.Sql("ALTER TABLE \"pictures_new\" RENAME TO \"pictures\";", suppressTransaction: true);
             
-            migrationBuilder.Sql("PRAGMA foreign_keys=ON;");
+            migrationBuilder.Sql("PRAGMA foreign_keys=ON;", suppressTransaction: true);
         }
     }
 }
