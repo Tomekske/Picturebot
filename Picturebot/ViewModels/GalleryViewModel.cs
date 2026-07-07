@@ -731,6 +731,7 @@ public partial class GalleryViewModel : ViewModelBase,
         AlbumItems.Clear();
 
         foreach (var picVm in _allPictures) {
+            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
             picVm.Dispose();
         }
 
@@ -751,6 +752,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
+                    picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     _allPictures.Add(picVm);
                     _ = picVm.LoadThumbnailAsync(250);
                 }
@@ -780,6 +782,14 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         UpdateBreadcrumbs(currentNode);
+    }
+
+    private void OnPictureItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+        if (e.PropertyName == nameof(PictureItemViewModel.CurationStatus) ||
+            e.PropertyName == nameof(PictureItemViewModel.Rating) ||
+            e.PropertyName == nameof(PictureItemViewModel.ColorLabel)) {
+            ApplyFilters();
+        }
     }
 
     private void ToggleStatusFilter(CurationStatus status, bool isActive) {
