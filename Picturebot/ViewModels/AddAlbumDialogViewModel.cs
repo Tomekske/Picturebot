@@ -48,8 +48,9 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
         _onResult = onResult;
 
         Parents.Add(new LocationItem { Name = "Library", Id = null });
+        var folderMap = existingFolders.ToDictionary(f => f.Id);
         foreach (var f in existingFolders) {
-            Parents.Add(new LocationItem { Name = f.Name, Id = f.Id });
+            Parents.Add(new LocationItem { Name = LocationItem.GetFolderPath(f, folderMap), Id = f.Id });
         }
 
         SelectedParent = Parents[0];

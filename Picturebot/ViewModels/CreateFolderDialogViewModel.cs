@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -27,8 +28,9 @@ public partial class CreateFolderDialogViewModel : ViewModelBase {
         _onResult = onResult;
 
         Parents.Add(new LocationItem { Name = "Library", Id = null });
+        var folderMap = existingFolders.ToDictionary(f => f.Id);
         foreach (var f in existingFolders) {
-            Parents.Add(new LocationItem { Name = f.Name, Id = f.Id });
+            Parents.Add(new LocationItem { Name = LocationItem.GetFolderPath(f, folderMap), Id = f.Id });
         }
 
         SelectedParent = Parents[0];
