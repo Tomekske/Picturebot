@@ -32,34 +32,43 @@ public class PictureWorkerService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         Log.Information("PictureWorkerService starting...");
+        try {
+            // 1. Recovery: Reset 'Processing' to 'Pending' on startup
+            await ResetOrphanedRecordsAsync();
 
-        // 1. Recovery: Reset 'Processing' to 'Pending' on startup
-        await ResetOrphanedRecordsAsync();
+            // 2. Main Processing Loop
+            while (!stoppingToken.IsCancellationRequested) {
+                try {
+                    var albumId = await GetNextAlbumIdWithPendingWorkAsync();
 
-        // 2. Main Processing Loop
-        while (!stoppingToken.IsCancellationRequested) {
-            try {
-                var albumId = await GetNextAlbumIdWithPendingWorkAsync();
+                    if (albumId == null) {
+                        // Notify that everything is done
+                        WeakReferenceMessenger.Default.Send(new ProcessingCompletedMessage(-1)); // -1 indicates all albums done
+                        await Task.Delay(5000, stoppingToken);
+                        continue;
+                    }
 
-                if (albumId == null) {
-                    // Notify that everything is done
-                    WeakReferenceMessenger.Default.Send(new ProcessingCompletedMessage(-1)); // -1 indicates all albums done
-                    await Task.Delay(5000, stoppingToken);
-                    continue;
+                    await ProcessAlbumAsync(albumId.Value, stoppingToken);
+
+                    // Explicitly yield control back to the Avalonia Dispatcher and other background tasks
+                    // to prevent process-wide starvation during heavy album transitions.
+                    await Task.Delay(1, stoppingToken);
+                } catch (OperationCanceledException) {
+                    break;
+                } catch (Exception ex) {
+                    Log.Error(ex, "Error in PictureWorkerService main loop");
+                    await Task.Delay(10000, stoppingToken);
                 }
-
-                await ProcessAlbumAsync(albumId.Value, stoppingToken);
-
-                // Explicitly yield control back to the Avalonia Dispatcher and other background tasks
-                // to prevent process-wide starvation during heavy album transitions.
-                await Task.Delay(1, stoppingToken);
-            } catch (OperationCanceledException) {
-                break;
-            } catch (Exception ex) {
-                Log.Error(ex, "Error in PictureWorkerService main loop");
-                await Task.Delay(10000, stoppingToken);
             }
+        } finally {
+            Log.Information("PictureWorkerService background processor stopped.");
         }
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken) {
+        Log.Information("PictureWorkerService service stopping...");
+        await base.StopAsync(cancellationToken);
+        Log.Information("PictureWorkerService service stopped.");
     }
 
     private async Task ResetOrphanedRecordsAsync() {
@@ -151,6 +160,8 @@ public class PictureWorkerService(
                     WeakReferenceMessenger.Default.Send(new ProcessingProgressMessage(
                         new ProcessingProgress(albumId, currentTotalCompleted, totalCount, picture.Name)));
                 }
+            } catch (OperationCanceledException) {
+                throw;
             } catch (Exception ex) {
                 Log.Error(ex, "Failed to process picture {PictureId}", picture.Id);
                 await HandleProcessingFailureAsync(picture.Id, ex.Message);

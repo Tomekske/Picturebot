@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.Threading;
+using System.Threading.Tasks;
 using AppRegistry.Infrastructure;
 using Avalonia;
 using Database.Infrastructure;
@@ -118,10 +119,23 @@ internal sealed class Program {
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
 
-            // Manually stop hosted services
-            foreach (var hostedService in hostedServices) {
-                hostedService.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
-            }
+            // Clear the SynchronizationContext to prevent deadlocks when calling StopAsync synchronously on the UI thread
+            SynchronizationContext.SetSynchronizationContext(null);
+
+            // Manually stop hosted services on the ThreadPool with a 3-second timeout
+            Task.Run(async () => {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3))) {
+                    foreach (var hostedService in hostedServices) {
+                        try {
+                            await hostedService.StopAsync(cts.Token);
+                        } catch (Exception ex) {
+                            Log.Warning(ex, "Timeout or error stopping hosted service {Service}", hostedService.GetType().Name);
+                        }
+                    }
+                }
+            }).GetAwaiter().GetResult();
+
+            Environment.Exit(0);
         } catch (Exception ex) {
             Log.Fatal(ex, "Application terminated unexpectedly");
         } finally {
