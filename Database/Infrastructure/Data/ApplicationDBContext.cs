@@ -57,13 +57,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
             .Property(n => n.Type)
             .HasConversion<string>();
 
-        modelBuilder.Entity<Picture>()
-            .Property(p => p.CurationStatus)
-            .HasConversion<string>();
 
-        modelBuilder.Entity<Picture>()
-            .Property(p => p.ColorLabel)
-            .HasConversion<string>();
 
         modelBuilder.Entity<Picture>()
             .Property(p => p.ProcessingState)

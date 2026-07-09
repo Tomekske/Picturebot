@@ -65,16 +65,26 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     public async Task UpdateAsync(Node node) {
         var trackedEntity = context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
         
-        if (trackedEntity != null) {
-            // Update the properties of the tracked entity without replacing it
-            context.Entry(trackedEntity).CurrentValues.SetValues(node);
-        } else {
-            // Attach the node and mark as modified
-            context.Nodes.Attach(node);
-            context.Entry(node).State = EntityState.Modified;
+        var parent = node.Parent;
+        var children = node.Children;
+        node.Parent = null;
+        node.Children = null;
+
+        try {
+            if (trackedEntity != null) {
+                // Update the properties of the tracked entity without replacing it
+                context.Entry(trackedEntity).CurrentValues.SetValues(node);
+            } else {
+                // Attach the node and mark as modified
+                context.Nodes.Attach(node);
+                context.Entry(node).State = EntityState.Modified;
+            }
+            
+            await context.SaveChangesAsync();
+        } finally {
+            node.Parent = parent;
+            node.Children = children;
         }
-        
-        await context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Node node) {

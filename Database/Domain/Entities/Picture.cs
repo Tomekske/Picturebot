@@ -48,16 +48,19 @@ public class Picture : Node {
     /// <summary>
     ///     The current curation state of the picture (e.g., Flagged, Rejected).
     /// </summary>
+    [NotMapped]
     public CurationStatus CurationStatus { get; set; } = CurationStatus.Unflagged;
 
     /// <summary>
     ///     The color label assigned to the picture.
     /// </summary>
+    [NotMapped]
     public ColorLabel ColorLabel { get; set; } = ColorLabel.None;
 
     /// <summary>
     ///     The star rating of the picture (0-5).
     /// </summary>
+    [NotMapped]
     public int Rating { get; set; }
 
     /// <summary>

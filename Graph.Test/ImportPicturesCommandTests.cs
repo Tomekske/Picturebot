@@ -14,6 +14,8 @@ public class ImportPicturesCommandTests {
     private Mock<IAlbumService> _mockAlbumService;
     private Mock<INodeService> _mockNodeService;
     private Mock<IPictureAnalyzer> _mockPictureAnalyzer;
+    private Mock<IXmpService> _mockXmpService;
+    private Mock<IPathService> _mockPathService;
     private ImportPicturesCommand _command;
 
     [SetUp]
@@ -22,12 +24,16 @@ public class ImportPicturesCommandTests {
         _mockAlbumService = new Mock<IAlbumService>();
         _mockNodeService = new Mock<INodeService>();
         _mockPictureAnalyzer = new Mock<IPictureAnalyzer>();
+        _mockXmpService = new Mock<IXmpService>();
+        _mockPathService = new Mock<IPathService>();
 
         _command = new ImportPicturesCommand(
             _mockAlbumService.Object,
             _mockNodeService.Object,
             _mockFileSystem,
-            _mockPictureAnalyzer.Object);
+            _mockPictureAnalyzer.Object,
+            _mockXmpService.Object,
+            _mockPathService.Object);
     }
 
     [Test]

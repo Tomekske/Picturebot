@@ -44,6 +44,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly INodeService _nodeService;
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
+    private readonly IXmpService _xmpService;
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
@@ -122,7 +123,8 @@ public partial class GalleryViewModel : ViewModelBase,
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
         IPictureGroupingService groupingService, INavigationService navigationService,
         ISettingsService settingsService, ICurationQueue curationQueue,
-        IAlbumService albumService, IFolderService folderService, ICopyService copyService) {
+        IAlbumService albumService, IFolderService folderService, ICopyService copyService,
+        IXmpService xmpService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
@@ -132,6 +134,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _albumService = albumService;
         _folderService = folderService;
         _copyService = copyService;
+        _xmpService = xmpService;
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -239,8 +242,12 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
-    public void Receive(NodeSelectedMessage message) {
-        UpdateGallery(message.Value);
+    public async void Receive(NodeSelectedMessage message) {
+        if (message.Value is Album album) {
+            await LoadAlbumAsync(album);
+        } else {
+            UpdateGallery(message.Value);
+        }
     }
 
     [RelayCommand]
@@ -508,6 +515,18 @@ public partial class GalleryViewModel : ViewModelBase,
 
             // Re-fetch children to get the updated entities and refresh the view
             var children = await _nodeService.FindChildrenAsync(album.Id);
+            var pics = children.OfType<Picture>().ToList();
+            foreach (var pic in pics) {
+                pic.Parent = album;
+            }
+            _pathService.PopulatePaths(pics);
+
+            await Task.Run(async () => {
+                foreach (var pic in pics) {
+                    await _xmpService.LoadMetadataAsync(pic);
+                }
+            });
+
             UpdateGalleryItems(album, children);
             
             MainWindow.ToastManager.CreateToast()
@@ -689,8 +708,13 @@ public partial class GalleryViewModel : ViewModelBase,
 
     private void UpdateGallery(Node? node) {
         if (node == null) {
+            TearDownXmpWatcher();
             _ = LoadInitialItemsAsync();
             return;
+        }
+
+        if (node is not Album) {
+            TearDownXmpWatcher();
         }
 
         UpdateGalleryItems(node, node.Children?.ToList());
@@ -707,6 +731,7 @@ public partial class GalleryViewModel : ViewModelBase,
         AlbumItems.Clear();
 
         foreach (var picVm in _allPictures) {
+            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
             picVm.Dispose();
         }
 
@@ -727,6 +752,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
+                    picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     _allPictures.Add(picVm);
                     _ = picVm.LoadThumbnailAsync(250);
                 }
@@ -756,6 +782,14 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         UpdateBreadcrumbs(currentNode);
+    }
+
+    private void OnPictureItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+        if (e.PropertyName == nameof(PictureItemViewModel.CurationStatus) ||
+            e.PropertyName == nameof(PictureItemViewModel.Rating) ||
+            e.PropertyName == nameof(PictureItemViewModel.ColorLabel)) {
+            ApplyFilters();
+        }
     }
 
     private void ToggleStatusFilter(CurationStatus status, bool isActive) {
@@ -955,6 +989,180 @@ public partial class GalleryViewModel : ViewModelBase,
         Log.Information("Processing completed for current album {Id}, refreshing gallery.", message.Value);
         Dispatcher.UIThread.Post(() => {
             _ = RefreshGalleryGrouping();
+        });
+    }
+
+    [RelayCommand(CanExecute = nameof(IsShowingAlbum))]
+    private async Task CreateXmpFiles() {
+        if (_currentNode is not Album album) {
+            return;
+        }
+
+        try {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Generating XMP Files")
+                .WithContent($"Generating XMP sidecar files for album '{album.Name}'...")
+                .Dismiss().After(TimeSpan.FromSeconds(2))
+                .Queue();
+
+            await _xmpService.CreateXmpForAlbumAsync(album.Id);
+
+            // Re-load the current items to reflect the newly created XMP files
+            await LoadAlbumAsync(album);
+
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Success")
+                .WithContent($"Successfully created XMP sidecars using legacy data for album '{album.Name}'.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to create XMP files for album {AlbumName}", album.Name);
+            
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent($"Failed to generate XMP files: {ex.Message}")
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Queue();
+        }
+    }
+
+    private FileSystemWatcher? _xmpWatcher;
+
+    private async Task LoadAlbumAsync(Album album) {
+        SetupXmpWatcher(album);
+
+        // Find children
+        var children = await _nodeService.FindChildrenAsync(album.Id);
+        var pics = children.OfType<Picture>().ToList();
+
+        // Populate paths
+        foreach (var pic in pics) {
+            pic.Parent = album;
+        }
+        _pathService.PopulatePaths(pics);
+
+        // Load XMP metadata in background thread
+        await Task.Run(async () => {
+            foreach (var pic in pics) {
+                await _xmpService.LoadMetadataAsync(pic);
+            }
+        });
+
+        // Update the gallery items on UI thread
+        UpdateGalleryItems(album, children);
+    }
+
+    private void SetupXmpWatcher(Album album) {
+        TearDownXmpWatcher();
+
+        if (string.IsNullOrEmpty(_settingsService.Current.LibraryPath) || string.IsNullOrEmpty(album.Uuid)) {
+            return;
+        }
+
+        var rawsPath = Path.Combine(_settingsService.Current.LibraryPath, album.Uuid, "RAWs");
+        if (!Directory.Exists(rawsPath)) {
+            return;
+        }
+
+        try {
+            _xmpWatcher = new FileSystemWatcher(rawsPath, "*.xmp") {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
+                EnableRaisingEvents = true
+            };
+
+            _xmpWatcher.Changed += OnXmpFileChanged;
+            _xmpWatcher.Created += OnXmpFileChanged;
+            _xmpWatcher.Deleted += OnXmpFileChanged;
+            _xmpWatcher.Renamed += OnXmpFileRenamed;
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to start FileSystemWatcher for album {Uuid} at {Path}", album.Uuid, rawsPath);
+        }
+    }
+
+    private void TearDownXmpWatcher() {
+        if (_xmpWatcher != null) {
+            _xmpWatcher.EnableRaisingEvents = false;
+            _xmpWatcher.Changed -= OnXmpFileChanged;
+            _xmpWatcher.Created -= OnXmpFileChanged;
+            _xmpWatcher.Deleted -= OnXmpFileChanged;
+            _xmpWatcher.Renamed -= OnXmpFileRenamed;
+            _xmpWatcher.Dispose();
+            _xmpWatcher = null;
+        }
+    }
+
+    private void OnXmpFileChanged(object sender, FileSystemEventArgs e) {
+        var fileName = Path.GetFileNameWithoutExtension(e.Name);
+        if (string.IsNullOrEmpty(fileName)) return;
+
+        Dispatcher.UIThread.Post(async () => {
+            var picVm = _allPictures.FirstOrDefault(p => p.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase));
+            if (picVm == null) return;
+
+            if (e.ChangeType == WatcherChangeTypes.Deleted) {
+                picVm.Picture.CurationStatus = CurationStatus.Unflagged;
+                picVm.Picture.ColorLabel = ColorLabel.None;
+                picVm.Picture.Rating = 0;
+
+                picVm.CurationStatus = CurationStatus.Unflagged;
+                picVm.ColorLabel = ColorLabel.None;
+                picVm.Rating = 0;
+            } else {
+                var originalCapturedAt = picVm.Picture.CapturedAt;
+
+                await _xmpService.LoadMetadataAsync(picVm.Picture);
+
+                picVm.CurationStatus = picVm.Picture.CurationStatus;
+                picVm.ColorLabel = picVm.Picture.ColorLabel;
+                picVm.Rating = picVm.Picture.Rating;
+
+                if (picVm.Picture.CapturedAt != originalCapturedAt) {
+                    await _nodeService.UpdateNodeAsync(picVm.Picture);
+                    _ = RefreshGalleryGrouping();
+                }
+            }
+
+            ApplyFilters();
+        });
+    }
+
+    private void OnXmpFileRenamed(object sender, RenamedEventArgs e) {
+        var oldName = Path.GetFileNameWithoutExtension(e.OldName);
+        var newName = Path.GetFileNameWithoutExtension(e.Name);
+
+        Dispatcher.UIThread.Post(async () => {
+            if (!string.IsNullOrEmpty(oldName)) {
+                var oldPicVm = _allPictures.FirstOrDefault(p => p.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+                if (oldPicVm != null) {
+                    oldPicVm.Picture.CurationStatus = CurationStatus.Unflagged;
+                    oldPicVm.Picture.ColorLabel = ColorLabel.None;
+                    oldPicVm.Picture.Rating = 0;
+
+                    oldPicVm.CurationStatus = CurationStatus.Unflagged;
+                    oldPicVm.ColorLabel = ColorLabel.None;
+                    oldPicVm.Rating = 0;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(newName)) {
+                var newPicVm = _allPictures.FirstOrDefault(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
+                if (newPicVm != null) {
+                    var originalCapturedAt = newPicVm.Picture.CapturedAt;
+
+                    await _xmpService.LoadMetadataAsync(newPicVm.Picture);
+
+                    newPicVm.CurationStatus = newPicVm.Picture.CurationStatus;
+                    newPicVm.ColorLabel = newPicVm.Picture.ColorLabel;
+                    newPicVm.Rating = newPicVm.Picture.Rating;
+
+                    if (newPicVm.Picture.CapturedAt != originalCapturedAt) {
+                        await _nodeService.UpdateNodeAsync(newPicVm.Picture);
+                        _ = RefreshGalleryGrouping();
+                    }
+                }
+            }
+
+            ApplyFilters();
         });
     }
 
