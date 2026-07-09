@@ -34,6 +34,9 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CreateAlbumCommand))]
     private string _sourcePath = string.Empty;
 
+    [ObservableProperty]
+    private string _selectedParentPath = "Library";
+
     public AddAlbumDialogViewModel(
         IAlbumService albumService,
         IImportPicturesCommand importCommand,
@@ -47,16 +50,30 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
         _scopeFactory = scopeFactory;
         _onResult = onResult;
 
-        Parents.Add(new LocationItem { Name = "Library", Id = null });
-        var folderMap = existingFolders.ToDictionary(f => f.Id);
-        foreach (var f in existingFolders) {
-            Parents.Add(new LocationItem { Name = LocationItem.GetFolderPath(f, folderMap), Id = f.Id });
-        }
-
-        SelectedParent = Parents[0];
+        FolderTree = FolderNodeViewModel.BuildFolderTree(existingFolders, OnFolderSelected);
+        SelectedParent = new LocationItem { Name = "Library", Id = null };
     }
 
-    public ObservableCollection<LocationItem> Parents { get; } = new();
+    public ObservableCollection<FolderNodeViewModel> FolderTree { get; }
+
+    private void OnFolderSelected(FolderNodeViewModel node) {
+        SelectedParent = new LocationItem { Name = node.Name, Id = node.Id };
+        SelectedParentPath = node.FullPath;
+    }
+
+    [RelayCommand]
+    private void ResetToLibrary() {
+        DeselectAll(FolderTree);
+        SelectedParent = new LocationItem { Name = "Library", Id = null };
+        SelectedParentPath = "Library";
+    }
+
+    private void DeselectAll(IEnumerable<FolderNodeViewModel> nodes) {
+        foreach (var node in nodes) {
+            node.IsSelected = false;
+            DeselectAll(node.Children);
+        }
+    }
 
     [RelayCommand]
     private async Task SelectSourcePathAsync() {
