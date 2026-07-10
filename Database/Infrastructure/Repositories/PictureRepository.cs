@@ -7,7 +7,7 @@ namespace Database.Infrastructure.Repositories;
 
 public class PictureRepository(ApplicationDbContext context) : NodeRepository(context), IPictureRepository {
     public async Task<List<Picture>> FindByHierarchyIdAsync(int hierarchyId) {
-        return await context.Nodes
+        return await _context.Nodes
             .OfType<Picture>()
             .Include(p => p.Metrics)
             .Where(p => p.ParentId == hierarchyId)

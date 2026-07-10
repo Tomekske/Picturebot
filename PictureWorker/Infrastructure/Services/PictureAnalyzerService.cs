@@ -54,10 +54,19 @@ public class PictureAnalyzerService : IPictureAnalyzer {
         }
 
         try {
+            // Read from the abstracted file system
+            byte[] fileBytes;
+            await using (var stream = _fileSystem.File.OpenRead(filePath)) {
+                using (var ms = new System.IO.MemoryStream()) {
+                    await stream.CopyToAsync(ms);
+                    fileBytes = ms.ToArray();
+                }
+            }
+
             // 2. Offload the heavy OpenCV CPU work to a background thread
             return await Task.Run<ErrorOr<int>>(() => {
-                // Load picture as Grayscale immediately
-                using var src = Cv2.ImRead(filePath, ImreadModes.Grayscale);
+                // Decode from byte array using Cv2.ImDecode
+                using var src = Cv2.ImDecode(fileBytes, ImreadModes.Grayscale);
 
                 // Instead of throwing an exception, return a structured validation error
                 if (src.Empty()) {

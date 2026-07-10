@@ -299,28 +299,7 @@ public class XmpServiceTests : IDisposable {
         Assert.That(picRejected.CurationStatus, Is.EqualTo(CurationStatus.Rejected));
     }
 
-    [Test]
-    public async Task LoadMetadataAsync_LegacyFallbackUrgency5_ShouldMapToPickedAndRewrite() {
-        var xmpPath = @"C:\RAWs\Legacy5.xmp";
-        var xml = @"<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'><rdf:Description rdf:about='' xmlns:photoshop='http://ns.adobe.com/photoshop/1.0/' photoshop:Urgency='5'/></rdf:RDF></x:xmpmeta>";
-        _mockFileSystem.AddFile(xmpPath, xml);
-        var picture = new Picture { Name = "Legacy5", SubFolder = new SubFolder { Raw = @"C:\RAWs\Legacy5.NEF" } };
-        
-        await _xmpService.LoadMetadataAsync(picture);
-        
-        // CurationStatus should be Picked (Flagged)
-        Assert.That(picture.CurationStatus, Is.EqualTo(CurationStatus.Flagged));
 
-        // XMP file should have been rewritten
-        var rewrittenXml = _mockFileSystem.File.ReadAllText(xmpPath);
-        var doc = XDocument.Parse(rewrittenXml);
-        var desc = doc.Descendants().First(e => e.Name.LocalName == "Description");
-        
-        var xmpDM = XNamespace.Get("http://ns.adobe.com/xmp/1.0/DynamicMedia/");
-        Assert.That(desc.Attribute(xmpDM + "pick")?.Value, Is.EqualTo("1"));
-        Assert.That(desc.Attribute(xmpDM + "good")?.Value, Is.EqualTo("true"));
-        Assert.That(desc.Attribute(XNamespace.Get("http://ns.adobe.com/photoshop/1.0/") + "Urgency"), Is.Null);
-    }
 
     [Test]
     public async Task SaveMetadataAsync_ShouldCleanPhotoshopUrgencyAndMapXmpDMStates() {
@@ -357,5 +336,28 @@ public class XmpServiceTests : IDisposable {
         var desc3 = doc3.Descendants().First(e => e.Name.LocalName == "Description");
         Assert.That(desc3.Attribute(xmpDM + "pick")?.Value, Is.EqualTo("-1"));
         Assert.That(desc3.Attribute(xmpDM + "good")?.Value, Is.EqualTo("false"));
+    }
+
+    [Test]
+    public async Task SaveMetadataAsync_ShouldRemoveDuplicateElementsAndKeepAttributes() {
+        var xmp = XNamespace.Get("http://ns.adobe.com/xap/1.0/");
+        var xmpPath = @"C:\RAWs\SaveDuplicateElements.xmp";
+        var xml = @"<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'><rdf:Description rdf:about='' xmlns:xmp='http://ns.adobe.com/xap/1.0/'><xmp:Rating>3</xmp:Rating><xmp:Label>Blue</xmp:Label></rdf:Description></rdf:RDF></x:xmpmeta>";
+        _mockFileSystem.AddFile(xmpPath, xml);
+        var picture = new Picture { Rating = 5, ColorLabel = ColorLabel.Red, SubFolder = new SubFolder { Raw = @"C:\RAWs\SaveDuplicateElements.NEF" } };
+
+        await _xmpService.SaveMetadataAsync(picture);
+
+        var savedXml = _mockFileSystem.File.ReadAllText(xmpPath);
+        var doc = XDocument.Parse(savedXml);
+        var desc = doc.Descendants().First(e => e.Name.LocalName == "Description");
+
+        // The child elements should be removed
+        Assert.That(desc.Element(xmp + "Rating"), Is.Null);
+        Assert.That(desc.Element(xmp + "Label"), Is.Null);
+
+        // The attributes should be set correctly
+        Assert.That(desc.Attribute(xmp + "Rating")?.Value, Is.EqualTo("5"));
+        Assert.That(desc.Attribute(xmp + "Label")?.Value, Is.EqualTo("Red"));
     }
 }

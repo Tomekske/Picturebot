@@ -41,7 +41,7 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         
         // Task 1: Create the Album
         var album = await _albumService.CreateAsync(parentId, albumName, libraryPath);
-        var albumPath = _fileSystem.Path.Combine(libraryPath, album.Uuid);
+        var albumPath = _fileSystem.Path.Combine(libraryPath, album.Uuid ?? string.Empty);
 
         var rawsPath = _fileSystem.Path.Combine(albumPath, "RAWs");
         var jpgsPath = _fileSystem.Path.Combine(albumPath, "JPGs");

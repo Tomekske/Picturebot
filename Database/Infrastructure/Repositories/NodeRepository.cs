@@ -7,13 +7,15 @@ using Microsoft.EntityFrameworkCore;
 namespace Database.Infrastructure.Repositories;
 
 public class NodeRepository(ApplicationDbContext context) : INodeRepository {
+    protected readonly ApplicationDbContext _context = context;
+
     public async Task CreateAsync(Node node) {
-        context.Nodes.Add(node);
-        await context.SaveChangesAsync();
+        _context.Nodes.Add(node);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<Node>> FindAllAsync() {
-        return await context.Nodes
+        return await _context.Nodes
             .AsNoTracking()
             .Include(n => (n as Picture)!.Metrics)
             .OrderBy(n => n.Name)
@@ -21,14 +23,14 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     }
 
     public async Task<Node?> FindByIdAsync(int id) {
-        return await context.Nodes
+        return await _context.Nodes
             .Include(n => n.Parent)
             .Include(n => (n as Picture)!.Metrics)
             .FirstOrDefaultAsync(n => n.Id == id);
     }
 
     public async Task<bool> FindDuplicateAsync(int? parentId, string name, NodeType type) {
-        var query = context.Nodes.AsQueryable();
+        var query = _context.Nodes.AsQueryable();
 
         query = parentId == null
             ? query.Where(n => n.ParentId == null)
@@ -38,12 +40,12 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     }
 
     public async Task<bool> IsPictureHashDuplicateAsync(int parentId, ulong hash) {
-        return await context.Nodes.OfType<Picture>()
+        return await _context.Nodes.OfType<Picture>()
             .AnyAsync(p => p.ParentId == parentId && p.Hash == hash);
     }
 
     public async Task<List<Node>> FindNodesByTypeAsync(NodeType type) {
-        return await context.Nodes
+        return await _context.Nodes
             .AsNoTracking()
             .Include(n => n.Parent)
             .Include(n => (n as Picture)!.Metrics)
@@ -53,7 +55,7 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     }
 
     public async Task<List<Node>> FindChildrenAsync(int parentId) {
-        return await context.Nodes
+        return await _context.Nodes
             .Include(n => n.Parent)
             .Include(n => (n as Picture)!.Metrics)
             .Where(n => n.ParentId == parentId)
@@ -63,7 +65,7 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
 
 
     public async Task UpdateAsync(Node node) {
-        var trackedEntity = context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
+        var trackedEntity = _context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
         
         var parent = node.Parent;
         var children = node.Children;
@@ -73,14 +75,14 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         try {
             if (trackedEntity != null) {
                 // Update the properties of the tracked entity without replacing it
-                context.Entry(trackedEntity).CurrentValues.SetValues(node);
+                _context.Entry(trackedEntity).CurrentValues.SetValues(node);
             } else {
                 // Attach the node and mark as modified
-                context.Nodes.Attach(node);
-                context.Entry(node).State = EntityState.Modified;
+                _context.Nodes.Attach(node);
+                _context.Entry(node).State = EntityState.Modified;
             }
             
-            await context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
         } finally {
             node.Parent = parent;
             node.Children = children;
@@ -88,25 +90,25 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     }
 
     public async Task DeleteAsync(Node node) {
-        var trackedEntity = context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
+        var trackedEntity = _context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
 
         if (node is Album) {
-            var children = await context.Nodes
+            var children = await _context.Nodes
                 .Where(n => n.ParentId == node.Id)
                 .ToListAsync();
-            context.Nodes.RemoveRange(children);
+            _context.Nodes.RemoveRange(children);
         }
 
         if (trackedEntity != null) {
-            context.Nodes.Remove(trackedEntity);
+            _context.Nodes.Remove(trackedEntity);
         } else {
             // Detach navigation properties to prevent EF from trying to track the entire graph,
             // which causes identity conflicts if the parent or children are already tracked.
             node.Parent = null;
             node.Children = null;
-            context.Nodes.Remove(node);
+            _context.Nodes.Remove(node);
         }
 
-        await context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
     }
 }

@@ -1095,7 +1095,22 @@ public partial class GalleryViewModel : ViewModelBase,
         var fileName = Path.GetFileNameWithoutExtension(e.Name);
         if (string.IsNullOrEmpty(fileName)) return;
 
+        var fileDir = Path.GetDirectoryName(e.FullPath);
+
         Dispatcher.UIThread.Post(async () => {
+            if (_currentNode is not Album activeAlbum || string.IsNullOrEmpty(activeAlbum.Uuid)) {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_settingsService.Current.LibraryPath)) {
+                return;
+            }
+
+            var activeRawsPath = Path.Combine(_settingsService.Current.LibraryPath, activeAlbum.Uuid, "RAWs");
+            if (!activeRawsPath.Equals(fileDir, StringComparison.OrdinalIgnoreCase)) {
+                return;
+            }
+
             var picVm = _allPictures.FirstOrDefault(p => p.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase));
             if (picVm == null) return;
 
@@ -1129,8 +1144,22 @@ public partial class GalleryViewModel : ViewModelBase,
     private void OnXmpFileRenamed(object sender, RenamedEventArgs e) {
         var oldName = Path.GetFileNameWithoutExtension(e.OldName);
         var newName = Path.GetFileNameWithoutExtension(e.Name);
+        var fileDir = Path.GetDirectoryName(e.FullPath);
 
         Dispatcher.UIThread.Post(async () => {
+            if (_currentNode is not Album activeAlbum || string.IsNullOrEmpty(activeAlbum.Uuid)) {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_settingsService.Current.LibraryPath)) {
+                return;
+            }
+
+            var activeRawsPath = Path.Combine(_settingsService.Current.LibraryPath, activeAlbum.Uuid, "RAWs");
+            if (!activeRawsPath.Equals(fileDir, StringComparison.OrdinalIgnoreCase)) {
+                return;
+            }
+
             if (!string.IsNullOrEmpty(oldName)) {
                 var oldPicVm = _allPictures.FirstOrDefault(p => p.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
                 if (oldPicVm != null) {

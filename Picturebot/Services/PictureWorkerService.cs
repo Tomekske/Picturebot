@@ -139,12 +139,10 @@ public class PictureWorkerService(
                 // Persistence: Keep DB updates surgical and dedicated to state changes
                 await UpdateProcessingStateAsync(picture.Id, ProcessingState.Processing);
 
-                var success = await ProcessPictureInternalAsync(picture, pathService, settingsService, ct);
+                var (success, errorMsg) = await ProcessPictureInternalAsync(picture, pathService, settingsService, ct);
 
-                if (success) {
-                    await UpdateProcessingStateAsync(picture.Id, ProcessingState.Completed);
-                } else {
-                    await HandleProcessingFailureAsync(picture.Id);
+                if (!success) {
+                    await HandleProcessingFailureAsync(picture.Id, errorMsg);
                 }
 
                 // Increment in-memory counter
@@ -178,14 +176,14 @@ public class PictureWorkerService(
     }
 
 
-    private async Task<bool> ProcessPictureInternalAsync(Picture picture, IPathService pathService,
+    private async Task<(bool Success, string? ErrorMessage)> ProcessPictureInternalAsync(Picture picture, IPathService pathService,
         ISettingsService settingsService, CancellationToken ct) {
         pathService.PopulatePaths(picture);
 
         if (picture.SubFolder == null) {
-            Log.Error("SubFolder is null for Picture {Id} ({Name}). Ensure Parent (Album) is loaded.", picture.Id,
-                picture.Name);
-            return false;
+            var errMsg = $"SubFolder is null for Picture {picture.Id} ({picture.Name}). Ensure Parent (Album) is loaded.";
+            Log.Error(errMsg);
+            return (false, errMsg);
         }
 
         // 1. Identify source for analysis & processing
@@ -198,9 +196,9 @@ public class PictureWorkerService(
         }
 
         if (analysisSource == null) {
-            Log.Warning("No source file found for {Name} (ID: {Id}). Expected at {Preview} or {Raw}",
-                picture.Name, picture.Id, picture.SubFolder.Preview, picture.SubFolder.Raw);
-            return false;
+            var errMsg = $"No source file found for {picture.Name} (ID: {picture.Id}). Expected at {picture.SubFolder.Preview} or {picture.SubFolder.Raw}";
+            Log.Warning(errMsg);
+            return (false, errMsg);
         }
 
         Log.Information("Analyzing {Name} using {File}", picture.Name, analysisSource);
@@ -256,8 +254,9 @@ public class PictureWorkerService(
 
             Log.Debug("Generated preview for {Name}", picture.Name);
         } else {
-            Log.Warning("Failed to generate preview for {Name}: {Error}", picture.Name,
-                previewResult.FirstError.Description);
+            var errMsg = $"Failed to generate preview for {picture.Name}: {previewResult.FirstError.Description}";
+            Log.Warning(errMsg);
+            return (false, errMsg);
         }
 
         // 6. Thumbnail Generation
@@ -274,8 +273,9 @@ public class PictureWorkerService(
 
             Log.Debug("Generated thumbnail for {Name}", picture.Name);
         } else {
-            Log.Warning("Failed to generate thumbnail for {Name}: {Error}", picture.Name,
-                thumbResult.FirstError.Description);
+            var errMsg = $"Failed to generate thumbnail for {picture.Name}: {thumbResult.FirstError.Description}";
+            Log.Warning(errMsg);
+            return (false, errMsg);
         }
 
 
@@ -288,10 +288,12 @@ public class PictureWorkerService(
             dbPic.Height = picture.Height;
             dbPic.Hash = picture.Hash;
             dbPic.Sharpness = picture.Sharpness;
+            dbPic.ProcessingState = ProcessingState.Completed;
+            dbPic.LastErrorMessage = null;
             await context.SaveChangesAsync(ct);
         }
 
-        return true;
+        return (true, null);
     }
 
     private async Task UpdateProcessingStateAsync(int pictureId, ProcessingState state) {

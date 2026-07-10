@@ -89,10 +89,9 @@ public class XmpService(
             }
             picture.ColorLabel = ParseColorLabel(labelStr);
 
-            // 3. Curation Status (xmpDM:pick with photoshop:Urgency="5" legacy fallback)
+            // 3. Curation Status (xmpDM:pick)
             var xmpDM = XNamespace.Get("http://ns.adobe.com/xmp/1.0/DynamicMedia/");
             var pickAttrVal = desc.Attribute(xmpDM + "pick")?.Value ?? desc.Element(xmpDM + "pick")?.Value;
-            bool shouldRewrite = false;
 
             if (pickAttrVal != null) {
                 if (int.TryParse(pickAttrVal, out var pickVal)) {
@@ -105,17 +104,7 @@ public class XmpService(
                     picture.CurationStatus = CurationStatus.Unflagged;
                 }
             } else {
-                var urgencyAttrVal = desc.Attribute(photoshop + "Urgency")?.Value ?? desc.Element(photoshop + "Urgency")?.Value;
-                if (urgencyAttrVal == "5") {
-                    picture.CurationStatus = CurationStatus.Flagged;
-                    shouldRewrite = true;
-                } else {
-                    picture.CurationStatus = CurationStatus.Unflagged;
-                }
-            }
-
-            if (shouldRewrite) {
-                await SaveMetadataAsync(picture);
+                picture.CurationStatus = CurationStatus.Unflagged;
             }
 
             // 4. CreateDate -> CapturedAt
@@ -150,7 +139,7 @@ public class XmpService(
 
         try {
             XDocument doc;
-            XElement desc;
+            XElement? desc = null;
 
             if (fileSystem.File.Exists(xmpPath)) {
                 string content;
@@ -160,32 +149,47 @@ public class XmpService(
                 }
                 
                 doc = XDocument.Parse(content);
-                desc = doc.Descendants(rdf + "Description").FirstOrDefault();
-                if (desc == null) {
-                    desc = new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
+                var foundDesc = doc.Descendants(rdf + "Description").FirstOrDefault();
+                if (foundDesc == null) {
+                    var newDesc = new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
                     var rdfElement = doc.Descendants(rdf + "RDF").FirstOrDefault();
                     if (rdfElement != null) {
-                        rdfElement.Add(desc);
+                        rdfElement.Add(newDesc);
+                        desc = newDesc;
                     } else {
-                        doc = CreateNewXmpDocument(out desc);
+                        doc = CreateNewXmpDocument(out var outDesc);
+                        desc = outDesc;
                     }
+                } else {
+                    desc = foundDesc;
                 }
             } else {
-                doc = CreateNewXmpDocument(out desc);
+                doc = CreateNewXmpDocument(out var outDesc);
+                desc = outDesc;
             }
 
             EnsureNamespaceAttributes(desc);
+
+            var xmpDM = XNamespace.Get("http://ns.adobe.com/xmp/1.0/DynamicMedia/");
+
+            // Clean up existing elements to prevent element/attribute duplication
+            desc.Element(xmp + "CreatorTool")?.Remove();
+            desc.Element(xmp + "Rating")?.Remove();
+            desc.Element(xmp + "Label")?.Remove();
+            desc.Element(photoshop + "Urgency")?.Remove();
+            desc.Element(xmpDM + "pick")?.Remove();
+            desc.Element(xmpDM + "good")?.Remove();
+            desc.Element(xmp + "ModifyDate")?.Remove();
+            desc.Element(xmp + "MetadataDate")?.Remove();
+            desc.Element(xmp + "CreateDate")?.Remove();
 
             // Set/update attributes
             desc.SetAttributeValue(xmp + "CreatorTool", "Picturebot");
             desc.SetAttributeValue(xmp + "Rating", picture.Rating.ToString());
             desc.SetAttributeValue(xmp + "Label", picture.ColorLabel == ColorLabel.None ? "" : picture.ColorLabel.ToString());
-            // Safely remove photoshop:Urgency to keep file clean
             desc.Attribute(photoshop + "Urgency")?.Remove();
-            desc.Element(photoshop + "Urgency")?.Remove();
 
             // Write xmpDM:pick and xmpDM:good for Lightroom compatibility
-            var xmpDM = XNamespace.Get("http://ns.adobe.com/xmp/1.0/DynamicMedia/");
             if (picture.CurationStatus == CurationStatus.Flagged) {
                 desc.SetAttributeValue(xmpDM + "pick", "1");
                 desc.SetAttributeValue(xmpDM + "good", "true");
@@ -195,7 +199,6 @@ public class XmpService(
             } else {
                 desc.SetAttributeValue(xmpDM + "pick", "0");
                 desc.Attribute(xmpDM + "good")?.Remove();
-                desc.Element(xmpDM + "good")?.Remove();
             }
 
             var nowStr = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
@@ -301,21 +304,7 @@ public class XmpService(
         return ColorLabel.None;
     }
 
-    private CurationStatus ParseCurationStatus(int urgency) {
-        return urgency switch {
-            1 => CurationStatus.Flagged,
-            8 => CurationStatus.Rejected,
-            _ => CurationStatus.Unflagged
-        };
-    }
 
-    private int GetUrgencyValue(CurationStatus status) {
-        return status switch {
-            CurationStatus.Flagged => 1,
-            CurationStatus.Rejected => 8,
-            _ => 5
-        };
-    }
 
     private XDocument CreateNewXmpDocument(out XElement desc) {
         desc = new XElement(rdf + "Description",
@@ -337,50 +326,6 @@ public class XmpService(
         if (desc.Attribute(XNamespace.Xmlns + "photoshop") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "photoshop", photoshop.NamespaceName));
         var xmpDM = XNamespace.Get("http://ns.adobe.com/xmp/1.0/DynamicMedia/");
         if (desc.Attribute(XNamespace.Xmlns + "xmpDM") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "xmpDM", xmpDM.NamespaceName));
-    }
-
-    private async Task<(CurationStatus? status, ColorLabel? label, int? rating)> GetLegacyDataAsync(int pictureId) {
-        try {
-            using var scope = scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var connection = context.Database.GetDbConnection();
-            var originalState = connection.State;
-            if (originalState != System.Data.ConnectionState.Open) {
-                await connection.OpenAsync();
-            }
-            try {
-                using var command = connection.CreateCommand();
-                command.CommandText = "SELECT CurationStatus, ColorLabel, Rating FROM pictures WHERE Id = @id";
-                var param = command.CreateParameter();
-                param.ParameterName = "@id";
-                param.Value = pictureId;
-                command.Parameters.Add(param);
-
-                using var reader = await command.ExecuteReaderAsync();
-                if (await reader.ReadAsync()) {
-                    var statusStr = reader.IsDBNull(0) ? null : reader.GetString(0);
-                    var labelStr = reader.IsDBNull(1) ? null : reader.GetString(1);
-                    var ratingVal = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2);
-
-                    CurationStatus? status = null;
-                    if (statusStr != null && Enum.TryParse<CurationStatus>(statusStr, out var parsedStatus)) {
-                        status = parsedStatus;
-                    }
-                    ColorLabel? label = null;
-                    if (labelStr != null && Enum.TryParse<ColorLabel>(labelStr, out var parsedLabel)) {
-                        label = parsedLabel;
-                    }
-                    return (status, label, ratingVal);
-                }
-            } finally {
-                if (originalState != System.Data.ConnectionState.Open) {
-                    await connection.CloseAsync();
-                }
-            }
-        } catch (Exception ex) {
-            Log.Warning(ex, "Failed to load legacy fallback metadata for picture {Id}", pictureId);
-        }
-        return (null, null, null);
     }
 
     private void UpdateTitleElement(XElement desc, string title) {
