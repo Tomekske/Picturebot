@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:DataType="vm:CreateFolderDialogViewModel"
              x:Class="Picturebot.Views.CreateFolderDialog"
              Width="520">
@@ -14,21 +15,53 @@
                    Margin="0,0,0,8" />
 
         <StackPanel Spacing="10">
-            <TextBlock Text="PARENT LOCATION"
-                       FontSize="11"
-                       FontWeight="Bold"
-                       Foreground="{DynamicResource SukiLowText}"
-                       LetterSpacing="1" />
-            <ComboBox ItemsSource="{Binding Parents}"
-                      SelectedItem="{Binding SelectedParent}"
-                      HorizontalAlignment="Stretch"
-                      Height="40">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:LocationItem">
-                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Text="PARENT LOCATION"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource SukiLowText}"
+                           LetterSpacing="1"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Command="{Binding ResetToLibraryCommand}"
+                        Content="Reset to Library Root"
+                        Classes="Basic"
+                        FontSize="11"
+                        Foreground="{DynamicResource SukiPrimaryColor}"
+                        Padding="4,0"
+                        Margin="0,0,0,2" />
+            </Grid>
+            <TextBlock Text="{Binding SelectedParentPath, StringFormat='Selected: {0}'}"
+                       FontSize="13"
+                       FontWeight="Medium"
+                       Foreground="{DynamicResource SukiText}"
+                       Margin="0,0,0,4" />
+            <Border BorderBrush="{DynamicResource SukiBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Height="150">
+                <ScrollViewer>
+                    <TreeView ItemsSource="{Binding FolderTree}"
+                              Background="Transparent"
+                              BorderThickness="0">
+                        <TreeView.Styles>
+                            <Style Selector="TreeViewItem" x:DataType="vm:FolderNodeViewModel">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                <Setter Property="MinHeight" Value="28" />
+                            </Style>
+                        </TreeView.Styles>
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:FolderNodeViewModel">
+                                <StackPanel Orientation="Horizontal" Spacing="6" Height="28" VerticalAlignment="Center">
+                                    <icons:MaterialIcon Kind="Folder" Width="16" Height="16" Foreground="#FFD700" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </ScrollViewer>
+            </Border>
         </StackPanel>
 
         <StackPanel Spacing="10">
