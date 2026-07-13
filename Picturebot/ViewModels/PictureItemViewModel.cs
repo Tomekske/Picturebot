@@ -77,7 +77,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
         try {
             var path = Picture.SubFolder.Thumbnail;
-            Thumbnail = await ImageHelper.LoadAndOrientAsync(path, targetHeight);
+            Thumbnail = await ImageHelper.LoadDirectAsync(path);
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {
