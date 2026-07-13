@@ -57,6 +57,8 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public Picture Picture { get; }
 
+    public bool IsVisible { get; set; }
+
     public string Name => Picture.Name;
 
     public void Dispose() {

@@ -395,10 +395,22 @@
                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                         <Binding Path="IsShowingAlbum" />
                         <Binding Path="!PicturesList.Count" />
+                        <Binding Path="!IsLoading" />
                     </MultiBinding>
                 </StackPanel.IsVisible>
                 <icons:MaterialIcon Kind="ImageAlbum" Width="64" Height="64" Foreground="{DynamicResource SukiLowText}" />
                 <TextBlock Text="This album is empty" FontSize="20" FontWeight="SemiBold"
+                           Foreground="{DynamicResource SukiLowText}" />
+            </StackPanel>
+
+            <!-- Loading State for Albums -->
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="15"
+                        IsVisible="{Binding IsLoading}">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="4" />
+                <TextBlock Text="Loading Album..." FontSize="16" FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
                            Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>
 

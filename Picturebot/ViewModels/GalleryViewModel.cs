@@ -51,6 +51,9 @@ public partial class GalleryViewModel : ViewModelBase,
     private int _pendingAutoFlagBatchCount;
 
     [ObservableProperty]
+    private bool _isLoading;
+
+    [ObservableProperty]
     private ObservableCollection<CurationStatus> _filterStatuses = new();
 
     [ObservableProperty]
@@ -340,6 +343,7 @@ public partial class GalleryViewModel : ViewModelBase,
         var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
             .OrderBy(g => g.Key);
 
+        var groupVms = new List<PictureGroupViewModel>();
         foreach (var group in groups) {
             var dateStr = group.Key.ToString("yyyy-MM-dd");
             var count = group.Count();
@@ -355,8 +359,10 @@ public partial class GalleryViewModel : ViewModelBase,
 
             var groupVm = new PictureGroupViewModel(dateStr, header,
                 new ObservableCollection<PictureItemViewModel>(sortedGroup));
-            GroupedPictures.Add(groupVm);
+            groupVms.Add(groupVm);
         }
+
+        GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVms);
     }
 
     private Orientation GetOrientation(Picture p) {
@@ -423,6 +429,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         var groupIndex = 1;
+        var groupVms = new List<PictureGroupViewModel>();
 
         // 4. Process ALL groups as burst groups (even singletons)
         foreach (var group in burstGroups) {
@@ -447,9 +454,11 @@ public partial class GalleryViewModel : ViewModelBase,
             groupIndex++;
 
             // Pass 'true' to ensure the UI treats every single one as a burst group
-            GroupedPictures.Add(new PictureGroupViewModel(header, header,
+            groupVms.Add(new PictureGroupViewModel(header, header,
                 new ObservableCollection<PictureItemViewModel>(group), true));
         }
+
+        GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVms);
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteGroupSimilar))]
@@ -850,10 +859,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
         var filteredList = filtered.ToList();
 
-        PicturesList.Clear();
-        foreach (var pic in filteredList) {
-            PicturesList.Add(pic);
-        }
+        PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
 
         if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
             SelectedPicture = PicturesList.FirstOrDefault();
@@ -1031,51 +1037,225 @@ public partial class GalleryViewModel : ViewModelBase,
     private async Task LoadAlbumAsync(Album album) {
         SetupXmpWatcher(album);
 
+        _currentNode = album;
+        IsBurstViewEnabled = false;
+        IsLibraryRoot = false;
+
+        // Clear UI collections immediately to indicate loading
+        Items.Clear();
+        FolderItems.Clear();
+        AlbumItems.Clear();
+
+        foreach (var picVm in _allPictures) {
+            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+            picVm.Dispose();
+        }
+
+        _allPictures.Clear();
+        PicturesList.Clear();
+        GroupedPictures.Clear();
+
+        IsShowingAlbum = true;
+        CanPlayCarousel = false;
+
+        UpdateBreadcrumbs(album);
+
         // Find children
         var children = await _nodeService.FindChildrenAsync(album.Id);
         var pics = children.OfType<Picture>().ToList();
 
+        if (pics.Count == 0) {
+            IsLoading = false;
+            return;
+        }
+
+        IsLoading = true;
+
+        // --- STAGE 1: Load first batch (e.g., 40 images) instantly on UI thread ---
+        var initialBatchSize = Math.Min(40, pics.Count);
+        var firstBatchPics = pics.Take(initialBatchSize).ToList();
+
         // Populate paths
-        foreach (var pic in pics) {
+        foreach (var pic in firstBatchPics) {
             pic.Parent = album;
         }
-        _pathService.PopulatePaths(pics);
+        _pathService.PopulatePaths(firstBatchPics);
 
-        // Update the gallery items on UI thread immediately so images display instantly
-        UpdateGalleryItems(album, children);
+        // Load XMP metadata synchronously for the small initial batch
+        foreach (var pic in firstBatchPics) {
+            await _xmpService.LoadMetadataAsync(pic);
+        }
 
-        // Load XMP metadata in background thread
+        // Create ViewModels
+        var initialPicsList = new List<PictureItemViewModel>();
+        foreach (var pic in firstBatchPics) {
+            var picVm = new PictureItemViewModel(pic);
+            picVm.PropertyChanged += OnPictureItemPropertyChanged;
+            initialPicsList.Add(picVm);
+        }
+
+        // Filter
+        var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
+        var initialFilterStatuses = new List<CurationStatus>();
+        if (hasPickedInitial) {
+            initialFilterStatuses.Add(CurationStatus.Flagged);
+        }
+
+        var filteredInitial = initialPicsList.AsEnumerable();
+        if (initialFilterStatuses.Any()) {
+            filteredInitial = filteredInitial.Where(p => initialFilterStatuses.Contains(p.CurationStatus));
+        }
+        var filteredListInitial = filteredInitial.ToList();
+
+        // Date Grouping
+        var groupVmsInitial = new List<PictureGroupViewModel>();
+        var groupsInitial = filteredListInitial.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
+        foreach (var group in groupsInitial) {
+            var dateStr = group.Key.ToString("yyyy-MM-dd");
+            var header = $"{dateStr} ({group.Count()})";
+            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+            
+            foreach (var pic in sortedGroup) {
+                pic.GroupName = null;
+                pic.BurstIndex = 0;
+                pic.BurstPosition = 0;
+                pic.BurstTotal = 0;
+            }
+
+            var groupVm = new PictureGroupViewModel(dateStr, header,
+                new ObservableCollection<PictureItemViewModel>(sortedGroup));
+            groupVmsInitial.Add(groupVm);
+        }
+
+        // Display initial batch instantly
+        _allPictures.AddRange(initialPicsList);
+        PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListInitial);
+        GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsInitial);
+
+        FilterStatuses.Clear();
+        if (hasPickedInitial) {
+            FilterStatuses.Add(CurationStatus.Flagged);
+        } else {
+            FilterRatings.Clear();
+            FilterColors.Clear();
+        }
+
+        CanPlayCarousel = pics.Any();
+        IsLoading = pics.Count > initialBatchSize; // Only show spinner if there is background work to do
+
+        NotifyFilterStates();
+
+        if (pics.Count <= initialBatchSize) {
+            return;
+        }
+
+        // --- STAGE 2: Load the remaining images in the background ---
         _ = Task.Run(async () => {
-            foreach (var pic in pics) {
+            var remainingPics = pics.Skip(initialBatchSize).ToList();
+
+            // Populate paths
+            foreach (var pic in remainingPics) {
+                pic.Parent = album;
+            }
+            _pathService.PopulatePaths(remainingPics);
+
+            // Load XMP metadata in background thread
+            foreach (var pic in remainingPics) {
                 await _xmpService.LoadMetadataAsync(pic);
             }
 
-            // Post updates back to the UI thread once metadata is fully loaded
+            // Create ViewModels
+            var remainingPicsList = new List<PictureItemViewModel>();
+            foreach (var pic in remainingPics) {
+                var picVm = new PictureItemViewModel(pic);
+                picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                remainingPicsList.Add(picVm);
+            }
+
+            // Post combinations and re-grouping back to the UI thread
             Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                // Prevent race conditions if the user has navigated to another album during background loading
                 if (_currentNode?.Id != album.Id) {
+                    // Switch occurred, discard remaining items
+                    foreach (var picVm in remainingPicsList) {
+                        picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                        picVm.Dispose();
+                    }
                     return;
                 }
 
-                foreach (var picVm in _allPictures) {
-                    picVm.CurationStatus = picVm.Picture.CurationStatus;
-                    picVm.ColorLabel = picVm.Picture.ColorLabel;
-                    picVm.Rating = picVm.Picture.Rating;
+                // Combine initial and remaining view models
+                var allPicsList = _allPictures.Concat(remainingPicsList).ToList();
+
+                // Re-apply filters
+                var hasPickedAll = allPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
+                var filterStatusesAll = new List<CurationStatus>();
+                if (hasPickedAll) {
+                    filterStatusesAll.Add(CurationStatus.Flagged);
                 }
 
-                bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
-                if (hasPicked) {
-                    FilterStatuses.Clear();
+                var filteredAll = allPicsList.AsEnumerable();
+                if (filterStatusesAll.Any()) {
+                    filteredAll = filteredAll.Where(p => filterStatusesAll.Contains(p.CurationStatus));
+                }
+                var filteredListAll = filteredAll.ToList();
+
+                // Re-calculate Date Grouping
+                var groupVmsAll = new List<PictureGroupViewModel>();
+                var groupsAll = filteredListAll.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
+                foreach (var group in groupsAll) {
+                    var dateStr = group.Key.ToString("yyyy-MM-dd");
+                    var header = $"{dateStr} ({group.Count()})";
+                    var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                    
+                    foreach (var pic in sortedGroup) {
+                        pic.GroupName = null;
+                        pic.BurstIndex = 0;
+                        pic.BurstPosition = 0;
+                        pic.BurstTotal = 0;
+                    }
+
+                    var groupVm = new PictureGroupViewModel(dateStr, header,
+                        new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                    groupVmsAll.Add(groupVm);
+                }
+
+                // Update UI state
+                _allPictures.AddRange(remainingPicsList);
+                PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListAll);
+                GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsAll);
+
+                FilterStatuses.Clear();
+                if (hasPickedAll) {
                     FilterStatuses.Add(CurationStatus.Flagged);
                 } else {
-                    FilterStatuses.Clear();
                     FilterRatings.Clear();
                     FilterColors.Clear();
                 }
 
-                ApplyFilters();
+                IsLoading = false;
+                NotifyFilterStates();
             });
         });
+    }
+
+    private void NotifyFilterStates() {
+        OnPropertyChanged(nameof(IsFlaggedFilterActive));
+        OnPropertyChanged(nameof(IsUnflaggedFilterActive));
+        OnPropertyChanged(nameof(IsRejectedFilterActive));
+        OnPropertyChanged(nameof(IsOneStarFilterActive));
+        OnPropertyChanged(nameof(IsTwoStarFilterActive));
+        OnPropertyChanged(nameof(IsThreeStarFilterActive));
+        OnPropertyChanged(nameof(IsFourStarFilterActive));
+        OnPropertyChanged(nameof(IsFiveStarFilterActive));
+        OnPropertyChanged(nameof(IsZeroStarFilterActive));
+        OnPropertyChanged(nameof(IsNoneColorFilterActive));
+        OnPropertyChanged(nameof(IsRedColorFilterActive));
+        OnPropertyChanged(nameof(IsOrangeColorFilterActive));
+        OnPropertyChanged(nameof(IsYellowColorFilterActive));
+        OnPropertyChanged(nameof(IsGreenColorFilterActive));
+        OnPropertyChanged(nameof(IsBlueColorFilterActive));
+        OnPropertyChanged(nameof(IsPinkColorFilterActive));
+        OnPropertyChanged(nameof(IsPurpleColorFilterActive));
     }
 
     private void SetupXmpWatcher(Album album) {
