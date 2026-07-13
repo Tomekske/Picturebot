@@ -564,9 +564,25 @@
 
                                                                 <Panel Grid.Row="0" Margin="8">
                                                                     <Image Source="{Binding Thumbnail}"
+                                                                           Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                                            Stretch="Uniform"
                                                                            HorizontalAlignment="Center"
-                                                                           VerticalAlignment="Center" />
+                                                                           VerticalAlignment="Center"
+                                                                           EffectiveViewportChanged="OnImageEffectiveViewportChanged">
+                                                                        <Image.Transitions>
+                                                                            <Transitions>
+                                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
+                                                                            </Transitions>
+                                                                        </Image.Transitions>
+                                                                        <Image.Styles>
+                                                                            <Style Selector="Image">
+                                                                                <Setter Property="Opacity" Value="0" />
+                                                                            </Style>
+                                                                            <Style Selector="Image.loaded">
+                                                                                <Setter Property="Opacity" Value="1" />
+                                                                            </Style>
+                                                                        </Image.Styles>
+                                                                    </Image>
 
                                                                     <!-- Top Left: Flagged Indicator -->
                                                                     <Border VerticalAlignment="Top"

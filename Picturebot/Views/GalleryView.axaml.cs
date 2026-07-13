@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Picturebot.ViewModels;
 
@@ -28,6 +28,15 @@ public partial class GalleryView : UserControl {
         if (e.AddedItems.Count > 0 && e.AddedItems[0] is PictureItemViewModel pic) {
             if (DataContext is GalleryViewModel vm) {
                 vm.SelectedPicture = pic;
+            }
+        }
+    }
+
+    private void OnImageEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e) {
+        if (sender is Control control && control.DataContext is PictureItemViewModel vm) {
+            var isVisible = e.EffectiveViewport.Width > 0 && e.EffectiveViewport.Height > 0;
+            if (isVisible) {
+                _ = vm.LoadThumbnailAsync(250);
             }
         }
     }

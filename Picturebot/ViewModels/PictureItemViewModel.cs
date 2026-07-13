@@ -68,16 +68,27 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     }
 
     public async Task LoadThumbnailAsync(int targetHeight) {
+        if (Thumbnail != null) {
+            return;
+        }
+
         if (string.IsNullOrEmpty(Picture.SubFolder?.Thumbnail) || !File.Exists(Picture.SubFolder.Thumbnail)) {
             return;
         }
 
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         try {
             var path = Picture.SubFolder.Thumbnail;
-            Thumbnail = await ImageHelper.LoadDirectAsync(path);
+            var bitmap = await ImageHelper.LoadDirectAsync(path);
+            
+            if (!token.IsCancellationRequested) {
+                Thumbnail = bitmap;
+            } else {
+                bitmap.Dispose();
+            }
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {

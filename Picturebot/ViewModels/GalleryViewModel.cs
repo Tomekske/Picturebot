@@ -157,6 +157,7 @@ public partial class GalleryViewModel : ViewModelBase,
             var picVm = PicturesList.FirstOrDefault(p => p.Name == name);
             if (picVm != null) {
                 picVm.ProcessingState = ProcessingState.Completed;
+                picVm.Dispose();
                 _ = picVm.LoadThumbnailAsync(250);
             }
         }
@@ -754,7 +755,6 @@ public partial class GalleryViewModel : ViewModelBase,
                     var picVm = new PictureItemViewModel(pic);
                     picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     _allPictures.Add(picVm);
-                    _ = picVm.LoadThumbnailAsync(250);
                 }
 
                 bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
@@ -1041,15 +1041,41 @@ public partial class GalleryViewModel : ViewModelBase,
         }
         _pathService.PopulatePaths(pics);
 
+        // Update the gallery items on UI thread immediately so images display instantly
+        UpdateGalleryItems(album, children);
+
         // Load XMP metadata in background thread
-        await Task.Run(async () => {
+        _ = Task.Run(async () => {
             foreach (var pic in pics) {
                 await _xmpService.LoadMetadataAsync(pic);
             }
-        });
 
-        // Update the gallery items on UI thread
-        UpdateGalleryItems(album, children);
+            // Post updates back to the UI thread once metadata is fully loaded
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                // Prevent race conditions if the user has navigated to another album during background loading
+                if (_currentNode?.Id != album.Id) {
+                    return;
+                }
+
+                foreach (var picVm in _allPictures) {
+                    picVm.CurationStatus = picVm.Picture.CurationStatus;
+                    picVm.ColorLabel = picVm.Picture.ColorLabel;
+                    picVm.Rating = picVm.Picture.Rating;
+                }
+
+                bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
+                if (hasPicked) {
+                    FilterStatuses.Clear();
+                    FilterStatuses.Add(CurationStatus.Flagged);
+                } else {
+                    FilterStatuses.Clear();
+                    FilterRatings.Clear();
+                    FilterColors.Clear();
+                }
+
+                ApplyFilters();
+            });
+        });
     }
 
     private void SetupXmpWatcher(Album album) {
