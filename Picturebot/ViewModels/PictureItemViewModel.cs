@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Database.Domain.Entities;
 using Domain.Enums;
 using Picturebot.Utilities;
+using Picturebot.Services;
 using Serilog;
 
 namespace Picturebot.ViewModels;
@@ -61,11 +62,14 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public string Name => Picture.Name;
 
-    public void Dispose() {
+    public void CancelLoading() {
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
-        Thumbnail?.Dispose();
+    }
+
+    public void Dispose() {
+        CancelLoading();
         Thumbnail = null;
     }
 
@@ -74,7 +78,14 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
             return;
         }
 
-        if (string.IsNullOrEmpty(Picture.SubFolder?.Thumbnail) || !File.Exists(Picture.SubFolder.Thumbnail)) {
+        var path = Picture.SubFolder?.Thumbnail;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
+            path = Picture.SubFolder?.Raw;
+        }
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
+            path = Picture.SubFolder?.Preview;
+        }
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
             return;
         }
 
@@ -83,18 +94,16 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         var token = _cts.Token;
 
         try {
-            var path = Picture.SubFolder.Thumbnail;
-            var bitmap = await ImageHelper.LoadDirectAsync(path);
+            var priority = IsVisible ? 0 : 1;
+            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(path, targetHeight, priority, token);
             
-            if (!token.IsCancellationRequested) {
+            if (!token.IsCancellationRequested && bitmap != null) {
                 Thumbnail = bitmap;
-            } else {
-                bitmap.Dispose();
             }
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {
-            Log.Error(ex, "Failed to load thumbnail for {Name} at {Path}", Name, Picture.SubFolder.Thumbnail);
+            Log.Error(ex, "Failed to load thumbnail for {Name} via registry", Name);
         }
     }
 }

@@ -7,17 +7,13 @@ using Picturebot.ViewModels;
 namespace Picturebot.Views;
 
 public partial class GalleryView : UserControl {
-    private readonly Queue<PictureItemViewModel> _loadedThumbnailsQueue = new();
-
     public GalleryView() {
         InitializeComponent();
-        DataContextChanged += (s, e) => _loadedThumbnailsQueue.Clear();
     }
 
     public GalleryView(GalleryViewModel viewModel) {
         InitializeComponent();
         DataContext = viewModel;
-        DataContextChanged += (s, e) => _loadedThumbnailsQueue.Clear();
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
@@ -45,31 +41,20 @@ public partial class GalleryView : UserControl {
 
             if (isVisible) {
                 _ = vm.LoadThumbnailAsync(250);
-
-                if (!_loadedThumbnailsQueue.Contains(vm)) {
-                    _loadedThumbnailsQueue.Enqueue(vm);
-                }
-
-                // If cache exceeds limit, clean up off-screen loaded items to reclaim memory
-                if (_loadedThumbnailsQueue.Count > 120) {
-                    var tempQueue = new Queue<PictureItemViewModel>();
-                    while (_loadedThumbnailsQueue.Count > 0) {
-                        var item = _loadedThumbnailsQueue.Dequeue();
-                        
-                        // If item is scrolled out of view and we have at least 100 items cached, unload it
-                        if (!item.IsVisible && (tempQueue.Count + _loadedThumbnailsQueue.Count >= 100)) {
-                            item.Dispose();
-                        } else {
-                            tempQueue.Enqueue(item);
-                        }
-                    }
-
-                    // Re-populate our queue
-                    foreach (var item in tempQueue) {
-                        _loadedThumbnailsQueue.Enqueue(item);
-                    }
-                }
+            } else {
+                vm.CancelLoading();
+                vm.Thumbnail = null; // Release bitmap reference
             }
+        }
+    }
+
+    private void OnImageDataContextChanged(object? sender, EventArgs e) {
+        if (sender is Control control) {
+            if (control.Tag is PictureItemViewModel oldVm) {
+                oldVm.CancelLoading();
+                oldVm.Thumbnail = null; // Release bitmap reference on recycled container
+            }
+            control.Tag = control.DataContext as PictureItemViewModel;
         }
     }
 }

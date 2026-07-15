@@ -9,6 +9,7 @@
              xmlns:converters="using:Picturebot.Converters"
              xmlns:controls="using:Picturebot.Controls"
              xmlns:enums="using:Domain.Enums"
+             xmlns:labs="clr-namespace:Avalonia.Labs.Panels;assembly=Avalonia.Labs.Panels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Picturebot.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
@@ -547,54 +548,69 @@
                                          BorderThickness="0"
                                          Padding="0"
                                          ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                                    <ListBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-                                    <ListBox.Styles>
-                                        <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
-                                            <Setter Property="Padding" Value="0" />
-                                            <Setter Property="Margin" Value="0" />
-                                            <Setter Property="Width" Value="240" />
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="Template">
-                                                <ControlTemplate>
-                                                    <controls:AspectRatioPanel Ratio="0.85" Margin="8">
-                                                        <!-- The 'Matted Print' Border -->
-                                                        <Border Name="PART_AspectBorder"
-                                                                Background="#1C232E"
-                                                                BorderBrush="#3A4454"
-                                                                BorderThickness="1"
-                                                                CornerRadius="4"
-                                                                ClipToBounds="True">
-                                                            <Grid RowDefinitions="*,Auto">
-                                                                <!-- Color Label Background Overlay -->
-                                                                <Border Grid.RowSpan="2"
-                                                                        Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
-                                                                        Opacity="0.18" />
+                                     <ListBox.ItemsPanel>
+                                         <ItemsPanelTemplate>
+                                             <WrapPanel />
+                                         </ItemsPanelTemplate>
+                                     </ListBox.ItemsPanel>
+                                     <ListBox.Styles>
+                                         <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
+                                             <Setter Property="Padding" Value="0" />
+                                             <Setter Property="Margin" Value="0" />
+                                             <Setter Property="Width" Value="240" />
+                                             <Setter Property="Background" Value="Transparent" />
+                                             <Setter Property="Template">
+                                                 <ControlTemplate>
+                                                     <controls:AspectRatioPanel Ratio="0.85" Margin="8">
+                                                         <!-- The 'Matted Print' Border -->
+                                                         <Border Name="PART_AspectBorder"
+                                                                 Background="#1C232E"
+                                                                 BorderBrush="#3A4454"
+                                                                 BorderThickness="1"
+                                                                 CornerRadius="4"
+                                                                 ClipToBounds="True">
+                                                             <Grid RowDefinitions="*,Auto">
+                                                                 <!-- Color Label Background Overlay -->
+                                                                 <Border Grid.RowSpan="2"
+                                                                         Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
+                                                                         Opacity="0.18" />
 
-                                                                <Panel Grid.Row="0" Margin="8">
-                                                                    <Image Source="{Binding Thumbnail}"
-                                                                           Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                                                           Stretch="Uniform"
-                                                                           HorizontalAlignment="Center"
-                                                                           VerticalAlignment="Center"
-                                                                           EffectiveViewportChanged="OnImageEffectiveViewportChanged">
-                                                                        <Image.Transitions>
-                                                                            <Transitions>
-                                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
-                                                                            </Transitions>
-                                                                        </Image.Transitions>
-                                                                        <Image.Styles>
-                                                                            <Style Selector="Image">
-                                                                                <Setter Property="Opacity" Value="0" />
-                                                                            </Style>
-                                                                            <Style Selector="Image.loaded">
-                                                                                <Setter Property="Opacity" Value="1" />
-                                                                            </Style>
-                                                                        </Image.Styles>
-                                                                    </Image>
+                                                                 <Panel Grid.Row="0" Margin="8">
+                                                                     <!-- Placeholder Fallback Border/Icon -->
+                                                                     <Border Background="#1A222D"
+                                                                             BorderBrush="#2C3545"
+                                                                             BorderThickness="1"
+                                                                             CornerRadius="4"
+                                                                             IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}">
+                                                                         <icons:MaterialIcon Kind="ImageOutline"
+                                                                                             Width="48"
+                                                                                             Height="48"
+                                                                                             Foreground="#3E4B5E"
+                                                                                             HorizontalAlignment="Center"
+                                                                                             VerticalAlignment="Center" />
+                                                                     </Border>
+
+                                                                     <Image Source="{Binding Thumbnail}"
+                                                                            Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                            Stretch="Uniform"
+                                                                            HorizontalAlignment="Center"
+                                                                            VerticalAlignment="Center"
+                                                                            EffectiveViewportChanged="OnImageEffectiveViewportChanged"
+                                                                            DataContextChanged="OnImageDataContextChanged">
+                                                                         <Image.Transitions>
+                                                                             <Transitions>
+                                                                                 <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
+                                                                             </Transitions>
+                                                                         </Image.Transitions>
+                                                                         <Image.Styles>
+                                                                             <Style Selector="Image">
+                                                                                 <Setter Property="Opacity" Value="0" />
+                                                                             </Style>
+                                                                             <Style Selector="Image.loaded">
+                                                                                 <Setter Property="Opacity" Value="1" />
+                                                                             </Style>
+                                                                         </Image.Styles>
+                                                                     </Image>
 
                                                                     <!-- Top Left: Flagged Indicator -->
                                                                     <Border VerticalAlignment="Top"
