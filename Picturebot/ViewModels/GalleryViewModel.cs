@@ -740,14 +740,17 @@ public partial class GalleryViewModel : ViewModelBase,
         FolderItems.Clear();
         AlbumItems.Clear();
 
-        foreach (var picVm in _allPictures) {
-            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
-            picVm.Dispose();
-        }
-
+        var oldPictures = _allPictures.ToList();
         _allPictures.Clear();
         PicturesList.Clear();
         GroupedPictures.Clear();
+
+        _ = Task.Run(() => {
+            foreach (var picVm in oldPictures) {
+                picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                picVm.Dispose();
+            }
+        });
 
         IsShowingAlbum = currentNode is Album;
         CanPlayCarousel = IsShowingAlbum && children?.OfType<Picture>().Any() == true;
@@ -1034,7 +1037,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
     private FileSystemWatcher? _xmpWatcher;
 
-    private async Task LoadAlbumAsync(Album album) {
+    private Task LoadAlbumAsync(Album album) {
         SetupXmpWatcher(album);
 
         _currentNode = album;
@@ -1046,109 +1049,127 @@ public partial class GalleryViewModel : ViewModelBase,
         FolderItems.Clear();
         AlbumItems.Clear();
 
-        foreach (var picVm in _allPictures) {
-            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
-            picVm.Dispose();
-        }
-
+        // 1. Offload disposal of old view models to a background thread to prevent blocking the UI
+        var oldPictures = _allPictures.ToList();
         _allPictures.Clear();
         PicturesList.Clear();
         GroupedPictures.Clear();
 
+        _ = Task.Run(() => {
+            foreach (var picVm in oldPictures) {
+                picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                picVm.Dispose();
+            }
+        });
+
         IsShowingAlbum = true;
         CanPlayCarousel = false;
+        IsLoading = true;
 
         UpdateBreadcrumbs(album);
 
-        // Find children
-        var children = await _nodeService.FindChildrenAsync(album.Id);
-        var pics = children.OfType<Picture>().ToList();
+        // 2. Offload the entire load process (database query, Stage 1 loading, Stage 2 loading) to background
+        _ = Task.Run(async () => {
+            var children = await _nodeService.FindChildrenAsync(album.Id);
+            var pics = children.OfType<Picture>().ToList();
 
-        if (pics.Count == 0) {
-            IsLoading = false;
-            return;
-        }
-
-        IsLoading = true;
-
-        // --- STAGE 1: Load first batch (e.g., 40 images) instantly on UI thread ---
-        var initialBatchSize = Math.Min(40, pics.Count);
-        var firstBatchPics = pics.Take(initialBatchSize).ToList();
-
-        // Populate paths
-        foreach (var pic in firstBatchPics) {
-            pic.Parent = album;
-        }
-        _pathService.PopulatePaths(firstBatchPics);
-
-        // Load XMP metadata in parallel for the small initial batch
-        await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
-
-        // Create ViewModels
-        var initialPicsList = new List<PictureItemViewModel>();
-        foreach (var pic in firstBatchPics) {
-            var picVm = new PictureItemViewModel(pic);
-            picVm.PropertyChanged += OnPictureItemPropertyChanged;
-            initialPicsList.Add(picVm);
-        }
-
-        // Filter
-        var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
-        var initialFilterStatuses = new List<CurationStatus>();
-        if (hasPickedInitial) {
-            initialFilterStatuses.Add(CurationStatus.Flagged);
-        }
-
-        var filteredInitial = initialPicsList.AsEnumerable();
-        if (initialFilterStatuses.Any()) {
-            filteredInitial = filteredInitial.Where(p => initialFilterStatuses.Contains(p.CurationStatus));
-        }
-        var filteredListInitial = filteredInitial.ToList();
-
-        // Date Grouping
-        var groupVmsInitial = new List<PictureGroupViewModel>();
-        var groupsInitial = filteredListInitial.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
-        foreach (var group in groupsInitial) {
-            var dateStr = group.Key.ToString("yyyy-MM-dd");
-            var header = $"{dateStr} ({group.Count()})";
-            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
-            
-            foreach (var pic in sortedGroup) {
-                pic.GroupName = null;
-                pic.BurstIndex = 0;
-                pic.BurstPosition = 0;
-                pic.BurstTotal = 0;
+            if (pics.Count == 0) {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                    if (_currentNode?.Id == album.Id) {
+                        IsLoading = false;
+                    }
+                });
+                return;
             }
 
-            var groupVm = new PictureGroupViewModel(dateStr, header,
-                new ObservableCollection<PictureItemViewModel>(sortedGroup));
-            groupVmsInitial.Add(groupVm);
-        }
+            // --- STAGE 1: Load first batch (e.g., 40 images) in parallel background task ---
+            var initialBatchSize = Math.Min(40, pics.Count);
+            var firstBatchPics = pics.Take(initialBatchSize).ToList();
 
-        // Display initial batch instantly
-        _allPictures.AddRange(initialPicsList);
-        PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListInitial);
-        GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsInitial);
+            // Populate paths
+            foreach (var pic in firstBatchPics) {
+                pic.Parent = album;
+            }
+            _pathService.PopulatePaths(firstBatchPics);
 
-        FilterStatuses.Clear();
-        if (hasPickedInitial) {
-            FilterStatuses.Add(CurationStatus.Flagged);
-        } else {
-            FilterRatings.Clear();
-            FilterColors.Clear();
-        }
+            // Load XMP metadata in parallel
+            await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
 
-        CanPlayCarousel = pics.Any();
-        IsLoading = pics.Count > initialBatchSize; // Only show spinner if there is background work to do
+            // Create ViewModels
+            var initialPicsList = new List<PictureItemViewModel>();
+            foreach (var pic in firstBatchPics) {
+                var picVm = new PictureItemViewModel(pic);
+                picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                initialPicsList.Add(picVm);
+            }
 
-        NotifyFilterStates();
+            // Filter
+            var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
+            var initialFilterStatuses = new List<CurationStatus>();
+            if (hasPickedInitial) {
+                initialFilterStatuses.Add(CurationStatus.Flagged);
+            }
 
-        if (pics.Count <= initialBatchSize) {
-            return;
-        }
+            var filteredInitial = initialPicsList.AsEnumerable();
+            if (initialFilterStatuses.Any()) {
+                filteredInitial = filteredInitial.Where(p => initialFilterStatuses.Contains(p.CurationStatus));
+            }
+            var filteredListInitial = filteredInitial.ToList();
 
-        // --- STAGE 2: Load the remaining images in the background ---
-        _ = Task.Run(async () => {
+            // Date Grouping
+            var groupVmsInitial = new List<PictureGroupViewModel>();
+            var groupsInitial = filteredListInitial.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
+            foreach (var group in groupsInitial) {
+                var dateStr = group.Key.ToString("yyyy-MM-dd");
+                var header = $"{dateStr} ({group.Count()})";
+                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                
+                foreach (var pic in sortedGroup) {
+                    pic.GroupName = null;
+                    pic.BurstIndex = 0;
+                    pic.BurstPosition = 0;
+                    pic.BurstTotal = 0;
+                }
+
+                var groupVm = new PictureGroupViewModel(dateStr, header,
+                    new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                groupVmsInitial.Add(groupVm);
+            }
+
+            // Post initial batch to UI thread
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                if (_currentNode?.Id != album.Id) {
+                    // Switch occurred, discard view models
+                    foreach (var picVm in initialPicsList) {
+                        picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                        picVm.Dispose();
+                    }
+                    return;
+                }
+
+                _allPictures.AddRange(initialPicsList);
+                PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListInitial);
+                GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsInitial);
+
+                FilterStatuses.Clear();
+                if (hasPickedInitial) {
+                    FilterStatuses.Add(CurationStatus.Flagged);
+                } else {
+                    FilterRatings.Clear();
+                    FilterColors.Clear();
+                }
+
+                CanPlayCarousel = pics.Any();
+                IsLoading = pics.Count > initialBatchSize;
+
+                NotifyFilterStates();
+            });
+
+            if (pics.Count <= initialBatchSize) {
+                return;
+            }
+
+            // --- STAGE 2: Load the remaining images in the background ---
             var remainingPics = pics.Skip(initialBatchSize).ToList();
 
             // Populate paths
@@ -1234,6 +1255,8 @@ public partial class GalleryViewModel : ViewModelBase,
                 NotifyFilterStates();
             });
         });
+
+        return Task.CompletedTask;
     }
 
     private void NotifyFilterStates() {
