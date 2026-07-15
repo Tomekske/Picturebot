@@ -22,7 +22,9 @@ public class ThumbnailRequest {
     public CancellationToken CancellationToken { get; }
     public TaskCompletionSource<Bitmap?> Tcs { get; }
     public int Priority { get; }
-    public string CacheKey { get; }
+
+    private string? _cacheKey;
+    public string CacheKey => _cacheKey ??= CalculateCacheKey(FilePath);
 
     public ThumbnailRequest(string filePath, int targetHeight, int priority, CancellationToken cancellationToken) {
         FilePath = filePath;
@@ -30,7 +32,6 @@ public class ThumbnailRequest {
         Priority = priority;
         CancellationToken = cancellationToken;
         Tcs = new TaskCompletionSource<Bitmap?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        CacheKey = CalculateCacheKey(filePath);
     }
 
     private static string CalculateCacheKey(string filePath) {

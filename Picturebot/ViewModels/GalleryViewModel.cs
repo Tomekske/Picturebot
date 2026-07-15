@@ -1093,9 +1093,6 @@ public partial class GalleryViewModel : ViewModelBase,
             }
             _pathService.PopulatePaths(firstBatchPics);
 
-            // Load XMP metadata in parallel
-            await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
-
             // Create ViewModels
             var initialPicsList = new List<PictureItemViewModel>();
             foreach (var pic in firstBatchPics) {
@@ -1104,6 +1101,12 @@ public partial class GalleryViewModel : ViewModelBase,
                 picVm.PropertyChanged += OnPictureItemPropertyChanged;
                 initialPicsList.Add(picVm);
             }
+
+            // Load metadata and thumbnails in parallel on background thread
+            await Task.WhenAll(initialPicsList.Select(async picVm => {
+                await _xmpService.LoadMetadataAsync(picVm.Picture);
+                await picVm.LoadThumbnailAsync(320);
+            }));
 
             // Filter
             var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
@@ -1176,7 +1179,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
             // --- STAGE 2: Load the remaining images in the background in chunks ---
             var remainingPics = pics.Skip(initialBatchSize).ToList();
-            int chunkSize = 150; // Process 150 pictures at a time to prevent UI thread layout/rendering starvation
+            int chunkSize = 32; // Process 32 pictures at a time with metadata and thumbnails pre-loaded
 
             for (int i = 0; i < remainingPics.Count; i += chunkSize) {
                 // Check if current node changed during processing
@@ -1198,11 +1201,6 @@ public partial class GalleryViewModel : ViewModelBase,
                 }
                 _pathService.PopulatePaths(chunk);
 
-                // Load XMP metadata in parallel background threads with capped concurrency
-                await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
-                    await _xmpService.LoadMetadataAsync(pic);
-                });
-
                 // Create ViewModels
                 var chunkVms = new List<PictureItemViewModel>();
                 foreach (var pic in chunk) {
@@ -1211,6 +1209,12 @@ public partial class GalleryViewModel : ViewModelBase,
                     picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     chunkVms.Add(picVm);
                 }
+
+                // Load metadata and thumbnails in parallel background threads with capped concurrency
+                await Parallel.ForEachAsync(chunkVms, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (picVm, token) => {
+                    await _xmpService.LoadMetadataAsync(picVm.Picture);
+                    await picVm.LoadThumbnailAsync(320);
+                });
 
                 // Post chunk to UI thread and merge into existing collections
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {

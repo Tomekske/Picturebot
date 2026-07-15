@@ -510,7 +510,7 @@
             </ScrollViewer>
 
             <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
-                <ItemsControl ItemsSource="{Binding GroupedPictures}"
+                <ItemsControl x:Name="GroupedPicturesItemsControl" ItemsSource="{Binding GroupedPictures}"
                               Background="Transparent">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:PictureGroupViewModel">

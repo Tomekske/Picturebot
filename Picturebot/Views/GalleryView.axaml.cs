@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Picturebot.ViewModels;
 
 namespace Picturebot.Views;
@@ -9,11 +10,20 @@ namespace Picturebot.Views;
 public partial class GalleryView : UserControl {
     public GalleryView() {
         InitializeComponent();
+        SetupScrollInterception();
     }
 
     public GalleryView(GalleryViewModel viewModel) {
         InitializeComponent();
         DataContext = viewModel;
+        SetupScrollInterception();
+    }
+
+    private void SetupScrollInterception() {
+        var groupedPicturesItemsControl = this.FindControl<ItemsControl>("GroupedPicturesItemsControl");
+        groupedPicturesItemsControl?.AddHandler(InputElement.PointerWheelChangedEvent, (sender, e) => {
+            e.Handled = false;
+        }, RoutingStrategies.Bubble, true);
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
