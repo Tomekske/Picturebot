@@ -1093,6 +1093,9 @@ public partial class GalleryViewModel : ViewModelBase,
             }
             _pathService.PopulatePaths(firstBatchPics);
 
+            // Load XMP metadata in parallel first
+            await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
+
             // Create ViewModels
             var initialPicsList = new List<PictureItemViewModel>();
             foreach (var pic in firstBatchPics) {
@@ -1102,11 +1105,8 @@ public partial class GalleryViewModel : ViewModelBase,
                 initialPicsList.Add(picVm);
             }
 
-            // Load metadata and thumbnails in parallel on background thread
-            await Task.WhenAll(initialPicsList.Select(async picVm => {
-                await _xmpService.LoadMetadataAsync(picVm.Picture);
-                await picVm.LoadThumbnailAsync(320);
-            }));
+            // Load thumbnails in parallel on background thread
+            await Task.WhenAll(initialPicsList.Select(picVm => picVm.LoadThumbnailAsync(320)));
 
             // Filter
             var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
@@ -1201,6 +1201,11 @@ public partial class GalleryViewModel : ViewModelBase,
                 }
                 _pathService.PopulatePaths(chunk);
 
+                // Load XMP metadata in parallel background threads with capped concurrency
+                await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
+                    await _xmpService.LoadMetadataAsync(pic);
+                });
+
                 // Create ViewModels
                 var chunkVms = new List<PictureItemViewModel>();
                 foreach (var pic in chunk) {
@@ -1210,9 +1215,8 @@ public partial class GalleryViewModel : ViewModelBase,
                     chunkVms.Add(picVm);
                 }
 
-                // Load metadata and thumbnails in parallel background threads with capped concurrency
+                // Load thumbnails in parallel background threads with capped concurrency
                 await Parallel.ForEachAsync(chunkVms, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (picVm, token) => {
-                    await _xmpService.LoadMetadataAsync(picVm.Picture);
                     await picVm.LoadThumbnailAsync(320);
                 });
 
