@@ -547,7 +547,7 @@
                                          <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
                                              <Setter Property="Padding" Value="0" />
                                              <Setter Property="Margin" Value="0" />
-                                             <Setter Property="Width" Value="240" />
+                                             <Setter Property="Width" Value="320" />
                                              <Setter Property="Background" Value="Transparent" />
                                              <Setter Property="Template">
                                                  <ControlTemplate>

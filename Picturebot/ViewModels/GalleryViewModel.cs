@@ -1083,8 +1083,8 @@ public partial class GalleryViewModel : ViewModelBase,
                 return;
             }
 
-            // --- STAGE 1: Load first batch (e.g., 40 images) in parallel background task ---
-            var initialBatchSize = Math.Min(40, pics.Count);
+            // --- STAGE 1: Load first batch in parallel background task ---
+            var initialBatchSize = Math.Min(24, pics.Count);
             var firstBatchPics = pics.Take(initialBatchSize).ToList();
 
             // Populate paths

@@ -40,7 +40,7 @@ public partial class GalleryView : UserControl {
             vm.IsVisible = isVisible;
 
             if (isVisible) {
-                _ = vm.LoadThumbnailAsync(250);
+                _ = vm.LoadThumbnailAsync(320);
             } else {
                 vm.CancelLoading();
                 vm.Thumbnail = null; // Release bitmap reference
