@@ -1171,6 +1171,9 @@ public partial class GalleryViewModel : ViewModelBase,
                 return;
             }
 
+            // Introduce breathing room delay so the user sees the first batch fade in smoothly
+            await Task.Delay(250);
+
             // --- STAGE 2: Load the remaining images in the background in chunks ---
             var remainingPics = pics.Skip(initialBatchSize).ToList();
             int chunkSize = 150; // Process 150 pictures at a time to prevent UI thread layout/rendering starvation
