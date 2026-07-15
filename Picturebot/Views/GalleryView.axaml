@@ -537,18 +537,43 @@
                                          Background="Transparent"
                                          BorderThickness="0"
                                          Padding="0"
-                                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                      <ListBox.ItemsPanel>
                                          <ItemsPanelTemplate>
                                              <WrapPanel />
                                          </ItemsPanelTemplate>
                                      </ListBox.ItemsPanel>
                                      <ListBox.Styles>
-                                         <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
-                                             <Setter Property="Padding" Value="0" />
-                                             <Setter Property="Margin" Value="0" />
-                                             <Setter Property="Width" Value="320" />
-                                             <Setter Property="Background" Value="Transparent" />
+                                           <Style Selector="ScrollViewer">
+                                               <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
+                                               <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+                                           </Style>
+
+                                           <Style Selector="ScrollViewer /template/ ScrollBar">
+                                               <Setter Property="IsVisible" Value="False" />
+                                               <Setter Property="Width" Value="0" />
+                                               <Setter Property="Height" Value="0" />
+                                               <Setter Property="Opacity" Value="0" />
+                                           </Style>
+
+                                           <Style Selector="ScrollViewer /template/ Grid">
+                                               <Setter Property="ShowGridLines" Value="False" />
+                                           </Style>
+
+                                           <Style Selector="ScrollViewer /template/ Border">
+                                               <Setter Property="BorderThickness" Value="0" />
+                                               <Setter Property="Background" Value="Transparent" />
+                                           </Style>
+                                          <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
+                                              <Setter Property="Padding" Value="0" />
+                                              <Setter Property="Margin" Value="0" />
+                                              <Setter Property="BorderThickness" Value="0" />
+                                              <Setter Property="BorderBrush" Value="Transparent" />
+                                              <Setter Property="Background" Value="Transparent" />
+                                              <Setter Property="Width" Value="320" />
+                                              <Setter Property="HorizontalAlignment" Value="Left" />
+                                              <Setter Property="VerticalAlignment" Value="Top" />
                                              <Style.Animations>
                                                  <Animation Duration="0:0:0.4" Easing="CubicEaseOut">
                                                      <KeyFrame KeyTime="0:0:0">
