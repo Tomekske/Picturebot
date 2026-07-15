@@ -73,20 +73,39 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         Thumbnail = null;
     }
 
+    private string? _resolvedThumbnailPath;
+
+    public void ResolveThumbnailPath() {
+        if (_resolvedThumbnailPath != null) return;
+
+        var path = Picture.SubFolder?.Thumbnail;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+            _resolvedThumbnailPath = path;
+            return;
+        }
+        path = Picture.SubFolder?.Raw;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+            _resolvedThumbnailPath = path;
+            return;
+        }
+        path = Picture.SubFolder?.Preview;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+            _resolvedThumbnailPath = path;
+            return;
+        }
+    }
+
     public async Task LoadThumbnailAsync(int targetHeight) {
         if (Thumbnail != null) {
             return;
         }
 
-        var path = Picture.SubFolder?.Thumbnail;
-        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
-            path = Picture.SubFolder?.Raw;
-        }
-        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
-            path = Picture.SubFolder?.Preview;
-        }
-        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
-            return;
+        if (string.IsNullOrEmpty(_resolvedThumbnailPath)) {
+            // Resolve on background thread pool if not already pre-resolved
+            await Task.Run(() => ResolveThumbnailPath()).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(_resolvedThumbnailPath)) {
+                return;
+            }
         }
 
         _cts?.Cancel();
@@ -95,7 +114,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
         try {
             var priority = IsVisible ? 0 : 1;
-            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(path, targetHeight, priority, token);
+            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(_resolvedThumbnailPath, targetHeight, priority, token);
             
             if (!token.IsCancellationRequested && bitmap != null) {
                 Thumbnail = bitmap;

@@ -765,6 +765,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
+                    picVm.ResolveThumbnailPath();
                     picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     _allPictures.Add(picVm);
                 }
@@ -1099,6 +1100,7 @@ public partial class GalleryViewModel : ViewModelBase,
             var initialPicsList = new List<PictureItemViewModel>();
             foreach (var pic in firstBatchPics) {
                 var picVm = new PictureItemViewModel(pic);
+                picVm.ResolveThumbnailPath();
                 picVm.PropertyChanged += OnPictureItemPropertyChanged;
                 initialPicsList.Add(picVm);
             }
@@ -1202,6 +1204,7 @@ public partial class GalleryViewModel : ViewModelBase,
                 var chunkVms = new List<PictureItemViewModel>();
                 foreach (var pic in chunk) {
                     var picVm = new PictureItemViewModel(pic);
+                    picVm.ResolveThumbnailPath();
                     picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     chunkVms.Add(picVm);
                 }
