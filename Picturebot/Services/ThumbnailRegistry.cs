@@ -201,7 +201,7 @@ public class ThumbnailRegistry : IDisposable {
     private async Task WorkerLoopAsync() {
         while (!_cts.Token.IsCancellationRequested) {
             try {
-                await _wakeupChannel.Reader.ReadAsync(_cts.Token);
+                await _wakeupChannel.Reader.ReadAsync(_cts.Token).ConfigureAwait(false);
 
                 ThumbnailRequest? request = null;
                 lock (_queueLock) {
@@ -215,7 +215,7 @@ public class ThumbnailRegistry : IDisposable {
                 }
 
                 try {
-                    var bitmap = await ProcessRequestAsync(request);
+                    var bitmap = await ProcessRequestAsync(request).ConfigureAwait(false);
                     if (!request.CancellationToken.IsCancellationRequested) {
                         request.Tcs.TrySetResult(bitmap);
                     } else {
@@ -269,12 +269,12 @@ public class ThumbnailRegistry : IDisposable {
         request.CancellationToken.ThrowIfCancellationRequested();
 
         if (IsRawFile(request.FilePath)) {
-            var rawBytes = await ExtractExifThumbnailBytesAsync(request.FilePath, request.CancellationToken);
+            var rawBytes = await ExtractExifThumbnailBytesAsync(request.FilePath, request.CancellationToken).ConfigureAwait(false);
             request.CancellationToken.ThrowIfCancellationRequested();
 
             if (rawBytes != null && rawBytes.Length > 0) {
                 try {
-                    await File.WriteAllBytesAsync(cachePath, rawBytes, request.CancellationToken);
+                    await File.WriteAllBytesAsync(cachePath, rawBytes, request.CancellationToken).ConfigureAwait(false);
                     request.CancellationToken.ThrowIfCancellationRequested();
 
                     using var ms = new MemoryStream(rawBytes);
@@ -294,7 +294,7 @@ public class ThumbnailRegistry : IDisposable {
                 var img = Image.Load(request.FilePath);
                 img.Mutate(x => x.AutoOrient());
                 return img;
-            }, request.CancellationToken);
+            }, request.CancellationToken).ConfigureAwait(false);
 
             request.CancellationToken.ThrowIfCancellationRequested();
 
@@ -305,7 +305,7 @@ public class ThumbnailRegistry : IDisposable {
 
             request.CancellationToken.ThrowIfCancellationRequested();
 
-            await Task.Run(() => image.SaveAsJpeg(cachePath, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = 85 }), request.CancellationToken);
+            await Task.Run(() => image.SaveAsJpeg(cachePath, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = 85 }), request.CancellationToken).ConfigureAwait(false);
             request.CancellationToken.ThrowIfCancellationRequested();
 
             using var fs = new FileStream(cachePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);

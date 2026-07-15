@@ -1169,90 +1169,125 @@ public partial class GalleryViewModel : ViewModelBase,
                 return;
             }
 
-            // --- STAGE 2: Load the remaining images in the background ---
+            // --- STAGE 2: Load the remaining images in the background in chunks ---
             var remainingPics = pics.Skip(initialBatchSize).ToList();
+            int chunkSize = 150; // Process 150 pictures at a time to prevent UI thread layout/rendering starvation
 
-            // Populate paths
-            foreach (var pic in remainingPics) {
-                pic.Parent = album;
-            }
-            _pathService.PopulatePaths(remainingPics);
-
-            // Load XMP metadata in parallel background threads with capped concurrency
-            await Parallel.ForEachAsync(remainingPics, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
-                await _xmpService.LoadMetadataAsync(pic);
-            });
-
-            // Create ViewModels
-            var remainingPicsList = new List<PictureItemViewModel>();
-            foreach (var pic in remainingPics) {
-                var picVm = new PictureItemViewModel(pic);
-                picVm.PropertyChanged += OnPictureItemPropertyChanged;
-                remainingPicsList.Add(picVm);
-            }
-
-            // Perform CPU-heavy sorting, grouping, and filtering on the background thread
-            var allPicsList = initialPicsList.Concat(remainingPicsList).ToList();
-
-            // Re-apply filters
-            var hasPickedAll = allPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
-            var filterStatusesAll = new List<CurationStatus>();
-            if (hasPickedAll) {
-                filterStatusesAll.Add(CurationStatus.Flagged);
-            }
-
-            var filteredAll = allPicsList.AsEnumerable();
-            if (filterStatusesAll.Any()) {
-                filteredAll = filteredAll.Where(p => filterStatusesAll.Contains(p.CurationStatus));
-            }
-            var filteredListAll = filteredAll.ToList();
-
-            // Re-calculate Date Grouping
-            var groupVmsAll = new List<PictureGroupViewModel>();
-            var groupsAll = filteredListAll.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
-            foreach (var group in groupsAll) {
-                var dateStr = group.Key.ToString("yyyy-MM-dd");
-                var header = $"{dateStr} ({group.Count()})";
-                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
-                
-                foreach (var pic in sortedGroup) {
-                    pic.GroupName = null;
-                    pic.BurstIndex = 0;
-                    pic.BurstPosition = 0;
-                    pic.BurstTotal = 0;
-                }
-
-                var groupVm = new PictureGroupViewModel(dateStr, header,
-                    new ObservableCollection<PictureItemViewModel>(sortedGroup));
-                groupVmsAll.Add(groupVm);
-            }
-
-            // Post only fast UI assignments back to the UI thread
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                if (_currentNode?.Id != album.Id) {
-                    // Switch occurred, discard remaining items
-                    foreach (var picVm in remainingPicsList) {
-                        picVm.PropertyChanged -= OnPictureItemPropertyChanged;
-                        picVm.Dispose();
+            for (int i = 0; i < remainingPics.Count; i += chunkSize) {
+                // Check if current node changed during processing
+                bool shouldCancel = false;
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                    if (_currentNode?.Id != album.Id) {
+                        shouldCancel = true;
                     }
-                    return;
+                });
+                if (shouldCancel) {
+                    break;
                 }
 
-                // Update UI state
-                _allPictures.AddRange(remainingPicsList);
-                PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListAll);
-                GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsAll);
+                var chunk = remainingPics.Skip(i).Take(chunkSize).ToList();
 
-                FilterStatuses.Clear();
-                if (hasPickedAll) {
-                    FilterStatuses.Add(CurationStatus.Flagged);
-                } else {
-                    FilterRatings.Clear();
-                    FilterColors.Clear();
+                // Populate paths
+                foreach (var pic in chunk) {
+                    pic.Parent = album;
+                }
+                _pathService.PopulatePaths(chunk);
+
+                // Load XMP metadata in parallel background threads with capped concurrency
+                await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
+                    await _xmpService.LoadMetadataAsync(pic);
+                });
+
+                // Create ViewModels
+                var chunkVms = new List<PictureItemViewModel>();
+                foreach (var pic in chunk) {
+                    var picVm = new PictureItemViewModel(pic);
+                    picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                    chunkVms.Add(picVm);
                 }
 
-                IsLoading = false;
-                NotifyFilterStates();
+                // Post chunk to UI thread and merge into existing collections
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                    if (_currentNode?.Id != album.Id) {
+                        // Switch occurred, discard chunk ViewModels
+                        foreach (var picVm in chunkVms) {
+                            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                            picVm.Dispose();
+                        }
+                        return;
+                    }
+
+                    _allPictures.AddRange(chunkVms);
+
+                    // Re-apply filters on chunk
+                    var filteredChunk = chunkVms.AsEnumerable();
+                    if (FilterStatuses.Any()) {
+                        filteredChunk = filteredChunk.Where(p => FilterStatuses.Contains(p.CurationStatus));
+                    }
+                    if (FilterRatings.Any()) {
+                        filteredChunk = filteredChunk.Where(p => FilterRatings.Contains(p.Rating));
+                    }
+                    if (FilterColors.Any()) {
+                        filteredChunk = filteredChunk.Where(p => FilterColors.Contains(p.ColorLabel));
+                    }
+                    var filteredChunkList = filteredChunk.ToList();
+
+                    // Add to flat PicturesList
+                    foreach (var picVm in filteredChunkList) {
+                        PicturesList.Add(picVm);
+                    }
+
+                    // Add to GroupedPictures
+                    var groups = filteredChunkList.GroupBy(p => p.Picture.CapturedAt.Date);
+                    foreach (var group in groups) {
+                        var dateStr = group.Key.ToString("yyyy-MM-dd");
+                        
+                        // Find existing group
+                        var existingGroup = GroupedPictures.FirstOrDefault(g => g.Date == dateStr);
+                        if (existingGroup != null) {
+                            // Merge into existing group by appending (since pics are already sorted chronologically)
+                            foreach (var pic in group) {
+                                pic.GroupName = null;
+                                pic.BurstIndex = 0;
+                                pic.BurstPosition = 0;
+                                pic.BurstTotal = 0;
+                                existingGroup.Pictures.Add(pic);
+                            }
+                            existingGroup.Header = $"{dateStr} ({existingGroup.Pictures.Count})";
+                        } else {
+                            // Create new group
+                            var header = $"{dateStr} ({group.Count()})";
+                            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                            foreach (var pic in sortedGroup) {
+                                pic.GroupName = null;
+                                pic.BurstIndex = 0;
+                                pic.BurstPosition = 0;
+                                pic.BurstTotal = 0;
+                            }
+                            var groupVm = new PictureGroupViewModel(dateStr, header,
+                                new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                            
+                            // Insert group in sorted order
+                            int insertIdx = 0;
+                            while (insertIdx < GroupedPictures.Count && 
+                                   string.Compare(GroupedPictures[insertIdx].Date, dateStr, StringComparison.Ordinal) < 0) {
+                                insertIdx++;
+                            }
+                            GroupedPictures.Insert(insertIdx, groupVm);
+                        }
+                    }
+                });
+
+                // Yield control to UI thread to process renders/events
+                await Task.Delay(35);
+            }
+
+            // Set IsLoading to false after all chunks are processed
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                if (_currentNode?.Id == album.Id) {
+                    IsLoading = false;
+                    NotifyFilterStates();
+                }
             });
         });
 
