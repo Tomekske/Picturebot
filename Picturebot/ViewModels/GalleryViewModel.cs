@@ -1081,10 +1081,8 @@ public partial class GalleryViewModel : ViewModelBase,
         }
         _pathService.PopulatePaths(firstBatchPics);
 
-        // Load XMP metadata synchronously for the small initial batch
-        foreach (var pic in firstBatchPics) {
-            await _xmpService.LoadMetadataAsync(pic);
-        }
+        // Load XMP metadata in parallel for the small initial batch
+        await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
 
         // Create ViewModels
         var initialPicsList = new List<PictureItemViewModel>();
@@ -1159,10 +1157,10 @@ public partial class GalleryViewModel : ViewModelBase,
             }
             _pathService.PopulatePaths(remainingPics);
 
-            // Load XMP metadata in background thread
-            foreach (var pic in remainingPics) {
+            // Load XMP metadata in parallel background threads with capped concurrency
+            await Parallel.ForEachAsync(remainingPics, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
                 await _xmpService.LoadMetadataAsync(pic);
-            }
+            });
 
             // Create ViewModels
             var remainingPicsList = new List<PictureItemViewModel>();
