@@ -1191,7 +1191,43 @@ public partial class GalleryViewModel : ViewModelBase,
                 remainingPicsList.Add(picVm);
             }
 
-            // Post combinations and re-grouping back to the UI thread
+            // Perform CPU-heavy sorting, grouping, and filtering on the background thread
+            var allPicsList = initialPicsList.Concat(remainingPicsList).ToList();
+
+            // Re-apply filters
+            var hasPickedAll = allPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
+            var filterStatusesAll = new List<CurationStatus>();
+            if (hasPickedAll) {
+                filterStatusesAll.Add(CurationStatus.Flagged);
+            }
+
+            var filteredAll = allPicsList.AsEnumerable();
+            if (filterStatusesAll.Any()) {
+                filteredAll = filteredAll.Where(p => filterStatusesAll.Contains(p.CurationStatus));
+            }
+            var filteredListAll = filteredAll.ToList();
+
+            // Re-calculate Date Grouping
+            var groupVmsAll = new List<PictureGroupViewModel>();
+            var groupsAll = filteredListAll.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
+            foreach (var group in groupsAll) {
+                var dateStr = group.Key.ToString("yyyy-MM-dd");
+                var header = $"{dateStr} ({group.Count()})";
+                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                
+                foreach (var pic in sortedGroup) {
+                    pic.GroupName = null;
+                    pic.BurstIndex = 0;
+                    pic.BurstPosition = 0;
+                    pic.BurstTotal = 0;
+                }
+
+                var groupVm = new PictureGroupViewModel(dateStr, header,
+                    new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                groupVmsAll.Add(groupVm);
+            }
+
+            // Post only fast UI assignments back to the UI thread
             Avalonia.Threading.Dispatcher.UIThread.Post(() => {
                 if (_currentNode?.Id != album.Id) {
                     // Switch occurred, discard remaining items
@@ -1200,42 +1236,6 @@ public partial class GalleryViewModel : ViewModelBase,
                         picVm.Dispose();
                     }
                     return;
-                }
-
-                // Combine initial and remaining view models
-                var allPicsList = _allPictures.Concat(remainingPicsList).ToList();
-
-                // Re-apply filters
-                var hasPickedAll = allPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
-                var filterStatusesAll = new List<CurationStatus>();
-                if (hasPickedAll) {
-                    filterStatusesAll.Add(CurationStatus.Flagged);
-                }
-
-                var filteredAll = allPicsList.AsEnumerable();
-                if (filterStatusesAll.Any()) {
-                    filteredAll = filteredAll.Where(p => filterStatusesAll.Contains(p.CurationStatus));
-                }
-                var filteredListAll = filteredAll.ToList();
-
-                // Re-calculate Date Grouping
-                var groupVmsAll = new List<PictureGroupViewModel>();
-                var groupsAll = filteredListAll.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
-                foreach (var group in groupsAll) {
-                    var dateStr = group.Key.ToString("yyyy-MM-dd");
-                    var header = $"{dateStr} ({group.Count()})";
-                    var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
-                    
-                    foreach (var pic in sortedGroup) {
-                        pic.GroupName = null;
-                        pic.BurstIndex = 0;
-                        pic.BurstPosition = 0;
-                        pic.BurstTotal = 0;
-                    }
-
-                    var groupVm = new PictureGroupViewModel(dateStr, header,
-                        new ObservableCollection<PictureItemViewModel>(sortedGroup));
-                    groupVmsAll.Add(groupVm);
                 }
 
                 // Update UI state

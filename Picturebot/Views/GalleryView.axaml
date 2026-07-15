@@ -404,16 +404,6 @@
                            Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>
 
-            <!-- Loading State for Albums -->
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Spacing="15"
-                        IsVisible="{Binding IsLoading}">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="4" />
-                <TextBlock Text="Loading Album..." FontSize="16" FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           Foreground="{DynamicResource SukiLowText}" />
-            </StackPanel>
 
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
                 <StackPanel Spacing="30">
