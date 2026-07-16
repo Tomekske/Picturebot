@@ -53,6 +53,7 @@ public partial class GalleryView : UserControl {
                 _ = vm.LoadThumbnailAsync(320);
             } else {
                 vm.CancelLoading();
+                vm.Thumbnail = null;
             }
         }
     }
@@ -61,6 +62,7 @@ public partial class GalleryView : UserControl {
         if (sender is Control control) {
             if (control.Tag is PictureItemViewModel oldVm) {
                 oldVm.CancelLoading();
+                oldVm.Thumbnail = null;
             }
             control.Tag = control.DataContext as PictureItemViewModel;
         }

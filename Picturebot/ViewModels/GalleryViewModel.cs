@@ -161,7 +161,9 @@ public partial class GalleryViewModel : ViewModelBase,
             if (picVm != null) {
                 picVm.ProcessingState = ProcessingState.Completed;
                 picVm.Dispose();
-                _ = picVm.LoadThumbnailAsync(250);
+                if (picVm.IsVisible) {
+                    _ = picVm.LoadThumbnailAsync(320);
+                }
             }
         }
     }
@@ -1105,9 +1107,6 @@ public partial class GalleryViewModel : ViewModelBase,
                 initialPicsList.Add(picVm);
             }
 
-            // Load thumbnails in parallel on background thread
-            await Task.WhenAll(initialPicsList.Select(picVm => picVm.LoadThumbnailAsync(320)));
-
             // Filter
             var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
             var initialFilterStatuses = new List<CurationStatus>();
@@ -1214,11 +1213,6 @@ public partial class GalleryViewModel : ViewModelBase,
                     picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     chunkVms.Add(picVm);
                 }
-
-                // Load thumbnails in parallel background threads with capped concurrency
-                await Parallel.ForEachAsync(chunkVms, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (picVm, token) => {
-                    await picVm.LoadThumbnailAsync(320);
-                });
 
                 // Post chunk to UI thread and merge into existing collections
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
