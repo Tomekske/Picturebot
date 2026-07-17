@@ -51,6 +51,9 @@ public partial class GalleryViewModel : ViewModelBase,
     private int _pendingAutoFlagBatchCount;
 
     [ObservableProperty]
+    private bool _isLoading;
+
+    [ObservableProperty]
     private ObservableCollection<CurationStatus> _filterStatuses = new();
 
     [ObservableProperty]
@@ -157,7 +160,10 @@ public partial class GalleryViewModel : ViewModelBase,
             var picVm = PicturesList.FirstOrDefault(p => p.Name == name);
             if (picVm != null) {
                 picVm.ProcessingState = ProcessingState.Completed;
-                _ = picVm.LoadThumbnailAsync(250);
+                picVm.Dispose();
+                if (picVm.IsVisible) {
+                    _ = picVm.LoadThumbnailAsync(320);
+                }
             }
         }
     }
@@ -339,6 +345,7 @@ public partial class GalleryViewModel : ViewModelBase,
         var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
             .OrderBy(g => g.Key);
 
+        var groupVms = new List<PictureGroupViewModel>();
         foreach (var group in groups) {
             var dateStr = group.Key.ToString("yyyy-MM-dd");
             var count = group.Count();
@@ -354,8 +361,10 @@ public partial class GalleryViewModel : ViewModelBase,
 
             var groupVm = new PictureGroupViewModel(dateStr, header,
                 new ObservableCollection<PictureItemViewModel>(sortedGroup));
-            GroupedPictures.Add(groupVm);
+            groupVms.Add(groupVm);
         }
+
+        GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVms);
     }
 
     private Orientation GetOrientation(Picture p) {
@@ -422,6 +431,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         var groupIndex = 1;
+        var groupVms = new List<PictureGroupViewModel>();
 
         // 4. Process ALL groups as burst groups (even singletons)
         foreach (var group in burstGroups) {
@@ -446,9 +456,11 @@ public partial class GalleryViewModel : ViewModelBase,
             groupIndex++;
 
             // Pass 'true' to ensure the UI treats every single one as a burst group
-            GroupedPictures.Add(new PictureGroupViewModel(header, header,
+            groupVms.Add(new PictureGroupViewModel(header, header,
                 new ObservableCollection<PictureItemViewModel>(group), true));
         }
+
+        GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVms);
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteGroupSimilar))]
@@ -730,14 +742,17 @@ public partial class GalleryViewModel : ViewModelBase,
         FolderItems.Clear();
         AlbumItems.Clear();
 
-        foreach (var picVm in _allPictures) {
-            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
-            picVm.Dispose();
-        }
-
+        var oldPictures = _allPictures.ToList();
         _allPictures.Clear();
         PicturesList.Clear();
         GroupedPictures.Clear();
+
+        _ = Task.Run(() => {
+            foreach (var picVm in oldPictures) {
+                picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                picVm.Dispose();
+            }
+        });
 
         IsShowingAlbum = currentNode is Album;
         CanPlayCarousel = IsShowingAlbum && children?.OfType<Picture>().Any() == true;
@@ -752,9 +767,9 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 foreach (var pic in pics) {
                     var picVm = new PictureItemViewModel(pic);
+                    picVm.ResolveThumbnailPath();
                     picVm.PropertyChanged += OnPictureItemPropertyChanged;
                     _allPictures.Add(picVm);
-                    _ = picVm.LoadThumbnailAsync(250);
                 }
 
                 bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
@@ -850,10 +865,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
         var filteredList = filtered.ToList();
 
-        PicturesList.Clear();
-        foreach (var pic in filteredList) {
-            PicturesList.Add(pic);
-        }
+        PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
 
         if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
             SelectedPicture = PicturesList.FirstOrDefault();
@@ -1028,28 +1040,286 @@ public partial class GalleryViewModel : ViewModelBase,
 
     private FileSystemWatcher? _xmpWatcher;
 
-    private async Task LoadAlbumAsync(Album album) {
+    private Task LoadAlbumAsync(Album album) {
         SetupXmpWatcher(album);
 
-        // Find children
-        var children = await _nodeService.FindChildrenAsync(album.Id);
-        var pics = children.OfType<Picture>().ToList();
+        _currentNode = album;
+        IsBurstViewEnabled = false;
+        IsLibraryRoot = false;
 
-        // Populate paths
-        foreach (var pic in pics) {
-            pic.Parent = album;
-        }
-        _pathService.PopulatePaths(pics);
+        // Clear UI collections immediately to indicate loading
+        Items.Clear();
+        FolderItems.Clear();
+        AlbumItems.Clear();
 
-        // Load XMP metadata in background thread
-        await Task.Run(async () => {
-            foreach (var pic in pics) {
-                await _xmpService.LoadMetadataAsync(pic);
+        // 1. Offload disposal of old view models to a background thread to prevent blocking the UI
+        var oldPictures = _allPictures.ToList();
+        _allPictures.Clear();
+        PicturesList.Clear();
+        GroupedPictures.Clear();
+
+        _ = Task.Run(() => {
+            foreach (var picVm in oldPictures) {
+                picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                picVm.Dispose();
             }
         });
 
-        // Update the gallery items on UI thread
-        UpdateGalleryItems(album, children);
+        IsShowingAlbum = true;
+        CanPlayCarousel = false;
+        IsLoading = true;
+
+        UpdateBreadcrumbs(album);
+
+        // 2. Offload the entire load process (database query, Stage 1 loading, Stage 2 loading) to background
+        _ = Task.Run(async () => {
+            var children = await _nodeService.FindChildrenAsync(album.Id);
+            var pics = children.OfType<Picture>().ToList();
+
+            if (pics.Count == 0) {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                    if (_currentNode?.Id == album.Id) {
+                        IsLoading = false;
+                    }
+                });
+                return;
+            }
+
+            // --- STAGE 1: Load first batch in parallel background task ---
+            var initialBatchSize = Math.Min(24, pics.Count);
+            var firstBatchPics = pics.Take(initialBatchSize).ToList();
+
+            // Populate paths
+            foreach (var pic in firstBatchPics) {
+                pic.Parent = album;
+            }
+            _pathService.PopulatePaths(firstBatchPics);
+
+            // Load XMP metadata in parallel first
+            await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
+
+            // Create ViewModels
+            var initialPicsList = new List<PictureItemViewModel>();
+            foreach (var pic in firstBatchPics) {
+                var picVm = new PictureItemViewModel(pic);
+                picVm.ResolveThumbnailPath();
+                picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                initialPicsList.Add(picVm);
+            }
+
+            // Filter
+            var hasPickedInitial = initialPicsList.Any(p => p.CurationStatus == CurationStatus.Flagged);
+            var initialFilterStatuses = new List<CurationStatus>();
+            if (hasPickedInitial) {
+                initialFilterStatuses.Add(CurationStatus.Flagged);
+            }
+
+            var filteredInitial = initialPicsList.AsEnumerable();
+            if (initialFilterStatuses.Any()) {
+                filteredInitial = filteredInitial.Where(p => initialFilterStatuses.Contains(p.CurationStatus));
+            }
+            var filteredListInitial = filteredInitial.ToList();
+
+            // Date Grouping
+            var groupVmsInitial = new List<PictureGroupViewModel>();
+            var groupsInitial = filteredListInitial.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
+            foreach (var group in groupsInitial) {
+                var dateStr = group.Key.ToString("yyyy-MM-dd");
+                var header = $"{dateStr} ({group.Count()})";
+                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                
+                foreach (var pic in sortedGroup) {
+                    pic.GroupName = null;
+                    pic.BurstIndex = 0;
+                    pic.BurstPosition = 0;
+                    pic.BurstTotal = 0;
+                }
+
+                var groupVm = new PictureGroupViewModel(dateStr, header,
+                    new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                groupVmsInitial.Add(groupVm);
+            }
+
+            // Post initial batch to UI thread
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                if (_currentNode?.Id != album.Id) {
+                    // Switch occurred, discard view models
+                    foreach (var picVm in initialPicsList) {
+                        picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                        picVm.Dispose();
+                    }
+                    return;
+                }
+
+                _allPictures.AddRange(initialPicsList);
+                PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListInitial);
+                GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsInitial);
+
+                FilterStatuses.Clear();
+                if (hasPickedInitial) {
+                    FilterStatuses.Add(CurationStatus.Flagged);
+                } else {
+                    FilterRatings.Clear();
+                    FilterColors.Clear();
+                }
+
+                CanPlayCarousel = pics.Any();
+                IsLoading = pics.Count > initialBatchSize;
+
+                NotifyFilterStates();
+            });
+
+            if (pics.Count <= initialBatchSize) {
+                return;
+            }
+
+            // Introduce breathing room delay so the user sees the first batch fade in smoothly
+            await Task.Delay(250);
+
+            // --- STAGE 2: Load the remaining images in the background in chunks ---
+            var remainingPics = pics.Skip(initialBatchSize).ToList();
+            int chunkSize = 32; // Process 32 pictures at a time with metadata and thumbnails pre-loaded
+
+            for (int i = 0; i < remainingPics.Count; i += chunkSize) {
+                // Check if current node changed during processing
+                bool shouldCancel = false;
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                    if (_currentNode?.Id != album.Id) {
+                        shouldCancel = true;
+                    }
+                });
+                if (shouldCancel) {
+                    break;
+                }
+
+                var chunk = remainingPics.Skip(i).Take(chunkSize).ToList();
+
+                // Populate paths
+                foreach (var pic in chunk) {
+                    pic.Parent = album;
+                }
+                _pathService.PopulatePaths(chunk);
+
+                // Load XMP metadata in parallel background threads with capped concurrency
+                await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
+                    await _xmpService.LoadMetadataAsync(pic);
+                });
+
+                // Create ViewModels
+                var chunkVms = new List<PictureItemViewModel>();
+                foreach (var pic in chunk) {
+                    var picVm = new PictureItemViewModel(pic);
+                    picVm.ResolveThumbnailPath();
+                    picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                    chunkVms.Add(picVm);
+                }
+
+                // Post chunk to UI thread and merge into existing collections
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                    if (_currentNode?.Id != album.Id) {
+                        // Switch occurred, discard chunk ViewModels
+                        foreach (var picVm in chunkVms) {
+                            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                            picVm.Dispose();
+                        }
+                        return;
+                    }
+
+                    _allPictures.AddRange(chunkVms);
+
+                    // Re-apply filters on chunk
+                    var filteredChunk = chunkVms.AsEnumerable();
+                    if (FilterStatuses.Any()) {
+                        filteredChunk = filteredChunk.Where(p => FilterStatuses.Contains(p.CurationStatus));
+                    }
+                    if (FilterRatings.Any()) {
+                        filteredChunk = filteredChunk.Where(p => FilterRatings.Contains(p.Rating));
+                    }
+                    if (FilterColors.Any()) {
+                        filteredChunk = filteredChunk.Where(p => FilterColors.Contains(p.ColorLabel));
+                    }
+                    var filteredChunkList = filteredChunk.ToList();
+
+                    // Add to flat PicturesList
+                    foreach (var picVm in filteredChunkList) {
+                        PicturesList.Add(picVm);
+                    }
+
+                    // Add to GroupedPictures
+                    var groups = filteredChunkList.GroupBy(p => p.Picture.CapturedAt.Date);
+                    foreach (var group in groups) {
+                        var dateStr = group.Key.ToString("yyyy-MM-dd");
+                        
+                        // Find existing group
+                        var existingGroup = GroupedPictures.FirstOrDefault(g => g.Date == dateStr);
+                        if (existingGroup != null) {
+                            // Merge into existing group by appending (since pics are already sorted chronologically)
+                            foreach (var pic in group) {
+                                pic.GroupName = null;
+                                pic.BurstIndex = 0;
+                                pic.BurstPosition = 0;
+                                pic.BurstTotal = 0;
+                                existingGroup.Pictures.Add(pic);
+                            }
+                            existingGroup.Header = $"{dateStr} ({existingGroup.Pictures.Count})";
+                        } else {
+                            // Create new group
+                            var header = $"{dateStr} ({group.Count()})";
+                            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                            foreach (var pic in sortedGroup) {
+                                pic.GroupName = null;
+                                pic.BurstIndex = 0;
+                                pic.BurstPosition = 0;
+                                pic.BurstTotal = 0;
+                            }
+                            var groupVm = new PictureGroupViewModel(dateStr, header,
+                                new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                            
+                            // Insert group in sorted order
+                            int insertIdx = 0;
+                            while (insertIdx < GroupedPictures.Count && 
+                                   string.Compare(GroupedPictures[insertIdx].Date, dateStr, StringComparison.Ordinal) < 0) {
+                                insertIdx++;
+                            }
+                            GroupedPictures.Insert(insertIdx, groupVm);
+                        }
+                    }
+                });
+
+                // Yield control to UI thread to process renders/events
+                await Task.Delay(35);
+            }
+
+            // Set IsLoading to false after all chunks are processed
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                if (_currentNode?.Id == album.Id) {
+                    IsLoading = false;
+                    NotifyFilterStates();
+                }
+            });
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private void NotifyFilterStates() {
+        OnPropertyChanged(nameof(IsFlaggedFilterActive));
+        OnPropertyChanged(nameof(IsUnflaggedFilterActive));
+        OnPropertyChanged(nameof(IsRejectedFilterActive));
+        OnPropertyChanged(nameof(IsOneStarFilterActive));
+        OnPropertyChanged(nameof(IsTwoStarFilterActive));
+        OnPropertyChanged(nameof(IsThreeStarFilterActive));
+        OnPropertyChanged(nameof(IsFourStarFilterActive));
+        OnPropertyChanged(nameof(IsFiveStarFilterActive));
+        OnPropertyChanged(nameof(IsZeroStarFilterActive));
+        OnPropertyChanged(nameof(IsNoneColorFilterActive));
+        OnPropertyChanged(nameof(IsRedColorFilterActive));
+        OnPropertyChanged(nameof(IsOrangeColorFilterActive));
+        OnPropertyChanged(nameof(IsYellowColorFilterActive));
+        OnPropertyChanged(nameof(IsGreenColorFilterActive));
+        OnPropertyChanged(nameof(IsBlueColorFilterActive));
+        OnPropertyChanged(nameof(IsPinkColorFilterActive));
+        OnPropertyChanged(nameof(IsPurpleColorFilterActive));
     }
 
     private void SetupXmpWatcher(Album album) {

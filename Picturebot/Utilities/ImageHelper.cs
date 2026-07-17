@@ -31,4 +31,15 @@ public static class ImageHelper {
             return new Bitmap(ms);
         });
     }
+
+    /// <summary>
+    ///     Loads an image directly into an Avalonia Bitmap via a FileStream on a background thread.
+    ///     Use this for pre-oriented and pre-downsampled images (like thumbnails) to avoid ImageSharp overhead.
+    /// </summary>
+    public static async Task<Bitmap> LoadDirectAsync(string path) {
+        return await Task.Run(() => {
+            using var stream = File.OpenRead(path);
+            return new Bitmap(stream);
+        });
+    }
 }

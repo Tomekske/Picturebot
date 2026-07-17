@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Database.Domain.Entities;
 using Domain.Enums;
 using Picturebot.Utilities;
+using Picturebot.Services;
 using Serilog;
 
 namespace Picturebot.ViewModels;
@@ -57,31 +58,71 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public Picture Picture { get; }
 
+    public bool IsVisible { get; set; }
+
     public string Name => Picture.Name;
 
-    public void Dispose() {
+    public void CancelLoading() {
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
-        Thumbnail?.Dispose();
+    }
+
+    public void Dispose() {
+        CancelLoading();
         Thumbnail = null;
     }
 
-    public async Task LoadThumbnailAsync(int targetHeight) {
-        if (string.IsNullOrEmpty(Picture.SubFolder?.Thumbnail) || !File.Exists(Picture.SubFolder.Thumbnail)) {
+    private string? _resolvedThumbnailPath;
+
+    public void ResolveThumbnailPath() {
+        if (_resolvedThumbnailPath != null) return;
+
+        var path = Picture.SubFolder?.Thumbnail;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+            _resolvedThumbnailPath = path;
             return;
+        }
+        path = Picture.SubFolder?.Raw;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+            _resolvedThumbnailPath = path;
+            return;
+        }
+        path = Picture.SubFolder?.Preview;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+            _resolvedThumbnailPath = path;
+            return;
+        }
+    }
+
+    public async Task LoadThumbnailAsync(int targetHeight) {
+        if (Thumbnail != null) {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_resolvedThumbnailPath)) {
+            // Resolve on background thread pool if not already pre-resolved
+            await Task.Run(() => ResolveThumbnailPath()).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(_resolvedThumbnailPath)) {
+                return;
+            }
         }
 
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         try {
-            var path = Picture.SubFolder.Thumbnail;
-            Thumbnail = await ImageHelper.LoadAndOrientAsync(path, targetHeight);
+            var priority = IsVisible ? 0 : 1;
+            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(_resolvedThumbnailPath, targetHeight, priority, token);
+            
+            if (!token.IsCancellationRequested && bitmap != null) {
+                Thumbnail = bitmap;
+            }
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {
-            Log.Error(ex, "Failed to load thumbnail for {Name} at {Path}", Name, Picture.SubFolder.Thumbnail);
+            Log.Error(ex, "Failed to load thumbnail for {Name} via registry", Name);
         }
     }
 }

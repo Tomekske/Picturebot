@@ -1,5 +1,8 @@
-﻿using Avalonia.Controls;
+using System;
+using System.Collections.Generic;
+using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Picturebot.ViewModels;
 
 namespace Picturebot.Views;
@@ -7,11 +10,20 @@ namespace Picturebot.Views;
 public partial class GalleryView : UserControl {
     public GalleryView() {
         InitializeComponent();
+        SetupScrollInterception();
     }
 
     public GalleryView(GalleryViewModel viewModel) {
         InitializeComponent();
         DataContext = viewModel;
+        SetupScrollInterception();
+    }
+
+    private void SetupScrollInterception() {
+        var groupedPicturesItemsControl = this.FindControl<ItemsControl>("GroupedPicturesItemsControl");
+        groupedPicturesItemsControl?.AddHandler(InputElement.PointerWheelChangedEvent, (sender, e) => {
+            e.Handled = false;
+        }, RoutingStrategies.Bubble, true);
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
@@ -29,6 +41,30 @@ public partial class GalleryView : UserControl {
             if (DataContext is GalleryViewModel vm) {
                 vm.SelectedPicture = pic;
             }
+        }
+    }
+
+    private void OnImageEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e) {
+        if (sender is Control control && control.DataContext is PictureItemViewModel vm) {
+            var isVisible = e.EffectiveViewport.Width > 0 && e.EffectiveViewport.Height > 0;
+            vm.IsVisible = isVisible;
+
+            if (isVisible) {
+                _ = vm.LoadThumbnailAsync(320);
+            } else {
+                vm.CancelLoading();
+                vm.Thumbnail = null;
+            }
+        }
+    }
+
+    private void OnImageDataContextChanged(object? sender, EventArgs e) {
+        if (sender is Control control) {
+            if (control.Tag is PictureItemViewModel oldVm) {
+                oldVm.CancelLoading();
+                oldVm.Thumbnail = null;
+            }
+            control.Tag = control.DataContext as PictureItemViewModel;
         }
     }
 }
