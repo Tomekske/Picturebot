@@ -529,7 +529,9 @@ public partial class GalleryViewModel : ViewModelBase,
             var children = await _nodeService.FindChildrenAsync(album.Id);
             var pics = children.OfType<Picture>().ToList();
             foreach (var pic in pics) {
-                pic.Parent = album;
+                if (pic.Parent == null) {
+                    pic.Parent = album;
+                }
             }
             _pathService.PopulatePaths(pics);
 
@@ -1091,7 +1093,9 @@ public partial class GalleryViewModel : ViewModelBase,
 
             // Populate paths
             foreach (var pic in firstBatchPics) {
-                pic.Parent = album;
+                if (pic.Parent == null) {
+                    pic.Parent = album;
+                }
             }
             _pathService.PopulatePaths(firstBatchPics);
 
@@ -1196,7 +1200,9 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 // Populate paths
                 foreach (var pic in chunk) {
-                    pic.Parent = album;
+                    if (pic.Parent == null) {
+                        pic.Parent = album;
+                    }
                 }
                 _pathService.PopulatePaths(chunk);
 
