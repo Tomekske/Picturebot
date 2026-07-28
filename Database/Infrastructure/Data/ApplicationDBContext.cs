@@ -79,7 +79,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 GreenLabelName = "Green",
                 BlueLabelName = "Blue",
                 PinkLabelName = "Pink",
-                PurpleLabelName = "Purple"
+                PurpleLabelName = "Purple",
+                RedLabelShortcut = "Ctrl+NumPad1",
+                OrangeLabelShortcut = "Ctrl+NumPad2",
+                YellowLabelShortcut = "Ctrl+NumPad3",
+                GreenLabelShortcut = "Ctrl+NumPad4",
+                BlueLabelShortcut = "Ctrl+NumPad5",
+                PinkLabelShortcut = "Ctrl+NumPad6",
+                PurpleLabelShortcut = "Ctrl+NumPad7",
+                NoneLabelShortcut = "Ctrl+NumPad0"
             }
         );
 

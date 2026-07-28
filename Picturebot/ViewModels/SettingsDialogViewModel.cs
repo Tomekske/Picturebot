@@ -56,6 +56,30 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _purpleLabelName = "Purple";
 
     [ObservableProperty]
+    private string _redLabelShortcut = "Ctrl+NumPad1";
+
+    [ObservableProperty]
+    private string _orangeLabelShortcut = "Ctrl+NumPad2";
+
+    [ObservableProperty]
+    private string _yellowLabelShortcut = "Ctrl+NumPad3";
+
+    [ObservableProperty]
+    private string _greenLabelShortcut = "Ctrl+NumPad4";
+
+    [ObservableProperty]
+    private string _blueLabelShortcut = "Ctrl+NumPad5";
+
+    [ObservableProperty]
+    private string _pinkLabelShortcut = "Ctrl+NumPad6";
+
+    [ObservableProperty]
+    private string _purpleLabelShortcut = "Ctrl+NumPad7";
+
+    [ObservableProperty]
+    private string _noneLabelShortcut = "Ctrl+NumPad0";
+
+    [ObservableProperty]
     private string _editFolderPath = string.Empty;
 
     [ObservableProperty]
@@ -99,6 +123,14 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         BlueLabelName = settings.BlueLabelName;
         PinkLabelName = settings.PinkLabelName;
         PurpleLabelName = settings.PurpleLabelName;
+        RedLabelShortcut = settings.RedLabelShortcut ?? "Ctrl+NumPad1";
+        OrangeLabelShortcut = settings.OrangeLabelShortcut ?? "Ctrl+NumPad2";
+        YellowLabelShortcut = settings.YellowLabelShortcut ?? "Ctrl+NumPad3";
+        GreenLabelShortcut = settings.GreenLabelShortcut ?? "Ctrl+NumPad4";
+        BlueLabelShortcut = settings.BlueLabelShortcut ?? "Ctrl+NumPad5";
+        PinkLabelShortcut = settings.PinkLabelShortcut ?? "Ctrl+NumPad6";
+        PurpleLabelShortcut = settings.PurpleLabelShortcut ?? "Ctrl+NumPad7";
+        NoneLabelShortcut = settings.NoneLabelShortcut ?? "Ctrl+NumPad0";
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
@@ -198,6 +230,14 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             BlueLabelName = BlueLabelName,
             PinkLabelName = PinkLabelName,
             PurpleLabelName = PurpleLabelName,
+            RedLabelShortcut = RedLabelShortcut,
+            OrangeLabelShortcut = OrangeLabelShortcut,
+            YellowLabelShortcut = YellowLabelShortcut,
+            GreenLabelShortcut = GreenLabelShortcut,
+            BlueLabelShortcut = BlueLabelShortcut,
+            PinkLabelShortcut = PinkLabelShortcut,
+            PurpleLabelShortcut = PurpleLabelShortcut,
+            NoneLabelShortcut = NoneLabelShortcut,
             EditFolderPath = EditFolderPath,
             PrintFolderPath = PrintFolderPath,
             ThemeMode = ThemeIndex switch {

@@ -40,40 +40,6 @@
         <KeyBinding Gesture="NumPad4" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="4" />
         <KeyBinding Gesture="NumPad5" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="5" />
         <KeyBinding Gesture="NumPad0" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="0" />
-
-        <KeyBinding Gesture="Ctrl+D1" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Red}" />
-        <KeyBinding Gesture="Ctrl+D2" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Orange}" />
-        <KeyBinding Gesture="Ctrl+D3" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Yellow}" />
-        <KeyBinding Gesture="Ctrl+D4" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Green}" />
-        <KeyBinding Gesture="Ctrl+D5" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Blue}" />
-        <KeyBinding Gesture="Ctrl+D6" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Pink}" />
-        <KeyBinding Gesture="Ctrl+D7" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Purple}" />
-        <KeyBinding Gesture="Ctrl+D0" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.None}" />
-
-        <KeyBinding Gesture="Ctrl+NumPad1" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Red}" />
-        <KeyBinding Gesture="Ctrl+NumPad2" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Orange}" />
-        <KeyBinding Gesture="Ctrl+NumPad3" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Yellow}" />
-        <KeyBinding Gesture="Ctrl+NumPad4" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Green}" />
-        <KeyBinding Gesture="Ctrl+NumPad5" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Blue}" />
-        <KeyBinding Gesture="Ctrl+NumPad6" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Pink}" />
-        <KeyBinding Gesture="Ctrl+NumPad7" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.Purple}" />
-        <KeyBinding Gesture="Ctrl+NumPad0" Command="{Binding GalleryVM.SetColorLabelCommand}"
-                    CommandParameter="{x:Static enums:ColorLabel.None}" />
     </suki:SukiWindow.KeyBindings>
 
     <suki:SukiWindow.Hosts>

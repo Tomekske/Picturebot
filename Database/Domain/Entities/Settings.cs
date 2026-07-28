@@ -53,6 +53,15 @@ public class Settings {
     public string PinkLabelName { get; set; } = "Pink";
     public string PurpleLabelName { get; set; } = "Purple";
 
+    public string RedLabelShortcut { get; set; } = "Ctrl+NumPad1";
+    public string OrangeLabelShortcut { get; set; } = "Ctrl+NumPad2";
+    public string YellowLabelShortcut { get; set; } = "Ctrl+NumPad3";
+    public string GreenLabelShortcut { get; set; } = "Ctrl+NumPad4";
+    public string BlueLabelShortcut { get; set; } = "Ctrl+NumPad5";
+    public string PinkLabelShortcut { get; set; } = "Ctrl+NumPad6";
+    public string PurpleLabelShortcut { get; set; } = "Ctrl+NumPad7";
+    public string NoneLabelShortcut { get; set; } = "Ctrl+NumPad0";
+
     /// <summary>
     ///     The destination folder for files copied for editing.
     /// </summary>

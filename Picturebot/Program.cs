@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.IO.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -107,6 +108,22 @@ internal sealed class Program {
             using (var scope = App.Services.CreateScope()) {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 context.Database.Migrate(); // Use sync Migrate() if possible, or wait
+
+                var settings = context.Settings.FirstOrDefault();
+                if (settings != null) {
+                    bool modified = false;
+                    if (settings.RedLabelShortcut == "Ctrl+D1") { settings.RedLabelShortcut = "Ctrl+NumPad1"; modified = true; }
+                    if (settings.OrangeLabelShortcut == "Ctrl+D2") { settings.OrangeLabelShortcut = "Ctrl+NumPad2"; modified = true; }
+                    if (settings.YellowLabelShortcut == "Ctrl+D3") { settings.YellowLabelShortcut = "Ctrl+NumPad3"; modified = true; }
+                    if (settings.GreenLabelShortcut == "Ctrl+D4") { settings.GreenLabelShortcut = "Ctrl+NumPad4"; modified = true; }
+                    if (settings.BlueLabelShortcut == "Ctrl+D5") { settings.BlueLabelShortcut = "Ctrl+NumPad5"; modified = true; }
+                    if (settings.PinkLabelShortcut == "Ctrl+D6") { settings.PinkLabelShortcut = "Ctrl+NumPad6"; modified = true; }
+                    if (settings.PurpleLabelShortcut == "Ctrl+D7") { settings.PurpleLabelShortcut = "Ctrl+NumPad7"; modified = true; }
+                    if (settings.NoneLabelShortcut == "Ctrl+D0") { settings.NoneLabelShortcut = "Ctrl+NumPad0"; modified = true; }
+                    if (modified) {
+                        context.SaveChanges();
+                    }
+                }
             }
 
             Log.Information("Database migrations applied successfully");
