@@ -681,6 +681,9 @@ public partial class GalleryViewModel : ViewModelBase,
                     if (nodeToDelete is Folder folder) {
                         await _folderService.DeleteAsync(folder);
                     } else if (nodeToDelete is Album album) {
+                        if (_currentNode?.Id == album.Id) {
+                            TearDownXmpWatcher();
+                        }
                         await _albumService.DeleteAsync(album);
                     }
 
