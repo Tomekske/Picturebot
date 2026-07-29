@@ -390,20 +390,12 @@
                                         
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Toggle Fullscreen Mode" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Fullscreen" Text="{Binding FullscreenShortcut, Mode=TwoWay}" Watermark="Fullscreen" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="Fullscreen:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Fullscreen" Text="{Binding FullscreenShortcut, Mode=TwoWay}" Watermark="Fullscreen" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Open File in Explorer" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="OpenInExplorer" Text="{Binding OpenInExplorerShortcut, Mode=TwoWay}" Watermark="Open in Explorer" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="Explorer:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="OpenInExplorer" Text="{Binding OpenInExplorerShortcut, Mode=TwoWay}" Watermark="Open in Explorer" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
                                     </StackPanel>
 
@@ -413,74 +405,42 @@
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Red Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Red" Text="{Binding RedLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Red" Text="{Binding RedLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Orange Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Orange" Text="{Binding OrangeLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Orange" Text="{Binding OrangeLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Yellow Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Yellow" Text="{Binding YellowLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#FDD835" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Yellow" Text="{Binding YellowLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Green Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Green" Text="{Binding GreenLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Green" Text="{Binding GreenLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Blue Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Blue" Text="{Binding BlueLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Blue" Text="{Binding BlueLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Pink Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Pink" Text="{Binding PinkLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#F06292" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Pink" Text="{Binding PinkLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Assign Purple Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Purple" Text="{Binding PurpleLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Purple" Text="{Binding PurpleLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Clear Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="None" Text="{Binding NoneLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <material:MaterialIcon Kind="LabelOffOutline" Foreground="Gray" Width="12" Height="12" Margin="10,0,0,0" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="None" Text="{Binding NoneLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
                                     </StackPanel>
 
@@ -490,56 +450,32 @@
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Set Star Rating to 1" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Rating1" Text="{Binding Rating1Shortcut, Mode=TwoWay}" Watermark="1 Star" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="1 Star:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Rating1" Text="{Binding Rating1Shortcut, Mode=TwoWay}" Watermark="1 Star" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Set Star Rating to 2" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Rating2" Text="{Binding Rating2Shortcut, Mode=TwoWay}" Watermark="2 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="2 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Rating2" Text="{Binding Rating2Shortcut, Mode=TwoWay}" Watermark="2 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Set Star Rating to 3" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Rating3" Text="{Binding Rating3Shortcut, Mode=TwoWay}" Watermark="3 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="3 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Rating3" Text="{Binding Rating3Shortcut, Mode=TwoWay}" Watermark="3 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Set Star Rating to 4" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Rating4" Text="{Binding Rating4Shortcut, Mode=TwoWay}" Watermark="4 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="4 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Rating4" Text="{Binding Rating4Shortcut, Mode=TwoWay}" Watermark="4 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Set Star Rating to 5" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Rating5" Text="{Binding Rating5Shortcut, Mode=TwoWay}" Watermark="5 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="5 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Rating5" Text="{Binding Rating5Shortcut, Mode=TwoWay}" Watermark="5 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Clear Star Rating" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="Rating0" Text="{Binding Rating0Shortcut, Mode=TwoWay}" Watermark="0 Stars / None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="0 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="Rating0" Text="{Binding Rating0Shortcut, Mode=TwoWay}" Watermark="0 Stars / None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
                                     </StackPanel>
 
@@ -549,29 +485,17 @@
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Mark Image as Picked" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="CurationPicked" Text="{Binding CurationPickedShortcut, Mode=TwoWay}" Watermark="Picked" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="Picked:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="CurationPicked" Text="{Binding CurationPickedShortcut, Mode=TwoWay}" Watermark="Picked" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Mark Image as Rejected" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="CurationRejected" Text="{Binding CurationRejectedShortcut, Mode=TwoWay}" Watermark="Rejected" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="Rejected:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="CurationRejected" Text="{Binding CurationRejectedShortcut, Mode=TwoWay}" Watermark="Rejected" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
 
                                         <Grid ColumnDefinitions="*, 350" Height="40">
                                             <TextBlock Text="Set Curation Status to Neutral" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
-                                            <TextBox Grid.Column="1" Tag="CurationNeutral" Text="{Binding CurationNeutralShortcut, Mode=TwoWay}" Watermark="Neutral" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center">
-                                                <TextBox.InnerLeftContent>
-                                                    <TextBlock Text="Neutral:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="#AAAAAA" />
-                                                </TextBox.InnerLeftContent>
-                                            </TextBox>
+                                            <TextBox Grid.Column="1" Tag="CurationNeutral" Text="{Binding CurationNeutralShortcut, Mode=TwoWay}" Watermark="Neutral" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
                                     </StackPanel>
                                 </StackPanel>
