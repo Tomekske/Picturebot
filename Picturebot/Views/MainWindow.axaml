@@ -11,9 +11,6 @@
                  Width="1200" Height="800">
 
     <suki:SukiWindow.KeyBindings>
-        <KeyBinding Gesture="F" Command="{Binding GalleryVM.PlayCarouselCommand}" />
-        <KeyBinding Gesture="O" Command="{Binding GalleryVM.OpenInExplorerCommand}" />
-        
         <KeyBinding Gesture="Shift+P" Command="{Binding GalleryVM.ShowPickedOnlyCommand}" />
         <KeyBinding Gesture="Shift+R" Command="{Binding GalleryVM.ClearAllFiltersCommand}" />
 
@@ -26,20 +23,6 @@
 
         <KeyBinding Gesture="Ctrl+E" Command="{Binding GalleryVM.CopyToEditCommand}" />
         <KeyBinding Gesture="Shift+E" Command="{Binding GalleryVM.CopyToPrintCommand}" />
-
-        <KeyBinding Gesture="D1" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="1" />
-        <KeyBinding Gesture="D2" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="2" />
-        <KeyBinding Gesture="D3" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="3" />
-        <KeyBinding Gesture="D4" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="4" />
-        <KeyBinding Gesture="D5" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="5" />
-        <KeyBinding Gesture="D0" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="0" />
-
-        <KeyBinding Gesture="NumPad1" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="1" />
-        <KeyBinding Gesture="NumPad2" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="2" />
-        <KeyBinding Gesture="NumPad3" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="3" />
-        <KeyBinding Gesture="NumPad4" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="4" />
-        <KeyBinding Gesture="NumPad5" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="5" />
-        <KeyBinding Gesture="NumPad0" Command="{Binding GalleryVM.SetRatingCommand}" CommandParameter="0" />
     </suki:SukiWindow.KeyBindings>
 
     <suki:SukiWindow.Hosts>

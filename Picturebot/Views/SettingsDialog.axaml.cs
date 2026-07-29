@@ -62,6 +62,14 @@ public partial class SettingsDialog : UserControl {
             case "Pink": vm.PinkLabelShortcut = shortcutText; break;
             case "Purple": vm.PurpleLabelShortcut = shortcutText; break;
             case "None": vm.NoneLabelShortcut = shortcutText; break;
+            case "Fullscreen": vm.FullscreenShortcut = shortcutText; break;
+            case "OpenInExplorer": vm.OpenInExplorerShortcut = shortcutText; break;
+            case "Rating0": vm.Rating0Shortcut = shortcutText; break;
+            case "Rating1": vm.Rating1Shortcut = shortcutText; break;
+            case "Rating2": vm.Rating2Shortcut = shortcutText; break;
+            case "Rating3": vm.Rating3Shortcut = shortcutText; break;
+            case "Rating4": vm.Rating4Shortcut = shortcutText; break;
+            case "Rating5": vm.Rating5Shortcut = shortcutText; break;
         }
     }
 }

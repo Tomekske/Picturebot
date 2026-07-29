@@ -26,10 +26,19 @@ public partial class CarouselWindow : Window {
             }
 
             if (gesture.KeyModifiers == e.KeyModifiers) {
+                // Fallback from D0-D9 to NumPad0-NumPad9
                 if (gesture.Key >= Key.D0 && gesture.Key <= Key.D9) {
                     var offset = gesture.Key - Key.D0;
                     var equivalentNumPadKey = Key.NumPad0 + offset;
                     if (e.Key == equivalentNumPadKey) {
+                        return true;
+                    }
+                }
+                // Fallback from NumPad0-NumPad9 to D0-D9
+                if (gesture.Key >= Key.NumPad0 && gesture.Key <= Key.NumPad9) {
+                    var offset = gesture.Key - Key.NumPad0;
+                    var equivalentDKey = Key.D0 + offset;
+                    if (e.Key == equivalentDKey) {
                         return true;
                     }
                 }
@@ -95,6 +104,36 @@ public partial class CarouselWindow : Window {
                 e.Handled = true;
                 return;
             }
+            if (MatchesGesture(e, settings.Rating0Shortcut)) {
+                vm.SetRatingCommand.Execute("0");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating1Shortcut)) {
+                vm.SetRatingCommand.Execute("1");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating2Shortcut)) {
+                vm.SetRatingCommand.Execute("2");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating3Shortcut)) {
+                vm.SetRatingCommand.Execute("3");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating4Shortcut)) {
+                vm.SetRatingCommand.Execute("4");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating5Shortcut)) {
+                vm.SetRatingCommand.Execute("5");
+                e.Handled = true;
+                return;
+            }
         }
 
         Log.Debug("CarouselWindow KeyDown: {Key}", e.Key);
@@ -110,36 +149,6 @@ public partial class CarouselWindow : Window {
                 break;
             case Key.Right:
                 vm.NextCommand.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.D1:
-            case Key.NumPad1:
-                vm.SetRatingCommand.Execute("1");
-                e.Handled = true;
-                break;
-            case Key.D2:
-            case Key.NumPad2:
-                vm.SetRatingCommand.Execute("2");
-                e.Handled = true;
-                break;
-            case Key.D3:
-            case Key.NumPad3:
-                vm.SetRatingCommand.Execute("3");
-                e.Handled = true;
-                break;
-            case Key.D4:
-            case Key.NumPad4:
-                vm.SetRatingCommand.Execute("4");
-                e.Handled = true;
-                break;
-            case Key.D5:
-            case Key.NumPad5:
-                vm.SetRatingCommand.Execute("5");
-                e.Handled = true;
-                break;
-            case Key.D0:
-            case Key.NumPad0:
-                vm.SetRatingCommand.Execute("0");
                 e.Handled = true;
                 break;
             case Key.P:

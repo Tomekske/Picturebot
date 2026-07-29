@@ -58,7 +58,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
             .HasConversion<string>();
 
 
-
         modelBuilder.Entity<Picture>()
             .Property(p => p.ProcessingState)
             .HasConversion<string>();
@@ -87,7 +86,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 BlueLabelShortcut = "Ctrl+NumPad5",
                 PinkLabelShortcut = "Ctrl+NumPad6",
                 PurpleLabelShortcut = "Ctrl+NumPad7",
-                NoneLabelShortcut = "Ctrl+NumPad0"
+                NoneLabelShortcut = "Ctrl+NumPad0",
+                FullscreenShortcut = "F",
+                OpenInExplorerShortcut = "O",
+                Rating0Shortcut = "NumPad0",
+                Rating1Shortcut = "NumPad1",
+                Rating2Shortcut = "NumPad2",
+                Rating3Shortcut = "NumPad3",
+                Rating4Shortcut = "NumPad4",
+                Rating5Shortcut = "NumPad5"
             }
         );
 

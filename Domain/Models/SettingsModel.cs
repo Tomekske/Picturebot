@@ -41,6 +41,15 @@ public class SettingsModel {
     public string PurpleLabelShortcut { get; set; } = "Ctrl+NumPad7";
     public string NoneLabelShortcut { get; set; } = "Ctrl+NumPad0";
 
+    public string FullscreenShortcut { get; set; } = "F";
+    public string OpenInExplorerShortcut { get; set; } = "O";
+    public string Rating0Shortcut { get; set; } = "NumPad0";
+    public string Rating1Shortcut { get; set; } = "NumPad1";
+    public string Rating2Shortcut { get; set; } = "NumPad2";
+    public string Rating3Shortcut { get; set; } = "NumPad3";
+    public string Rating4Shortcut { get; set; } = "NumPad4";
+    public string Rating5Shortcut { get; set; } = "NumPad5";
+
     public string? EditFolderPath { get; set; }
     public string? PrintFolderPath { get; set; }
 }

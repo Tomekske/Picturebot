@@ -37,10 +37,19 @@ public partial class MainWindow : SukiWindow {
             }
 
             if (gesture.KeyModifiers == e.KeyModifiers) {
+                // Fallback from D0-D9 to NumPad0-NumPad9
                 if (gesture.Key >= Key.D0 && gesture.Key <= Key.D9) {
                     var offset = gesture.Key - Key.D0;
                     var equivalentNumPadKey = Key.NumPad0 + offset;
                     if (e.Key == equivalentNumPadKey) {
+                        return true;
+                    }
+                }
+                // Fallback from NumPad0-NumPad9 to D0-D9
+                if (gesture.Key >= Key.NumPad0 && gesture.Key <= Key.NumPad9) {
+                    var offset = gesture.Key - Key.NumPad0;
+                    var equivalentDKey = Key.D0 + offset;
+                    if (e.Key == equivalentDKey) {
                         return true;
                     }
                 }
@@ -98,6 +107,46 @@ public partial class MainWindow : SukiWindow {
             }
             if (MatchesGesture(e, settings.NoneLabelShortcut)) {
                 vm.GalleryVM.SetColorLabelCommand.Execute(ColorLabel.None);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.FullscreenShortcut)) {
+                vm.GalleryVM.PlayCarouselCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.OpenInExplorerShortcut)) {
+                vm.GalleryVM.OpenInExplorerCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating0Shortcut)) {
+                vm.GalleryVM.SetRatingCommand.Execute("0");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating1Shortcut)) {
+                vm.GalleryVM.SetRatingCommand.Execute("1");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating2Shortcut)) {
+                vm.GalleryVM.SetRatingCommand.Execute("2");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating3Shortcut)) {
+                vm.GalleryVM.SetRatingCommand.Execute("3");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating4Shortcut)) {
+                vm.GalleryVM.SetRatingCommand.Execute("4");
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.Rating5Shortcut)) {
+                vm.GalleryVM.SetRatingCommand.Execute("5");
                 e.Handled = true;
                 return;
             }
