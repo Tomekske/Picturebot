@@ -94,7 +94,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 Rating2Shortcut = "NumPad2",
                 Rating3Shortcut = "NumPad3",
                 Rating4Shortcut = "NumPad4",
-                Rating5Shortcut = "NumPad5"
+                Rating5Shortcut = "NumPad5",
+                CurationPickedShortcut = "P",
+                CurationRejectedShortcut = "X",
+                CurationNeutralShortcut = "U"
             }
         );
 

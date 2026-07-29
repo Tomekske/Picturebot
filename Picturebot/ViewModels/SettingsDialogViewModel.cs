@@ -98,6 +98,15 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _rating5Shortcut = "NumPad5";
 
     [ObservableProperty]
+    private string _curationPickedShortcut = "P";
+
+    [ObservableProperty]
+    private string _curationRejectedShortcut = "X";
+
+    [ObservableProperty]
+    private string _curationNeutralShortcut = "U";
+
+    [ObservableProperty]
     private string _redLabelName = "Red";
 
     [ObservableProperty]
@@ -182,6 +191,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         Rating3Shortcut = !string.IsNullOrWhiteSpace(settings.Rating3Shortcut) ? settings.Rating3Shortcut : "NumPad3";
         Rating4Shortcut = !string.IsNullOrWhiteSpace(settings.Rating4Shortcut) ? settings.Rating4Shortcut : "NumPad4";
         Rating5Shortcut = !string.IsNullOrWhiteSpace(settings.Rating5Shortcut) ? settings.Rating5Shortcut : "NumPad5";
+        CurationPickedShortcut = !string.IsNullOrWhiteSpace(settings.CurationPickedShortcut) ? settings.CurationPickedShortcut : "P";
+        CurationRejectedShortcut = !string.IsNullOrWhiteSpace(settings.CurationRejectedShortcut) ? settings.CurationRejectedShortcut : "X";
+        CurationNeutralShortcut = !string.IsNullOrWhiteSpace(settings.CurationNeutralShortcut) ? settings.CurationNeutralShortcut : "U";
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
@@ -297,6 +309,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             Rating3Shortcut = Rating3Shortcut,
             Rating4Shortcut = Rating4Shortcut,
             Rating5Shortcut = Rating5Shortcut,
+            CurationPickedShortcut = CurationPickedShortcut,
+            CurationRejectedShortcut = CurationRejectedShortcut,
+            CurationNeutralShortcut = CurationNeutralShortcut,
             EditFolderPath = EditFolderPath,
             PrintFolderPath = PrintFolderPath,
             ThemeMode = ThemeIndex switch {

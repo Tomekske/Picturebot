@@ -70,6 +70,9 @@ public partial class SettingsDialog : UserControl {
             case "Rating3": vm.Rating3Shortcut = shortcutText; break;
             case "Rating4": vm.Rating4Shortcut = shortcutText; break;
             case "Rating5": vm.Rating5Shortcut = shortcutText; break;
+            case "CurationPicked": vm.CurationPickedShortcut = shortcutText; break;
+            case "CurationRejected": vm.CurationRejectedShortcut = shortcutText; break;
+            case "CurationNeutral": vm.CurationNeutralShortcut = shortcutText; break;
         }
     }
 }

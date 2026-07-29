@@ -50,6 +50,10 @@ public class SettingsModel {
     public string Rating4Shortcut { get; set; } = "NumPad4";
     public string Rating5Shortcut { get; set; } = "NumPad5";
 
+    public string CurationPickedShortcut { get; set; } = "P";
+    public string CurationRejectedShortcut { get; set; } = "X";
+    public string CurationNeutralShortcut { get; set; } = "U";
+
     public string? EditFolderPath { get; set; }
     public string? PrintFolderPath { get; set; }
 }

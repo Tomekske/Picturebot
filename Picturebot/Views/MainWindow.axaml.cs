@@ -150,6 +150,21 @@ public partial class MainWindow : SukiWindow {
                 e.Handled = true;
                 return;
             }
+            if (MatchesGesture(e, settings.CurationPickedShortcut)) {
+                vm.GalleryVM.SetCurationStatusCommand.Execute(Domain.Enums.CurationStatus.Flagged);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.CurationRejectedShortcut)) {
+                vm.GalleryVM.SetCurationStatusCommand.Execute(Domain.Enums.CurationStatus.Rejected);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.CurationNeutralShortcut)) {
+                vm.GalleryVM.SetCurationStatusCommand.Execute(Domain.Enums.CurationStatus.Unflagged);
+                e.Handled = true;
+                return;
+            }
         }
         
         base.OnKeyDown(e);

@@ -14,13 +14,6 @@
         <KeyBinding Gesture="Shift+P" Command="{Binding GalleryVM.ShowPickedOnlyCommand}" />
         <KeyBinding Gesture="Shift+R" Command="{Binding GalleryVM.ClearAllFiltersCommand}" />
 
-        <KeyBinding Gesture="P" Command="{Binding GalleryVM.SetCurationStatusCommand}"
-                    CommandParameter="{x:Static enums:CurationStatus.Flagged}" />
-        <KeyBinding Gesture="X" Command="{Binding GalleryVM.SetCurationStatusCommand}"
-                    CommandParameter="{x:Static enums:CurationStatus.Rejected}" />
-        <KeyBinding Gesture="U" Command="{Binding GalleryVM.SetCurationStatusCommand}"
-                    CommandParameter="{x:Static enums:CurationStatus.Unflagged}" />
-
         <KeyBinding Gesture="Ctrl+E" Command="{Binding GalleryVM.CopyToEditCommand}" />
         <KeyBinding Gesture="Shift+E" Command="{Binding GalleryVM.CopyToPrintCommand}" />
     </suki:SukiWindow.KeyBindings>

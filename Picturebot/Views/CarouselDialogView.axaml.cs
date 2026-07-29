@@ -141,6 +141,21 @@ public partial class CarouselDialogView : UserControl {
                 e.Handled = true;
                 return;
             }
+            if (MatchesGesture(e, settings.CurationPickedShortcut)) {
+                vm.SetCurationStatusCommand.Execute(CurationStatus.Flagged);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.CurationRejectedShortcut)) {
+                vm.SetCurationStatusCommand.Execute(CurationStatus.Rejected);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.CurationNeutralShortcut)) {
+                vm.SetCurationStatusCommand.Execute(CurationStatus.Unflagged);
+                e.Handled = true;
+                return;
+            }
         }
 
         Log.Debug("CarouselDialogView KeyDown: {Key}", e.Key);
@@ -156,18 +171,6 @@ public partial class CarouselDialogView : UserControl {
                 break;
             case Key.Right:
                 vm.NextCommand.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.P:
-                vm.SetCurationStatusCommand.Execute(CurationStatus.Flagged);
-                e.Handled = true;
-                break;
-            case Key.X:
-                vm.SetCurationStatusCommand.Execute(CurationStatus.Rejected);
-                e.Handled = true;
-                break;
-            case Key.U:
-                vm.SetCurationStatusCommand.Execute(CurationStatus.Unflagged);
                 e.Handled = true;
                 break;
         }
