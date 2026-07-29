@@ -20,10 +20,28 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
+    private string _blueLabelName = "Blue";
+
+    [ObservableProperty]
+    private string _blueLabelShortcut = "Ctrl+NumPad5";
+
+    [ObservableProperty]
     private int _burstFallbackThreshold = 10;
 
     [ObservableProperty]
     private int _burstTimeThreshold = 3;
+
+    [ObservableProperty]
+    private string _editFolderPath = string.Empty;
+
+    [ObservableProperty]
+    private string _fullscreenShortcut = "F";
+
+    [ObservableProperty]
+    private string _greenLabelName = "Green";
+
+    [ObservableProperty]
+    private string _greenLabelShortcut = "Ctrl+NumPad4";
 
     [ObservableProperty]
     private int _groupingThreshold = 10;
@@ -35,37 +53,76 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _libraryLocation = string.Empty;
 
     [ObservableProperty]
-    private string _redLabelName = "Red";
+    private string _noneLabelShortcut = "Ctrl+NumPad0";
+
+    [ObservableProperty]
+    private string _openInExplorerShortcut = "O";
 
     [ObservableProperty]
     private string _orangeLabelName = "Orange";
 
     [ObservableProperty]
-    private string _yellowLabelName = "Yellow";
-
-    [ObservableProperty]
-    private string _greenLabelName = "Green";
-
-    [ObservableProperty]
-    private string _blueLabelName = "Blue";
+    private string _orangeLabelShortcut = "Ctrl+NumPad2";
 
     [ObservableProperty]
     private string _pinkLabelName = "Pink";
 
     [ObservableProperty]
-    private string _purpleLabelName = "Purple";
-
-    [ObservableProperty]
-    private string _editFolderPath = string.Empty;
+    private string _pinkLabelShortcut = "Ctrl+NumPad6";
 
     [ObservableProperty]
     private string _printFolderPath = string.Empty;
+
+    [ObservableProperty]
+    private string _purpleLabelName = "Purple";
+
+    [ObservableProperty]
+    private string _purpleLabelShortcut = "Ctrl+NumPad7";
+
+    [ObservableProperty]
+    private string _rating0Shortcut = "NumPad0";
+
+    [ObservableProperty]
+    private string _rating1Shortcut = "NumPad1";
+
+    [ObservableProperty]
+    private string _rating2Shortcut = "NumPad2";
+
+    [ObservableProperty]
+    private string _rating3Shortcut = "NumPad3";
+
+    [ObservableProperty]
+    private string _rating4Shortcut = "NumPad4";
+
+    [ObservableProperty]
+    private string _rating5Shortcut = "NumPad5";
+
+    [ObservableProperty]
+    private string _curationPickedShortcut = "P";
+
+    [ObservableProperty]
+    private string _curationRejectedShortcut = "X";
+
+    [ObservableProperty]
+    private string _curationNeutralShortcut = "U";
+
+    [ObservableProperty]
+    private string _redLabelName = "Red";
+
+    [ObservableProperty]
+    private string _redLabelShortcut = "Ctrl+NumPad1";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLightActive))]
     [NotifyPropertyChangedFor(nameof(IsDarkActive))]
     [NotifyPropertyChangedFor(nameof(IsSystemActive))]
     private int _themeIndex;
+
+    [ObservableProperty]
+    private string _yellowLabelName = "Yellow";
+
+    [ObservableProperty]
+    private string _yellowLabelShortcut = "Ctrl+NumPad3";
 
     public SettingsDialogViewModel(ISettingsService settingsService) {
         _settingsService = settingsService;
@@ -99,6 +156,44 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         BlueLabelName = settings.BlueLabelName;
         PinkLabelName = settings.PinkLabelName;
         PurpleLabelName = settings.PurpleLabelName;
+        RedLabelShortcut = !string.IsNullOrWhiteSpace(settings.RedLabelShortcut)
+            ? settings.RedLabelShortcut
+            : "Ctrl+NumPad1";
+        OrangeLabelShortcut = !string.IsNullOrWhiteSpace(settings.OrangeLabelShortcut)
+            ? settings.OrangeLabelShortcut
+            : "Ctrl+NumPad2";
+        YellowLabelShortcut = !string.IsNullOrWhiteSpace(settings.YellowLabelShortcut)
+            ? settings.YellowLabelShortcut
+            : "Ctrl+NumPad3";
+        GreenLabelShortcut = !string.IsNullOrWhiteSpace(settings.GreenLabelShortcut)
+            ? settings.GreenLabelShortcut
+            : "Ctrl+NumPad4";
+        BlueLabelShortcut = !string.IsNullOrWhiteSpace(settings.BlueLabelShortcut)
+            ? settings.BlueLabelShortcut
+            : "Ctrl+NumPad5";
+        PinkLabelShortcut = !string.IsNullOrWhiteSpace(settings.PinkLabelShortcut)
+            ? settings.PinkLabelShortcut
+            : "Ctrl+NumPad6";
+        PurpleLabelShortcut = !string.IsNullOrWhiteSpace(settings.PurpleLabelShortcut)
+            ? settings.PurpleLabelShortcut
+            : "Ctrl+NumPad7";
+        NoneLabelShortcut = !string.IsNullOrWhiteSpace(settings.NoneLabelShortcut)
+            ? settings.NoneLabelShortcut
+            : "Ctrl+NumPad0";
+        FullscreenShortcut =
+            !string.IsNullOrWhiteSpace(settings.FullscreenShortcut) ? settings.FullscreenShortcut : "F";
+        OpenInExplorerShortcut = !string.IsNullOrWhiteSpace(settings.OpenInExplorerShortcut)
+            ? settings.OpenInExplorerShortcut
+            : "O";
+        Rating0Shortcut = !string.IsNullOrWhiteSpace(settings.Rating0Shortcut) ? settings.Rating0Shortcut : "NumPad0";
+        Rating1Shortcut = !string.IsNullOrWhiteSpace(settings.Rating1Shortcut) ? settings.Rating1Shortcut : "NumPad1";
+        Rating2Shortcut = !string.IsNullOrWhiteSpace(settings.Rating2Shortcut) ? settings.Rating2Shortcut : "NumPad2";
+        Rating3Shortcut = !string.IsNullOrWhiteSpace(settings.Rating3Shortcut) ? settings.Rating3Shortcut : "NumPad3";
+        Rating4Shortcut = !string.IsNullOrWhiteSpace(settings.Rating4Shortcut) ? settings.Rating4Shortcut : "NumPad4";
+        Rating5Shortcut = !string.IsNullOrWhiteSpace(settings.Rating5Shortcut) ? settings.Rating5Shortcut : "NumPad5";
+        CurationPickedShortcut = !string.IsNullOrWhiteSpace(settings.CurationPickedShortcut) ? settings.CurationPickedShortcut : "P";
+        CurationRejectedShortcut = !string.IsNullOrWhiteSpace(settings.CurationRejectedShortcut) ? settings.CurationRejectedShortcut : "X";
+        CurationNeutralShortcut = !string.IsNullOrWhiteSpace(settings.CurationNeutralShortcut) ? settings.CurationNeutralShortcut : "U";
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
@@ -198,6 +293,25 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             BlueLabelName = BlueLabelName,
             PinkLabelName = PinkLabelName,
             PurpleLabelName = PurpleLabelName,
+            RedLabelShortcut = RedLabelShortcut,
+            OrangeLabelShortcut = OrangeLabelShortcut,
+            YellowLabelShortcut = YellowLabelShortcut,
+            GreenLabelShortcut = GreenLabelShortcut,
+            BlueLabelShortcut = BlueLabelShortcut,
+            PinkLabelShortcut = PinkLabelShortcut,
+            PurpleLabelShortcut = PurpleLabelShortcut,
+            NoneLabelShortcut = NoneLabelShortcut,
+            FullscreenShortcut = FullscreenShortcut,
+            OpenInExplorerShortcut = OpenInExplorerShortcut,
+            Rating0Shortcut = Rating0Shortcut,
+            Rating1Shortcut = Rating1Shortcut,
+            Rating2Shortcut = Rating2Shortcut,
+            Rating3Shortcut = Rating3Shortcut,
+            Rating4Shortcut = Rating4Shortcut,
+            Rating5Shortcut = Rating5Shortcut,
+            CurationPickedShortcut = CurationPickedShortcut,
+            CurationRejectedShortcut = CurationRejectedShortcut,
+            CurationNeutralShortcut = CurationNeutralShortcut,
             EditFolderPath = EditFolderPath,
             PrintFolderPath = PrintFolderPath,
             ThemeMode = ThemeIndex switch {

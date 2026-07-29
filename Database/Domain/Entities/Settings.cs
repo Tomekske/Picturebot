@@ -53,6 +53,28 @@ public class Settings {
     public string PinkLabelName { get; set; } = "Pink";
     public string PurpleLabelName { get; set; } = "Purple";
 
+    public string RedLabelShortcut { get; set; } = "Ctrl+NumPad1";
+    public string OrangeLabelShortcut { get; set; } = "Ctrl+NumPad2";
+    public string YellowLabelShortcut { get; set; } = "Ctrl+NumPad3";
+    public string GreenLabelShortcut { get; set; } = "Ctrl+NumPad4";
+    public string BlueLabelShortcut { get; set; } = "Ctrl+NumPad5";
+    public string PinkLabelShortcut { get; set; } = "Ctrl+NumPad6";
+    public string PurpleLabelShortcut { get; set; } = "Ctrl+NumPad7";
+    public string NoneLabelShortcut { get; set; } = "Ctrl+NumPad0";
+
+    public string FullscreenShortcut { get; set; } = "F";
+    public string OpenInExplorerShortcut { get; set; } = "O";
+    public string Rating0Shortcut { get; set; } = "NumPad0";
+    public string Rating1Shortcut { get; set; } = "NumPad1";
+    public string Rating2Shortcut { get; set; } = "NumPad2";
+    public string Rating3Shortcut { get; set; } = "NumPad3";
+    public string Rating4Shortcut { get; set; } = "NumPad4";
+    public string Rating5Shortcut { get; set; } = "NumPad5";
+
+    public string CurationPickedShortcut { get; set; } = "P";
+    public string CurationRejectedShortcut { get; set; } = "X";
+    public string CurationNeutralShortcut { get; set; } = "U";
+
     /// <summary>
     ///     The destination folder for files copied for editing.
     /// </summary>

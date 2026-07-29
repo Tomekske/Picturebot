@@ -67,7 +67,15 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         SelectedPicture = message.Value;
     }
 
+    private PictureItemViewModel? _activePicture;
+
     async partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
+        if (_activePicture != null) {
+            _activePicture.PropertyChanged -= OnPicturePropertyChanged;
+        }
+
+        _activePicture = value;
+
         PreviewImage?.Dispose();
         PreviewImage = null;
 
@@ -76,8 +84,19 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             return;
         }
 
+        value.PropertyChanged += OnPicturePropertyChanged;
+
         SelectedColorLabelOption = ColorLabelOptions.FirstOrDefault(o => o.Label == value.ColorLabel);
         await LoadPreviewAsync(value);
+    }
+
+    private void OnPicturePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+        if (e.PropertyName == nameof(PictureItemViewModel.ColorLabel) && SelectedPicture != null) {
+            var newOption = ColorLabelOptions.FirstOrDefault(o => o.Label == SelectedPicture.ColorLabel);
+            if (SelectedColorLabelOption != newOption) {
+                SelectedColorLabelOption = newOption;
+            }
+        }
     }
 
     partial void OnSelectedColorLabelOptionChanged(ColorLabelOption? value) {

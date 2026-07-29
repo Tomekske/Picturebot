@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.IO.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -107,6 +108,28 @@ internal sealed class Program {
             using (var scope = App.Services.CreateScope()) {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 context.Database.Migrate(); // Use sync Migrate() if possible, or wait
+
+                var settings = context.Settings.FirstOrDefault();
+                if (settings != null) {
+                    bool modified = false;
+                    if (settings.RedLabelShortcut == "Ctrl+D1") { settings.RedLabelShortcut = "Ctrl+NumPad1"; modified = true; }
+                    if (settings.OrangeLabelShortcut == "Ctrl+D2") { settings.OrangeLabelShortcut = "Ctrl+NumPad2"; modified = true; }
+                    if (settings.YellowLabelShortcut == "Ctrl+D3") { settings.YellowLabelShortcut = "Ctrl+NumPad3"; modified = true; }
+                    if (settings.GreenLabelShortcut == "Ctrl+D4") { settings.GreenLabelShortcut = "Ctrl+NumPad4"; modified = true; }
+                    if (settings.BlueLabelShortcut == "Ctrl+D5") { settings.BlueLabelShortcut = "Ctrl+NumPad5"; modified = true; }
+                    if (settings.PinkLabelShortcut == "Ctrl+D6") { settings.PinkLabelShortcut = "Ctrl+NumPad6"; modified = true; }
+                    if (settings.PurpleLabelShortcut == "Ctrl+D7") { settings.PurpleLabelShortcut = "Ctrl+NumPad7"; modified = true; }
+                    if (settings.NoneLabelShortcut == "Ctrl+D0") { settings.NoneLabelShortcut = "Ctrl+NumPad0"; modified = true; }
+                    if (settings.Rating0Shortcut == "D0") { settings.Rating0Shortcut = "NumPad0"; modified = true; }
+                    if (settings.Rating1Shortcut == "D1") { settings.Rating1Shortcut = "NumPad1"; modified = true; }
+                    if (settings.Rating2Shortcut == "D2") { settings.Rating2Shortcut = "NumPad2"; modified = true; }
+                    if (settings.Rating3Shortcut == "D3") { settings.Rating3Shortcut = "NumPad3"; modified = true; }
+                    if (settings.Rating4Shortcut == "D4") { settings.Rating4Shortcut = "NumPad4"; modified = true; }
+                    if (settings.Rating5Shortcut == "D5") { settings.Rating5Shortcut = "NumPad5"; modified = true; }
+                    if (modified) {
+                        context.SaveChanges();
+                    }
+                }
             }
 
             Log.Information("Database migrations applied successfully");
