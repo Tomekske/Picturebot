@@ -239,12 +239,12 @@
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto" Margin="0,4">
                     <TextBox Grid.Row="0" Grid.Column="0" Tag="Fullscreen" Text="{Binding FullscreenShortcut, Mode=TwoWay}" Watermark="Fullscreen" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Fullscreen" Foreground="Gray" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="Fullscreen:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="0" Grid.Column="1" Tag="OpenInExplorer" Text="{Binding OpenInExplorerShortcut, Mode=TwoWay}" Watermark="Open in Explorer" Margin="4,0,0,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="FolderOpenOutline" Foreground="Gray" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="Explorer:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                 </Grid>
@@ -256,32 +256,32 @@
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4">
                     <TextBox Grid.Row="0" Grid.Column="0" Tag="Rating1" Text="{Binding Rating1Shortcut, Mode=TwoWay}" Watermark="1 Star" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Star" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="1 Star:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="0" Grid.Column="1" Tag="Rating2" Text="{Binding Rating2Shortcut, Mode=TwoWay}" Watermark="2 Stars" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Star" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="2 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="1" Grid.Column="0" Tag="Rating3" Text="{Binding Rating3Shortcut, Mode=TwoWay}" Watermark="3 Stars" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Star" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="3 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="1" Grid.Column="1" Tag="Rating4" Text="{Binding Rating4Shortcut, Mode=TwoWay}" Watermark="4 Stars" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Star" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="4 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="2" Grid.Column="0" Tag="Rating5" Text="{Binding Rating5Shortcut, Mode=TwoWay}" Watermark="5 Stars" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Star" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="5 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="2" Grid.Column="1" Tag="Rating0" Text="{Binding Rating0Shortcut, Mode=TwoWay}" Watermark="0 Stars / None" Margin="4,0,0,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="StarOff" Foreground="Gray" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="0 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                 </Grid>
@@ -293,17 +293,17 @@
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="0,4">
                     <TextBox Grid.Row="0" Grid.Column="0" Tag="CurationPicked" Text="{Binding CurationPickedShortcut, Mode=TwoWay}" Watermark="Picked" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Check" Foreground="Green" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="Picked:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="0" Grid.Column="1" Tag="CurationRejected" Text="{Binding CurationRejectedShortcut, Mode=TwoWay}" Watermark="Rejected" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Close" Foreground="Red" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="Rejected:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                     <TextBox Grid.Row="1" Grid.Column="0" Tag="CurationNeutral" Text="{Binding CurationNeutralShortcut, Mode=TwoWay}" Watermark="Neutral" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
                         <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Minus" Foreground="Gray" Width="14" Height="14" Margin="10,0,0,0" />
+                            <TextBlock Text="Neutral:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
                         </TextBox.InnerLeftContent>
                     </TextBox>
                 </Grid>
