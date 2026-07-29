@@ -33,8 +33,11 @@ public partial class StatusBarViewModel : ViewModelBase {
     [RelayCommand]
     private void OpenSettings() {
         Debug.WriteLine("Settings Command Triggered!");
-        MainWindow.DialogManager.CreateDialog()
-            .WithContent(new SettingsDialog())
-            .TryShow();
+        var dialog = new SettingsDialog();
+        if (MainWindow.Instance != null) {
+            dialog.ShowDialog(MainWindow.Instance);
+        } else {
+            dialog.Show();
+        }
     }
 }

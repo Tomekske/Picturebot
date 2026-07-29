@@ -124,6 +124,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private string _yellowLabelShortcut = "Ctrl+NumPad3";
 
+    [ObservableProperty]
+    private int _selectedTabIndex;
+
     public SettingsDialogViewModel(ISettingsService settingsService) {
         _settingsService = settingsService;
         LoadSettings();
@@ -143,7 +146,10 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             return;
         }
 
-        var settings = _settingsService.Current;
+        LoadSettingsFromModel(_settingsService.Current);
+    }
+
+    private void LoadSettingsFromModel(SettingsModel settings) {
         LibraryLocation = settings.LibraryPath ?? string.Empty;
         GroupingThreshold = settings.GroupingThreshold;
         BurstTimeThreshold = settings.BurstTimeThresholdSeconds;
@@ -156,35 +162,16 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         BlueLabelName = settings.BlueLabelName;
         PinkLabelName = settings.PinkLabelName;
         PurpleLabelName = settings.PurpleLabelName;
-        RedLabelShortcut = !string.IsNullOrWhiteSpace(settings.RedLabelShortcut)
-            ? settings.RedLabelShortcut
-            : "Ctrl+NumPad1";
-        OrangeLabelShortcut = !string.IsNullOrWhiteSpace(settings.OrangeLabelShortcut)
-            ? settings.OrangeLabelShortcut
-            : "Ctrl+NumPad2";
-        YellowLabelShortcut = !string.IsNullOrWhiteSpace(settings.YellowLabelShortcut)
-            ? settings.YellowLabelShortcut
-            : "Ctrl+NumPad3";
-        GreenLabelShortcut = !string.IsNullOrWhiteSpace(settings.GreenLabelShortcut)
-            ? settings.GreenLabelShortcut
-            : "Ctrl+NumPad4";
-        BlueLabelShortcut = !string.IsNullOrWhiteSpace(settings.BlueLabelShortcut)
-            ? settings.BlueLabelShortcut
-            : "Ctrl+NumPad5";
-        PinkLabelShortcut = !string.IsNullOrWhiteSpace(settings.PinkLabelShortcut)
-            ? settings.PinkLabelShortcut
-            : "Ctrl+NumPad6";
-        PurpleLabelShortcut = !string.IsNullOrWhiteSpace(settings.PurpleLabelShortcut)
-            ? settings.PurpleLabelShortcut
-            : "Ctrl+NumPad7";
-        NoneLabelShortcut = !string.IsNullOrWhiteSpace(settings.NoneLabelShortcut)
-            ? settings.NoneLabelShortcut
-            : "Ctrl+NumPad0";
-        FullscreenShortcut =
-            !string.IsNullOrWhiteSpace(settings.FullscreenShortcut) ? settings.FullscreenShortcut : "F";
-        OpenInExplorerShortcut = !string.IsNullOrWhiteSpace(settings.OpenInExplorerShortcut)
-            ? settings.OpenInExplorerShortcut
-            : "O";
+        RedLabelShortcut = !string.IsNullOrWhiteSpace(settings.RedLabelShortcut) ? settings.RedLabelShortcut : "Ctrl+NumPad1";
+        OrangeLabelShortcut = !string.IsNullOrWhiteSpace(settings.OrangeLabelShortcut) ? settings.OrangeLabelShortcut : "Ctrl+NumPad2";
+        YellowLabelShortcut = !string.IsNullOrWhiteSpace(settings.YellowLabelShortcut) ? settings.YellowLabelShortcut : "Ctrl+NumPad3";
+        GreenLabelShortcut = !string.IsNullOrWhiteSpace(settings.GreenLabelShortcut) ? settings.GreenLabelShortcut : "Ctrl+NumPad4";
+        BlueLabelShortcut = !string.IsNullOrWhiteSpace(settings.BlueLabelShortcut) ? settings.BlueLabelShortcut : "Ctrl+NumPad5";
+        PinkLabelShortcut = !string.IsNullOrWhiteSpace(settings.PinkLabelShortcut) ? settings.PinkLabelShortcut : "Ctrl+NumPad6";
+        PurpleLabelShortcut = !string.IsNullOrWhiteSpace(settings.PurpleLabelShortcut) ? settings.PurpleLabelShortcut : "Ctrl+NumPad7";
+        NoneLabelShortcut = !string.IsNullOrWhiteSpace(settings.NoneLabelShortcut) ? settings.NoneLabelShortcut : "Ctrl+NumPad0";
+        FullscreenShortcut = !string.IsNullOrWhiteSpace(settings.FullscreenShortcut) ? settings.FullscreenShortcut : "F";
+        OpenInExplorerShortcut = !string.IsNullOrWhiteSpace(settings.OpenInExplorerShortcut) ? settings.OpenInExplorerShortcut : "O";
         Rating0Shortcut = !string.IsNullOrWhiteSpace(settings.Rating0Shortcut) ? settings.Rating0Shortcut : "NumPad0";
         Rating1Shortcut = !string.IsNullOrWhiteSpace(settings.Rating1Shortcut) ? settings.Rating1Shortcut : "NumPad1";
         Rating2Shortcut = !string.IsNullOrWhiteSpace(settings.Rating2Shortcut) ? settings.Rating2Shortcut : "NumPad2";
@@ -275,7 +262,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    private async Task SaveSettings() {
+    private async Task SaveSettings(object? parameter) {
         if (_settingsService == null) {
             return;
         }
@@ -330,11 +317,21 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .Queue();
 
-        CloseDialog();
+        CloseDialog(parameter);
     }
 
     [RelayCommand]
-    private void CloseDialog() {
-        MainWindow.DialogManager.DismissDialog();
+    private void CloseDialog(object? parameter) {
+        if (parameter is Window window) {
+            window.Close();
+        } else {
+            MainWindow.DialogManager.DismissDialog();
+        }
+    }
+
+    [RelayCommand]
+    private void RevertToDefault() {
+        var defaults = new SettingsModel();
+        LoadSettingsFromModel(defaults);
     }
 }
