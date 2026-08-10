@@ -54,6 +54,9 @@ public class SettingsModel {
     public string CurationRejectedShortcut { get; set; } = "X";
     public string CurationNeutralShortcut { get; set; } = "U";
 
+    public string CopyToEditShortcut { get; set; } = "Ctrl+E";
+    public string CopyToPrintShortcut { get; set; } = "Shift+E";
+
     public string? EditFolderPath { get; set; }
     public string? PrintFolderPath { get; set; }
 }

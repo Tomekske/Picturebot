@@ -397,6 +397,16 @@
                                             <TextBlock Text="Open File in Explorer" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
                                             <TextBox Grid.Column="1" Tag="OpenInExplorer" Text="{Binding OpenInExplorerShortcut, Mode=TwoWay}" Watermark="Open in Explorer" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
                                         </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Copy File to Edits" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CopyToEdit" Text="{Binding CopyToEditShortcut, Mode=TwoWay}" Watermark="Ctrl+E" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Copy File to Print" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CopyToPrint" Text="{Binding CopyToPrintShortcut, Mode=TwoWay}" Watermark="Shift+E" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
                                     </StackPanel>
 
                                     <!-- Color assignment shortcuts -->

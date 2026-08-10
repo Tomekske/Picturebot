@@ -77,6 +77,8 @@ public partial class SettingsDialog : Window {
             case "CurationPicked": vm.CurationPickedShortcut = shortcutText; break;
             case "CurationRejected": vm.CurationRejectedShortcut = shortcutText; break;
             case "CurationNeutral": vm.CurationNeutralShortcut = shortcutText; break;
+            case "CopyToEdit": vm.CopyToEditShortcut = shortcutText; break;
+            case "CopyToPrint": vm.CopyToPrintShortcut = shortcutText; break;
         }
     }
 }

@@ -75,6 +75,9 @@ public class Settings {
     public string CurationRejectedShortcut { get; set; } = "X";
     public string CurationNeutralShortcut { get; set; } = "U";
 
+    public string CopyToEditShortcut { get; set; } = "Ctrl+E";
+    public string CopyToPrintShortcut { get; set; } = "Shift+E";
+
     /// <summary>
     ///     The destination folder for files copied for editing.
     /// </summary>

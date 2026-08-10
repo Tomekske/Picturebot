@@ -107,6 +107,12 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _curationNeutralShortcut = "U";
 
     [ObservableProperty]
+    private string _copyToEditShortcut = "Ctrl+E";
+
+    [ObservableProperty]
+    private string _copyToPrintShortcut = "Shift+E";
+
+    [ObservableProperty]
     private string _redLabelName = "Red";
 
     [ObservableProperty]
@@ -181,6 +187,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         CurationPickedShortcut = !string.IsNullOrWhiteSpace(settings.CurationPickedShortcut) ? settings.CurationPickedShortcut : "P";
         CurationRejectedShortcut = !string.IsNullOrWhiteSpace(settings.CurationRejectedShortcut) ? settings.CurationRejectedShortcut : "X";
         CurationNeutralShortcut = !string.IsNullOrWhiteSpace(settings.CurationNeutralShortcut) ? settings.CurationNeutralShortcut : "U";
+        CopyToEditShortcut = !string.IsNullOrWhiteSpace(settings.CopyToEditShortcut) ? settings.CopyToEditShortcut : "Ctrl+E";
+        CopyToPrintShortcut = !string.IsNullOrWhiteSpace(settings.CopyToPrintShortcut) ? settings.CopyToPrintShortcut : "Shift+E";
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
@@ -299,6 +307,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             CurationPickedShortcut = CurationPickedShortcut,
             CurationRejectedShortcut = CurationRejectedShortcut,
             CurationNeutralShortcut = CurationNeutralShortcut,
+            CopyToEditShortcut = CopyToEditShortcut,
+            CopyToPrintShortcut = CopyToPrintShortcut,
             EditFolderPath = EditFolderPath,
             PrintFolderPath = PrintFolderPath,
             ThemeMode = ThemeIndex switch {

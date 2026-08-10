@@ -126,6 +126,8 @@ internal sealed class Program {
                     if (settings.Rating3Shortcut == "D3") { settings.Rating3Shortcut = "NumPad3"; modified = true; }
                     if (settings.Rating4Shortcut == "D4") { settings.Rating4Shortcut = "NumPad4"; modified = true; }
                     if (settings.Rating5Shortcut == "D5") { settings.Rating5Shortcut = "NumPad5"; modified = true; }
+                    if (string.IsNullOrEmpty(settings.CopyToEditShortcut)) { settings.CopyToEditShortcut = "Ctrl+E"; modified = true; }
+                    if (string.IsNullOrEmpty(settings.CopyToPrintShortcut)) { settings.CopyToPrintShortcut = "Shift+E"; modified = true; }
                     if (modified) {
                         context.SaveChanges();
                     }
