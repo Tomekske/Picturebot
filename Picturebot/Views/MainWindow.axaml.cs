@@ -165,6 +165,16 @@ public partial class MainWindow : SukiWindow {
                 e.Handled = true;
                 return;
             }
+            if (MatchesGesture(e, settings.CopyToEditShortcut)) {
+                vm.GalleryVM.CopyToEditCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+            if (MatchesGesture(e, settings.CopyToPrintShortcut)) {
+                vm.GalleryVM.CopyToPrintCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
         }
         
         base.OnKeyDown(e);

@@ -1,327 +1,519 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Picturebot.ViewModels"
-             xmlns:material="using:Material.Icons.Avalonia"
-             xmlns:icons="using:Material.Icons"
-             x:DataType="vm:SettingsDialogViewModel"
-             x:Class="Picturebot.Views.SettingsDialog"
-             Width="520">
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Picturebot.ViewModels"
+        xmlns:material="using:Material.Icons.Avalonia"
+        xmlns:icons="using:Material.Icons"
+        x:DataType="vm:SettingsDialogViewModel"
+        x:Class="Picturebot.Views.SettingsDialog"
+        Title="Settings"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Width="840"
+        Height="580"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
 
-    <ScrollViewer MaxHeight="600" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="24" Margin="0,0,12,0">
+    <Window.Styles>
+        <!-- Window Outer Styles -->
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="Inter, Roboto, Outfit, Segoe UI, sans-serif" />
+        </Style>
 
-            <TextBlock Text="Settings"
-                       FontSize="22"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,8" />
+        <!-- Sidebar ListBox Styles -->
+        <Style Selector="ListBox.sidebar-list">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,16" />
+        </Style>
+        <Style Selector="ListBox.sidebar-list ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Foreground" Value="#AAAAAA" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_LayoutRoot"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.sidebar-list ListBoxItem:pointerover">
+            <Setter Property="Background" Value="#29292F" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="ListBox.sidebar-list ListBoxItem:selected">
+            <Setter Property="Background" Value="#38383E" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="ListBox.sidebar-list ListBoxItem:selected /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="#38383E" />
+        </Style>
+        <Style Selector="ListBox.sidebar-list ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="THEME" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SukiLowText}"
-                            LetterSpacing="1" />
-                <UniformGrid Columns="3" Height="45">
-                    <Button Command="{Binding SetLightThemeCommand}"
-                            Classes.Accent="{Binding IsLightActive}"
-                            Margin="0,0,4,0">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <material:MaterialIcon Kind="{x:Static icons:MaterialIconKind.WhiteBalanceSunny}"
-                                                   Width="18" Height="18" />
-                            <TextBlock Text="Light" VerticalAlignment="Center" />
+        <!-- Form Input Styling -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#252529" />
+            <Setter Property="BorderBrush" Value="#333337" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Padding" Value="10,8" />
+        </Style>
+        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="#4F46E5" />
+            <Setter Property="Background" Value="#252529" />
+        </Style>
+
+        <!-- NumericUpDown Styling -->
+        <Style Selector="NumericUpDown">
+            <Setter Property="Background" Value="#252529" />
+            <Setter Property="BorderBrush" Value="#333337" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+
+        <!-- Theme Button Styling -->
+        <Style Selector="Button.theme-btn">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#333337" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#AAAAAA" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.theme-btn:pointerover">
+            <Setter Property="Background" Value="#252529" />
+        </Style>
+        <Style Selector="Button.theme-btn.active">
+            <Setter Property="Background" Value="#2A2A2E" />
+            <Setter Property="BorderBrush" Value="#4F46E5" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.theme-btn.system-active">
+            <Setter Property="Background" Value="#2A2A2E" />
+            <Setter Property="BorderBrush" Value="#D4AF37" />
+            <Setter Property="Foreground" Value="#D4AF37" />
+        </Style>
+
+        <!-- Standard Button Styles -->
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#2A2A2E" />
+            <Setter Property="Foreground" Value="#CCCCCC" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="Button.secondary:pointerover">
+            <Setter Property="Background" Value="#38383E" />
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#4F46E5" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="#4338CA" />
+        </Style>
+
+        <!-- Section Label Text -->
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+    </Window.Styles>
+
+    <Border CornerRadius="10" Background="#1E1E22" BorderBrush="#333337" BorderThickness="1" ClipToBounds="True">
+        <DockPanel LastChildFill="True">
+            <!-- Header Bar -->
+            <Grid DockPanel.Dock="Top" Height="48" Background="#1E1E22" PointerPressed="Header_PointerPressed">
+                <TextBlock Text="Settings" 
+                           FontSize="16" 
+                           FontWeight="Bold" 
+                           Foreground="#FFFFFF" 
+                           VerticalAlignment="Center" 
+                           Margin="16,0,0,0" />
+                
+                <Button Command="{Binding CloseDialogCommand}" 
+                        CommandParameter="{Binding $parent[Window]}"
+                        Background="Transparent" 
+                        BorderThickness="0" 
+                        Foreground="#AAAAAA" 
+                        FontSize="16" 
+                        HorizontalAlignment="Right" 
+                        VerticalAlignment="Center" 
+                        Margin="0,0,16,0"
+                        Padding="4">
+                    <TextBlock Text="✕" />
+                </Button>
+                
+                <!-- Header Bottom Divider -->
+                <Rectangle Height="1" Fill="#2A2A2E" VerticalAlignment="Bottom" />
+            </Grid>
+
+            <!-- Footer Action Bar -->
+            <Grid DockPanel.Dock="Bottom" Height="56" Background="#1E1E22">
+                <!-- Footer Top Divider -->
+                <Rectangle Height="1" Fill="#2A2A2E" VerticalAlignment="Top" />
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12" Margin="0,0,16,0">
+                    <Button Classes="secondary" 
+                            Content="Revert to Default" 
+                            Command="{Binding RevertToDefaultCommand}" />
+                    <Button Classes="primary" 
+                            Content="Save Changes" 
+                            Command="{Binding SaveSettingsCommand}" 
+                            CommandParameter="{Binding $parent[Window]}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Sidebar Navigation Column -->
+            <Grid ColumnDefinitions="200,1,*">
+                <ListBox Grid.Column="0" 
+                         Classes="sidebar-list" 
+                         SelectedIndex="{Binding SelectedTabIndex}">
+                    <ListBoxItem Content="General" />
+                    <ListBoxItem Content="Storage &amp; Paths" />
+                    <ListBoxItem Content="Culling" />
+                    <ListBoxItem Content="Color Labels" />
+                    <ListBoxItem Content="Keyboard Shortcuts" />
+                </ListBox>
+
+                <!-- Vertical Divider -->
+                <Rectangle Grid.Column="1" Width="1" Fill="#2A2A2E" />
+
+                <!-- Content Area -->
+                <ScrollViewer Grid.Column="2" Padding="24,16" VerticalScrollBarVisibility="Auto">
+                    <Carousel SelectedIndex="{Binding SelectedTabIndex}">
+                        <!-- View 0: General -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="GENERAL" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+                            
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Active Theme Mode" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <UniformGrid Grid.Column="1" Columns="3" Height="36" Width="280" HorizontalAlignment="Right">
+                                    <Button Classes="theme-btn" 
+                                            Classes.active="{Binding IsLightActive}"
+                                            Command="{Binding SetLightThemeCommand}"
+                                            Margin="0,0,4,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <material:MaterialIcon Kind="WhiteBalanceSunny" Width="14" Height="14" />
+                                            <TextBlock Text="Light" VerticalAlignment="Center" FontSize="12" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="theme-btn" 
+                                            Classes.active="{Binding IsDarkActive}"
+                                            Command="{Binding SetDarkThemeCommand}"
+                                            Margin="4,0,4,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <material:MaterialIcon Kind="WeatherNight" Width="14" Height="14" />
+                                            <TextBlock Text="Dark" VerticalAlignment="Center" FontSize="12" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="theme-btn" 
+                                            Classes.system-active="{Binding IsSystemActive}"
+                                            Command="{Binding SetSystemThemeCommand}"
+                                            Margin="4,0,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                            <material:MaterialIcon Kind="Settings" Width="14" Height="14" />
+                                            <TextBlock Text="System" VerticalAlignment="Center" FontSize="12" />
+                                        </StackPanel>
+                                    </Button>
+                                </UniformGrid>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Launch Application in Full Screen" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding LaunchFullScreen}" HorizontalAlignment="Right" />
+                            </Grid>
                         </StackPanel>
-                    </Button>
-                    <Button Command="{Binding SetDarkThemeCommand}"
-                            Classes.Accent="{Binding IsDarkActive}"
-                            Margin="4,0,4,0">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <material:MaterialIcon Kind="{x:Static icons:MaterialIconKind.WeatherNight}" Width="18"
-                                                   Height="18" />
-                            <TextBlock Text="Dark" VerticalAlignment="Center" />
+
+                        <!-- View 1: Storage & Paths -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="STORAGE &amp; PATHS" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Library Location" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding LibraryLocation}" Watermark="Select Library Path" IsReadOnly="True" Height="36" Width="350" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerRightContent>
+                                        <Button Command="{Binding BrowseLibraryLocationCommand}" Background="Transparent" BorderThickness="0" Padding="8,4">
+                                            <material:MaterialIcon Kind="FolderOpenOutline" Foreground="#AAAAAA" Width="18" Height="18" />
+                                        </Button>
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Edit Destination Folder" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding EditFolderPath}" Watermark="Select Edit Destination Path" IsReadOnly="True" Height="36" Width="350" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerRightContent>
+                                        <Button Command="{Binding BrowseEditFolderCommand}" Background="Transparent" BorderThickness="0" Padding="8,4">
+                                            <material:MaterialIcon Kind="FolderOpenOutline" Foreground="#AAAAAA" Width="18" Height="18" />
+                                        </Button>
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Print Destination Folder" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding PrintFolderPath}" Watermark="Select Print Destination Path" IsReadOnly="True" Height="36" Width="350" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerRightContent>
+                                        <Button Command="{Binding BrowsePrintFolderCommand}" Background="Transparent" BorderThickness="0" Padding="8,4">
+                                            <material:MaterialIcon Kind="FolderOpenOutline" Foreground="#AAAAAA" Width="18" Height="18" />
+                                        </Button>
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
+                            </Grid>
                         </StackPanel>
-                    </Button>
-                    <Button Command="{Binding SetSystemThemeCommand}"
-                            Classes.Accent="{Binding IsSystemActive}"
-                            Margin="4,0,0,0">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <material:MaterialIcon Kind="{x:Static icons:MaterialIconKind.Settings}" Width="18"
-                                                   Height="18" />
-                            <TextBlock Text="System" VerticalAlignment="Center" />
+
+                        <!-- View 2: Culling -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="CULLING CRITERIA" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Grouping Threshold" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding GroupingThreshold}" Minimum="1" Maximum="100" FormatString="0" Height="36" Width="150" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Burst Time Threshold (Seconds)" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding BurstTimeThreshold}" Minimum="1" Maximum="60" FormatString="0" Height="36" Width="150" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Burst Fallback Time (Seconds)" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding BurstFallbackThreshold}" Minimum="1" Maximum="120" FormatString="0" Height="36" Width="150" HorizontalAlignment="Right" />
+                            </Grid>
                         </StackPanel>
-                    </Button>
-                </UniformGrid>
-            </StackPanel>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="LIBRARY LOCATION" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <DockPanel LastChildFill="True">
-                    <Button Command="{Binding BrowseLibraryLocationCommand}"
-                            Content="Browse"
-                            DockPanel.Dock="Right"
-                            Margin="12,0,0,0"
-                            Padding="16,0" />
-                    <TextBox Text="{Binding LibraryLocation}"
-                              Watermark="This folder will be used to store your albums"
-                              Height="40"
-                              VerticalContentAlignment="Center" />
-                </DockPanel>
-            </StackPanel>
+                        <!-- View 3: Color Labels -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="COLOR LABEL NAMES" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="EDIT DESTINATION FOLDER" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <DockPanel LastChildFill="True">
-                    <Button Command="{Binding BrowseEditFolderCommand}"
-                            Content="Browse"
-                            DockPanel.Dock="Right"
-                            Margin="12,0,0,0"
-                            Padding="16,0" />
-                    <TextBox Text="{Binding EditFolderPath}"
-                              Watermark="Select a folder for RAW files to be edited (Ctrl+E)"
-                              Height="40"
-                              VerticalContentAlignment="Center" />
-                </DockPanel>
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Red Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding RedLabelName}" Watermark="Red Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="PRINT DESTINATION FOLDER" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <DockPanel LastChildFill="True">
-                    <Button Command="{Binding BrowsePrintFolderCommand}"
-                            Content="Browse"
-                            DockPanel.Dock="Right"
-                            Margin="12,0,0,0"
-                            Padding="16,0" />
-                    <TextBox Text="{Binding PrintFolderPath}"
-                              Watermark="Select a folder for JPG files to be printed (Shift+E)"
-                              Height="40"
-                              VerticalContentAlignment="Center" />
-                </DockPanel>
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Orange Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding OrangeLabelName}" Watermark="Orange Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="GROUPING THRESHOLD" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <NumericUpDown Value="{Binding GroupingThreshold}"
-                               Minimum="1"
-                               Maximum="100"
-                               FormatString="0"
-                               HorizontalAlignment="Left"
-                               Width="120"
-                               Height="40" />
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Yellow Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding YellowLabelName}" Watermark="Yellow Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="BURST TIME THRESHOLD (SECONDS)" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <NumericUpDown Value="{Binding BurstTimeThreshold}"
-                               Minimum="1"
-                               Maximum="60"
-                               FormatString="0"
-                               HorizontalAlignment="Left"
-                               Width="120"
-                               Height="40" />
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Green Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding GreenLabelName}" Watermark="Green Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="BURST FALLBACK TIME (SECONDS)" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <NumericUpDown Value="{Binding BurstFallbackThreshold}"
-                               Minimum="1"
-                               Maximum="120"
-                               FormatString="0"
-                               HorizontalAlignment="Left"
-                               Width="120"
-                               Height="40" />
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Blue Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding BlueLabelName}" Watermark="Blue Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="WINDOW" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SukiLowText}"
-                            LetterSpacing="1" />
-                <CheckBox IsChecked="{Binding LaunchFullScreen}"
-                           Content="Launch Full Screen"
-                           FontSize="14" />
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Pink Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding PinkLabelName}" Watermark="Pink Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#F06292" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="COLOR LABEL NAMES" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,4">
-                    <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding RedLabelName}" Watermark="Red Label" Margin="0,0,4,8">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OrangeLabelName}" Watermark="Orange Label" Margin="4,0,0,8">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding YellowLabelName}" Watermark="Yellow Label" Margin="0,0,4,8">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding GreenLabelName}" Watermark="Green Label" Margin="4,0,0,8">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding BlueLabelName}" Watermark="Blue Label" Margin="0,0,4,8">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PinkLabelName}" Watermark="Pink Label" Margin="4,0,0,8">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#F06292" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding PurpleLabelName}" Watermark="Purple Label" Margin="0,0,4,0">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                </Grid>
-            </StackPanel>
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Purple Color Label" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding PurpleLabelName}" Watermark="Purple Label" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center">
+                                    <TextBox.InnerLeftContent>
+                                        <material:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="14" Height="14" Margin="10,0,0,0" />
+                                    </TextBox.InnerLeftContent>
+                                </TextBox>
+                            </Grid>
+                        </StackPanel>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="COLOR LABEL KEYBINDS" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <TextBlock Text="Click a field and press a key combination to record. Backspace/Delete clears." 
-                            FontSize="12" Foreground="{DynamicResource SukiLowText}" Margin="0,0,0,4" />
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,4">
-                    <TextBox Grid.Row="0" Grid.Column="0" Tag="Red" Text="{Binding RedLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="0" Grid.Column="1" Tag="Orange" Text="{Binding OrangeLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="0" Tag="Yellow" Text="{Binding YellowLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#FDD835" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="1" Tag="Green" Text="{Binding GreenLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="2" Grid.Column="0" Tag="Blue" Text="{Binding BlueLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="2" Grid.Column="1" Tag="Pink" Text="{Binding PinkLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#F06292" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="3" Grid.Column="0" Tag="Purple" Text="{Binding PurpleLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="3" Grid.Column="1" Tag="None" Text="{Binding NoneLabelShortcut, Mode=TwoWay}" Watermark="None" Margin="4,0,0,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <material:MaterialIcon Kind="LabelOffOutline" Foreground="Gray" Width="14" Height="14" Margin="10,0,0,0" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                </Grid>
-            </StackPanel>
+                        <!-- View 4: Keyboard Shortcuts -->
+                        <StackPanel Spacing="16">
+                            <ScrollViewer MaxHeight="430" VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="16">
+                                    <!-- General shortcuts -->
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="GENERAL" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+                                        
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Toggle Fullscreen Mode" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Fullscreen" Text="{Binding FullscreenShortcut, Mode=TwoWay}" Watermark="Fullscreen" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
 
-            <StackPanel Spacing="10" Margin="0,15,0,0">
-                <TextBlock Text="GENERAL KEYBINDS" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto" Margin="0,4">
-                    <TextBox Grid.Row="0" Grid.Column="0" Tag="Fullscreen" Text="{Binding FullscreenShortcut, Mode=TwoWay}" Watermark="Fullscreen" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="Fullscreen:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="0" Grid.Column="1" Tag="OpenInExplorer" Text="{Binding OpenInExplorerShortcut, Mode=TwoWay}" Watermark="Open in Explorer" Margin="4,0,0,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="Explorer:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                </Grid>
-            </StackPanel>
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Open File in Explorer" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="OpenInExplorer" Text="{Binding OpenInExplorerShortcut, Mode=TwoWay}" Watermark="Open in Explorer" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
 
-            <StackPanel Spacing="10" Margin="0,15,0,0">
-                <TextBlock Text="STAR RATING KEYBINDS" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4">
-                    <TextBox Grid.Row="0" Grid.Column="0" Tag="Rating1" Text="{Binding Rating1Shortcut, Mode=TwoWay}" Watermark="1 Star" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="1 Star:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="0" Grid.Column="1" Tag="Rating2" Text="{Binding Rating2Shortcut, Mode=TwoWay}" Watermark="2 Stars" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="2 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="0" Tag="Rating3" Text="{Binding Rating3Shortcut, Mode=TwoWay}" Watermark="3 Stars" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="3 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="1" Tag="Rating4" Text="{Binding Rating4Shortcut, Mode=TwoWay}" Watermark="4 Stars" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="4 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="2" Grid.Column="0" Tag="Rating5" Text="{Binding Rating5Shortcut, Mode=TwoWay}" Watermark="5 Stars" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="5 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="2" Grid.Column="1" Tag="Rating0" Text="{Binding Rating0Shortcut, Mode=TwoWay}" Watermark="0 Stars / None" Margin="4,0,0,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="0 Stars:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                </Grid>
-            </StackPanel>
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Copy File to Edits" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CopyToEdit" Text="{Binding CopyToEditShortcut, Mode=TwoWay}" Watermark="Ctrl+E" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
 
-            <StackPanel Spacing="10" Margin="0,15,0,0">
-                <TextBlock Text="CURATION STATUS KEYBINDS" FontSize="11" FontWeight="Bold"
-                            Foreground="{DynamicResource SukiLowText}" LetterSpacing="1" />
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="0,4">
-                    <TextBox Grid.Row="0" Grid.Column="0" Tag="CurationPicked" Text="{Binding CurationPickedShortcut, Mode=TwoWay}" Watermark="Picked" Margin="0,0,4,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="Picked:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="0" Grid.Column="1" Tag="CurationRejected" Text="{Binding CurationRejectedShortcut, Mode=TwoWay}" Watermark="Rejected" Margin="4,0,0,8" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="Rejected:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBox Grid.Row="1" Grid.Column="0" Tag="CurationNeutral" Text="{Binding CurationNeutralShortcut, Mode=TwoWay}" Watermark="Neutral" Margin="0,0,4,0" IsReadOnly="True" KeyDown="OnShortcutKeyDown">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="Neutral:" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource SukiLowText}" />
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                </Grid>
-            </StackPanel>
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Copy File to Print" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CopyToPrint" Text="{Binding CopyToPrintShortcut, Mode=TwoWay}" Watermark="Shift+E" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,16,0,0">
-                <Button Command="{Binding CloseDialogCommand}"
-                        Content="Cancel"
-                        Classes.Accent="False"
-                        Width="100"
-                        Height="40" />
-                <Button Command="{Binding SaveSettingsCommand}"
-                        Content="Save"
-                        Classes.Accent="True"
-                        Width="100"
-                        Height="40" />
-            </StackPanel>
+                                    <!-- Color assignment shortcuts -->
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="COLORS" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
 
-        </StackPanel>
-    </ScrollViewer>
-</UserControl>
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Red Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Red" Text="{Binding RedLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Orange Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Orange" Text="{Binding OrangeLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Yellow Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Yellow" Text="{Binding YellowLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Green Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Green" Text="{Binding GreenLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Blue Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Blue" Text="{Binding BlueLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Pink Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Pink" Text="{Binding PinkLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Assign Purple Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Purple" Text="{Binding PurpleLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Clear Color Tag" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="None" Text="{Binding NoneLabelShortcut, Mode=TwoWay}" Watermark="None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <!-- Ratings shortcuts -->
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="STARS" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Set Star Rating to 1" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Rating1" Text="{Binding Rating1Shortcut, Mode=TwoWay}" Watermark="1 Star" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Set Star Rating to 2" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Rating2" Text="{Binding Rating2Shortcut, Mode=TwoWay}" Watermark="2 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Set Star Rating to 3" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Rating3" Text="{Binding Rating3Shortcut, Mode=TwoWay}" Watermark="3 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Set Star Rating to 4" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Rating4" Text="{Binding Rating4Shortcut, Mode=TwoWay}" Watermark="4 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Set Star Rating to 5" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Rating5" Text="{Binding Rating5Shortcut, Mode=TwoWay}" Watermark="5 Stars" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Clear Star Rating" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="Rating0" Text="{Binding Rating0Shortcut, Mode=TwoWay}" Watermark="0 Stars / None" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <!-- Curation shortcuts -->
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="CURATION STATUS" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Mark Image as Picked" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CurationPicked" Text="{Binding CurationPickedShortcut, Mode=TwoWay}" Watermark="Picked" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Mark Image as Rejected" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CurationRejected" Text="{Binding CurationRejectedShortcut, Mode=TwoWay}" Watermark="Rejected" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*, 350" Height="40">
+                                            <TextBlock Text="Set Curation Status to Neutral" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                            <TextBox Grid.Column="1" Tag="CurationNeutral" Text="{Binding CurationNeutralShortcut, Mode=TwoWay}" Watermark="Neutral" Height="36" Width="250" HorizontalAlignment="Right" IsReadOnly="True" KeyDown="OnShortcutKeyDown" VerticalContentAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Carousel>
+                </ScrollViewer>
+            </Grid>
+        </DockPanel>
+    </Border>
+</Window>

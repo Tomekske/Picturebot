@@ -97,7 +97,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> dbConte
                 Rating5Shortcut = "NumPad5",
                 CurationPickedShortcut = "P",
                 CurationRejectedShortcut = "X",
-                CurationNeutralShortcut = "U"
+                CurationNeutralShortcut = "U",
+                CopyToEditShortcut = "Ctrl+E",
+                CopyToPrintShortcut = "Shift+E"
             }
         );
 

@@ -13,9 +13,6 @@
     <suki:SukiWindow.KeyBindings>
         <KeyBinding Gesture="Shift+P" Command="{Binding GalleryVM.ShowPickedOnlyCommand}" />
         <KeyBinding Gesture="Shift+R" Command="{Binding GalleryVM.ClearAllFiltersCommand}" />
-
-        <KeyBinding Gesture="Ctrl+E" Command="{Binding GalleryVM.CopyToEditCommand}" />
-        <KeyBinding Gesture="Shift+E" Command="{Binding GalleryVM.CopyToPrintCommand}" />
     </suki:SukiWindow.KeyBindings>
 
     <suki:SukiWindow.Hosts>
