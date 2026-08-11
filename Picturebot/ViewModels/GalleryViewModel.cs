@@ -45,6 +45,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
     private readonly IXmpService _xmpService;
+    private readonly IPickedService _pickedService;
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
@@ -127,7 +128,7 @@ public partial class GalleryViewModel : ViewModelBase,
         IPictureGroupingService groupingService, INavigationService navigationService,
         ISettingsService settingsService, ICurationQueue curationQueue,
         IAlbumService albumService, IFolderService folderService, ICopyService copyService,
-        IXmpService xmpService) {
+        IXmpService xmpService, IPickedService pickedService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
@@ -138,6 +139,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _folderService = folderService;
         _copyService = copyService;
         _xmpService = xmpService;
+        _pickedService = pickedService;
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -553,6 +555,28 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Sync Error")
                 .WithContent("Failed to synchronize with Picked folder.")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteSyncPicked))]
+    private async Task SynchronizeHighlightsAsync() {
+        if (_currentNode is not Album album) return;
+
+        try {
+            await _albumService.SyncHighlightsAsync(album);
+
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Complete")
+                .WithContent($"Successfully synchronized highlights for '{album.Name}'.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to sync highlights for album {AlbumId}", album.Id);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Error")
+                .WithContent("Failed to synchronize highlights.")
                 .Dismiss().ByClicking()
                 .Queue();
         }
@@ -1105,6 +1129,32 @@ public partial class GalleryViewModel : ViewModelBase,
             // Load XMP metadata in parallel first
             await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
 
+            // Sync picked and highlight files if they are missing
+            foreach (var pic in firstBatchPics) {
+                if (pic.CurationStatus == CurationStatus.Flagged) {
+                    var pickedPath = pic.SubFolder?.Picked;
+                    if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
+                        await _pickedService.SyncToPickedAsync(pic);
+                    }
+                }
+                if (pic.ColorLabel == ColorLabel.Blue) {
+                    var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
+                    if (!string.IsNullOrEmpty(highlightsPath)) {
+                        var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
+                        if (!System.IO.File.Exists(highlightFile)) {
+                            var previewPath = pic.SubFolder?.Preview;
+                            if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath)) {
+                                var directory = System.IO.Path.GetDirectoryName(highlightFile);
+                                if (directory != null && !System.IO.Directory.Exists(directory)) {
+                                    System.IO.Directory.CreateDirectory(directory);
+                                }
+                                await Task.Run(() => System.IO.File.Copy(previewPath, highlightFile, true));
+                            }
+                        }
+                    }
+                }
+            }
+
             // Create ViewModels
             var initialPicsList = new List<PictureItemViewModel>();
             foreach (var pic in firstBatchPics) {
@@ -1213,6 +1263,32 @@ public partial class GalleryViewModel : ViewModelBase,
                 await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
                     await _xmpService.LoadMetadataAsync(pic);
                 });
+
+                // Sync picked and highlight files if they are missing
+                foreach (var pic in chunk) {
+                    if (pic.CurationStatus == CurationStatus.Flagged) {
+                        var pickedPath = pic.SubFolder?.Picked;
+                        if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
+                            await _pickedService.SyncToPickedAsync(pic);
+                        }
+                    }
+                    if (pic.ColorLabel == ColorLabel.Blue) {
+                        var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
+                        if (!string.IsNullOrEmpty(highlightsPath)) {
+                            var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
+                            if (!System.IO.File.Exists(highlightFile)) {
+                                var previewPath = pic.SubFolder?.Preview;
+                                if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath)) {
+                                    var directory = System.IO.Path.GetDirectoryName(highlightFile);
+                                    if (directory != null && !System.IO.Directory.Exists(directory)) {
+                                        System.IO.Directory.CreateDirectory(directory);
+                                    }
+                                    await Task.Run(() => System.IO.File.Copy(previewPath, highlightFile, true));
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Create ViewModels
                 var chunkVms = new List<PictureItemViewModel>();

@@ -36,4 +36,12 @@ public class PathService(ISettingsService settingsService, IFileSystem fileSyste
         var albumPath = fileSystem.Path.Combine(settingsService.Current.LibraryPath, album.Uuid);
         return fileSystem.Path.Combine(albumPath, "Picked");
     }
+
+    public string? GetAlbumHighlightsPath(Album album) {
+        if (string.IsNullOrEmpty(album.Uuid)) return null;
+        if (string.IsNullOrEmpty(settingsService.Current.LibraryPath)) return null;
+
+        var albumPath = fileSystem.Path.Combine(settingsService.Current.LibraryPath, album.Uuid);
+        return fileSystem.Path.Combine(albumPath, "Highlights");
+    }
 }

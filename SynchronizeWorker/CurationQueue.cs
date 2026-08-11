@@ -71,6 +71,9 @@ public class CurationQueue : ICurationQueue, IHostedService, IDisposable {
 
                         // 2. copy to the 'Picked' folder
                         await pickedService.SyncToPickedAsync(picture);
+
+                        // 2.5. copy to the 'Highlights' folder
+                        await pickedService.SyncToHighlightAsync(picture);
                         
                         Log.Information("Successfully synchronized curation for {Name}", picture.Name);
                         _processedInBatch++;

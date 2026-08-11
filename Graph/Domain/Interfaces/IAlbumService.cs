@@ -23,4 +23,11 @@ public interface IAlbumService {
     /// <param name="album">The album to synchronize.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     Task SyncPickedStatusAsync(Album album);
+
+    /// <summary>
+    ///     Synchronizes the pictures within the album having the blue color label to the physical 'Highlights' directory.
+    /// </summary>
+    /// <param name="album">The album to synchronize.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    Task SyncHighlightsAsync(Album album);
 }

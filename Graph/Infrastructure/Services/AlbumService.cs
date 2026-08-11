@@ -104,4 +104,59 @@ public class AlbumService(
             }
         }
     }
+
+    public async Task SyncHighlightsAsync(Album album) {
+        var highlightsPath = pathService.GetAlbumHighlightsPath(album);
+        if (string.IsNullOrEmpty(highlightsPath)) {
+            return;
+        }
+
+        var pictures = await pictureRepository.FindByHierarchyIdAsync(album.Id);
+        foreach (var picture in pictures) {
+            picture.Parent = album;
+        }
+        pathService.PopulatePaths(pictures);
+
+        var bluePictureNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var picture in pictures) {
+            await xmpService.LoadMetadataAsync(picture);
+            if (picture.ColorLabel == ColorLabel.Blue) {
+                bluePictureNames.Add(picture.Name);
+            }
+        }
+
+        // Ensure directory exists if we have highlights to copy
+        if (bluePictureNames.Count > 0 && !fileSystem.Directory.Exists(highlightsPath)) {
+            fileSystem.Directory.CreateDirectory(highlightsPath);
+        }
+
+        // Copy/overwrite blue pictures
+        foreach (var picture in pictures) {
+            if (picture.ColorLabel == ColorLabel.Blue) {
+                var previewPath = picture.SubFolder?.Preview;
+                if (!string.IsNullOrEmpty(previewPath) && fileSystem.File.Exists(previewPath)) {
+                    var targetPath = fileSystem.Path.Combine(highlightsPath, picture.Name + ".jpg");
+
+                    var directory = fileSystem.Path.GetDirectoryName(targetPath);
+                    if (directory != null && !fileSystem.Directory.Exists(directory)) {
+                        fileSystem.Directory.CreateDirectory(directory);
+                    }
+
+                    await Task.Run(() => fileSystem.File.Copy(previewPath, targetPath, true));
+                }
+            }
+        }
+
+        // Clean up files in Highlights that are no longer blue highlight pictures
+        if (fileSystem.Directory.Exists(highlightsPath)) {
+            var existingFiles = fileSystem.Directory.GetFiles(highlightsPath);
+            foreach (var file in existingFiles) {
+                var fileNameWithoutExt = fileSystem.Path.GetFileNameWithoutExtension(file);
+                if (!bluePictureNames.Contains(fileNameWithoutExt)) {
+                    await Task.Run(() => fileSystem.File.Delete(file));
+                }
+            }
+        }
+    }
 }
