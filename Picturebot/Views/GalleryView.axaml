@@ -346,6 +346,12 @@
                                         <icons:MaterialIcon Kind="FolderSyncOutline" Width="18" Height="18" />
                                     </MenuItem.Icon>
                                 </MenuItem>
+                                <MenuItem Header="Synchronize Highlights"
+                                          Command="{Binding SynchronizeHighlightsCommand}">
+                                    <MenuItem.Icon>
+                                        <icons:MaterialIcon Kind="StarOutline" Width="18" Height="18" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
                                 <MenuItem Header="Create XMP files"
                                           Command="{Binding CreateXmpFilesCommand}">
                                     <MenuItem.Icon>

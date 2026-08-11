@@ -129,4 +129,71 @@ public class AlbumServiceTests {
             _mockNodeService.Verify(s => s.DeleteNodeAsync(album), Times.Once);
         });
     }
+
+    [Test]
+    public async Task SyncHighlightsAsync_ShouldCopyBlueLabeledPreviewsAndCleanupOthers() {
+        // Arrange
+        var albumUuid = Guid.NewGuid().ToString();
+        var album = new Album { Id = 10, Uuid = albumUuid, Name = "Test Album" };
+        var libraryPath = @"C:\Photos";
+        var highlightsPath = Path.Combine(libraryPath, albumUuid, "Highlights");
+        var jpgsPath = Path.Combine(libraryPath, albumUuid, "JPGs");
+
+        _mockFileSystem.AddDirectory(jpgsPath);
+        _mockFileSystem.AddDirectory(highlightsPath);
+
+        // Pre-existing file in Highlights that should be removed because it's not a blue highlight picture
+        _mockFileSystem.AddFile(Path.Combine(highlightsPath, "stray.jpg"), new MockFileData("stray"));
+        // Pre-existing file in Highlights that belongs to a blue picture (should be overwritten/kept)
+        _mockFileSystem.AddFile(Path.Combine(highlightsPath, "blue1.jpg"), new MockFileData("old_blue"));
+        // Pre-existing file in Highlights that belongs to a non-blue picture (should be deleted)
+        _mockFileSystem.AddFile(Path.Combine(highlightsPath, "red1.jpg"), new MockFileData("old_red"));
+
+        // Source JPG files
+        _mockFileSystem.AddFile(Path.Combine(jpgsPath, "blue1.jpg"), new MockFileData("blue1_data"));
+        _mockFileSystem.AddFile(Path.Combine(jpgsPath, "blue2.jpg"), new MockFileData("blue2_data"));
+        _mockFileSystem.AddFile(Path.Combine(jpgsPath, "red1.jpg"), new MockFileData("red1_data"));
+
+        var pics = new List<Picture> {
+            new() { Id = 1, Name = "blue1", ColorLabel = ColorLabel.Blue, Parent = album },
+            new() { Id = 2, Name = "blue2", ColorLabel = ColorLabel.Blue, Parent = album },
+            new() { Id = 3, Name = "red1", ColorLabel = ColorLabel.Red, Parent = album }
+        };
+
+        _mockPictureRepository.Setup(r => r.FindByHierarchyIdAsync(album.Id)).ReturnsAsync(pics);
+        _mockPathService.Setup(p => p.GetAlbumHighlightsPath(album)).Returns(highlightsPath);
+        _mockPathService.Setup(p => p.PopulatePaths(It.IsAny<IEnumerable<Picture>>()))
+            .Callback<IEnumerable<Picture>>(pictures => {
+                foreach (var p in pictures) {
+                    p.SubFolder = new SubFolder {
+                        Preview = Path.Combine(jpgsPath, p.Name + ".jpg")
+                    };
+                }
+            });
+        _mockXmpService.Setup(x => x.LoadMetadataAsync(It.IsAny<Picture>())).Returns(Task.CompletedTask);
+
+        // Act
+        await _albumService.SyncHighlightsAsync(album);
+
+        // Assert
+        Assert.Multiple(() => {
+            // Verify blue1.jpg exists and was overwritten with new content
+            var blue1Path = Path.Combine(highlightsPath, "blue1.jpg");
+            Assert.That(_mockFileSystem.File.Exists(blue1Path), Is.True);
+            Assert.That(_mockFileSystem.File.ReadAllText(blue1Path), Is.EqualTo("blue1_data"));
+
+            // Verify blue2.jpg was copied
+            var blue2Path = Path.Combine(highlightsPath, "blue2.jpg");
+            Assert.That(_mockFileSystem.File.Exists(blue2Path), Is.True);
+            Assert.That(_mockFileSystem.File.ReadAllText(blue2Path), Is.EqualTo("blue2_data"));
+
+            // Verify red1.jpg was deleted/not copied
+            var red1Path = Path.Combine(highlightsPath, "red1.jpg");
+            Assert.That(_mockFileSystem.File.Exists(red1Path), Is.False);
+
+            // Verify stray.jpg was deleted
+            var strayPath = Path.Combine(highlightsPath, "stray.jpg");
+            Assert.That(_mockFileSystem.File.Exists(strayPath), Is.False);
+        });
+    }
 }

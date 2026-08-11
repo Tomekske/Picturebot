@@ -558,6 +558,28 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanExecuteSyncPicked))]
+    private async Task SynchronizeHighlightsAsync() {
+        if (_currentNode is not Album album) return;
+
+        try {
+            await _albumService.SyncHighlightsAsync(album);
+
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Complete")
+                .WithContent($"Successfully synchronized highlights for '{album.Name}'.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to sync highlights for album {AlbumId}", album.Id);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Sync Error")
+                .WithContent("Failed to synchronize highlights.")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
     private bool CanExecuteSyncPicked() => CanPlayCarousel && CanExecuteShortcuts();
 
     [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
