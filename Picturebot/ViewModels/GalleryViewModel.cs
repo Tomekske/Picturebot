@@ -45,6 +45,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly IPathService _pathService;
     private readonly ISettingsService _settingsService;
     private readonly IXmpService _xmpService;
+    private readonly IPickedService _pickedService;
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
@@ -127,7 +128,7 @@ public partial class GalleryViewModel : ViewModelBase,
         IPictureGroupingService groupingService, INavigationService navigationService,
         ISettingsService settingsService, ICurationQueue curationQueue,
         IAlbumService albumService, IFolderService folderService, ICopyService copyService,
-        IXmpService xmpService) {
+        IXmpService xmpService, IPickedService pickedService) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
@@ -138,6 +139,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _folderService = folderService;
         _copyService = copyService;
         _xmpService = xmpService;
+        _pickedService = pickedService;
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -1127,6 +1129,16 @@ public partial class GalleryViewModel : ViewModelBase,
             // Load XMP metadata in parallel first
             await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
 
+            // Sync picked files if they are missing
+            foreach (var pic in firstBatchPics) {
+                if (pic.CurationStatus == CurationStatus.Flagged) {
+                    var pickedPath = pic.SubFolder?.Picked;
+                    if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
+                        await _pickedService.SyncToPickedAsync(pic);
+                    }
+                }
+            }
+
             // Create ViewModels
             var initialPicsList = new List<PictureItemViewModel>();
             foreach (var pic in firstBatchPics) {
@@ -1235,6 +1247,16 @@ public partial class GalleryViewModel : ViewModelBase,
                 await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
                     await _xmpService.LoadMetadataAsync(pic);
                 });
+
+                // Sync picked files if they are missing
+                foreach (var pic in chunk) {
+                    if (pic.CurationStatus == CurationStatus.Flagged) {
+                        var pickedPath = pic.SubFolder?.Picked;
+                        if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
+                            await _pickedService.SyncToPickedAsync(pic);
+                        }
+                    }
+                }
 
                 // Create ViewModels
                 var chunkVms = new List<PictureItemViewModel>();
