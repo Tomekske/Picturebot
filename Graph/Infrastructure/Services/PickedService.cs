@@ -35,4 +35,35 @@ public class PickedService(IFileSystem fileSystem, IPathService pathService) : I
             }
         }
     }
+
+    public async Task SyncToHighlightAsync(Picture picture) {
+        if (picture.Parent is not Album album) return;
+
+        var highlightsPath = pathService.GetAlbumHighlightsPath(album);
+        if (string.IsNullOrEmpty(highlightsPath)) return;
+
+        if (picture.SubFolder == null) {
+            pathService.PopulatePaths(picture);
+        }
+
+        if (picture.SubFolder == null) return;
+
+        var previewPath = picture.SubFolder.Preview;
+        var highlightFile = fileSystem.Path.Combine(highlightsPath, picture.Name + ".jpg");
+
+        if (picture.ColorLabel == ColorLabel.Blue) {
+            if (fileSystem.File.Exists(previewPath)) {
+                var directory = fileSystem.Path.GetDirectoryName(highlightFile);
+                if (directory != null && !fileSystem.Directory.Exists(directory)) {
+                    fileSystem.Directory.CreateDirectory(directory);
+                }
+
+                await Task.Run(() => fileSystem.File.Copy(previewPath, highlightFile, true));
+            }
+        } else {
+            if (fileSystem.File.Exists(highlightFile)) {
+                await Task.Run(() => fileSystem.File.Delete(highlightFile));
+            }
+        }
+    }
 }

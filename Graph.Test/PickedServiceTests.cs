@@ -87,4 +87,62 @@ public class PickedServiceTests {
         // Assert
         _mockPathService.Verify(s => s.PopulatePaths(picture), Times.Once);
     }
+
+    [Test]
+    public async Task SyncToHighlightAsync_WhenBlue_ShouldCopyPreviewToHighlights() {
+        // Arrange
+        var album = new Album { Uuid = "Album1" };
+        var previewPath = @"C:\Library\Album1\JPGs\Pic1.jpg";
+        var highlightsDir = @"C:\Library\Album1\Highlights";
+        var highlightPath = @"C:\Library\Album1\Highlights\Pic1.jpg";
+        var previewContent = "fake image content";
+        
+        _mockFileSystem.AddDirectory(@"C:\Library\Album1\JPGs");
+        _mockFileSystem.AddFile(previewPath, new MockFileData(previewContent));
+
+        var picture = new Picture {
+            Name = "Pic1",
+            ColorLabel = ColorLabel.Blue,
+            Parent = album,
+            SubFolder = new SubFolder {
+                Preview = previewPath
+            }
+        };
+
+        _mockPathService.Setup(p => p.GetAlbumHighlightsPath(album)).Returns(highlightsDir);
+
+        // Act
+        await _pickedService.SyncToHighlightAsync(picture);
+
+        // Assert
+        Assert.That(_mockFileSystem.File.Exists(highlightPath), Is.True);
+        Assert.That(_mockFileSystem.GetFile(highlightPath).TextContents, Is.EqualTo(previewContent));
+    }
+
+    [Test]
+    public async Task SyncToHighlightAsync_WhenNotBlue_ShouldDeleteHighlightsFile() {
+        // Arrange
+        var album = new Album { Uuid = "Album1" };
+        var highlightsDir = @"C:\Library\Album1\Highlights";
+        var highlightPath = @"C:\Library\Album1\Highlights\Pic1.jpg";
+        _mockFileSystem.AddDirectory(highlightsDir);
+        _mockFileSystem.AddFile(highlightPath, new MockFileData("existing content"));
+
+        var picture = new Picture {
+            Name = "Pic1",
+            ColorLabel = ColorLabel.Red,
+            Parent = album,
+            SubFolder = new SubFolder {
+                Preview = @"C:\Library\Album1\JPGs\Pic1.jpg"
+            }
+        };
+
+        _mockPathService.Setup(p => p.GetAlbumHighlightsPath(album)).Returns(highlightsDir);
+
+        // Act
+        await _pickedService.SyncToHighlightAsync(picture);
+
+        // Assert
+        Assert.That(_mockFileSystem.File.Exists(highlightPath), Is.False);
+    }
 }

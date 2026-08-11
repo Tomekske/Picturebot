@@ -1129,12 +1129,28 @@ public partial class GalleryViewModel : ViewModelBase,
             // Load XMP metadata in parallel first
             await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
 
-            // Sync picked files if they are missing
+            // Sync picked and highlight files if they are missing
             foreach (var pic in firstBatchPics) {
                 if (pic.CurationStatus == CurationStatus.Flagged) {
                     var pickedPath = pic.SubFolder?.Picked;
                     if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
                         await _pickedService.SyncToPickedAsync(pic);
+                    }
+                }
+                if (pic.ColorLabel == ColorLabel.Blue) {
+                    var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
+                    if (!string.IsNullOrEmpty(highlightsPath)) {
+                        var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
+                        if (!System.IO.File.Exists(highlightFile)) {
+                            var previewPath = pic.SubFolder?.Preview;
+                            if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath)) {
+                                var directory = System.IO.Path.GetDirectoryName(highlightFile);
+                                if (directory != null && !System.IO.Directory.Exists(directory)) {
+                                    System.IO.Directory.CreateDirectory(directory);
+                                }
+                                await Task.Run(() => System.IO.File.Copy(previewPath, highlightFile, true));
+                            }
+                        }
                     }
                 }
             }
@@ -1248,12 +1264,28 @@ public partial class GalleryViewModel : ViewModelBase,
                     await _xmpService.LoadMetadataAsync(pic);
                 });
 
-                // Sync picked files if they are missing
+                // Sync picked and highlight files if they are missing
                 foreach (var pic in chunk) {
                     if (pic.CurationStatus == CurationStatus.Flagged) {
                         var pickedPath = pic.SubFolder?.Picked;
                         if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
                             await _pickedService.SyncToPickedAsync(pic);
+                        }
+                    }
+                    if (pic.ColorLabel == ColorLabel.Blue) {
+                        var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
+                        if (!string.IsNullOrEmpty(highlightsPath)) {
+                            var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
+                            if (!System.IO.File.Exists(highlightFile)) {
+                                var previewPath = pic.SubFolder?.Preview;
+                                if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath)) {
+                                    var directory = System.IO.Path.GetDirectoryName(highlightFile);
+                                    if (directory != null && !System.IO.Directory.Exists(directory)) {
+                                        System.IO.Directory.CreateDirectory(directory);
+                                    }
+                                    await Task.Run(() => System.IO.File.Copy(previewPath, highlightFile, true));
+                                }
+                            }
                         }
                     }
                 }
