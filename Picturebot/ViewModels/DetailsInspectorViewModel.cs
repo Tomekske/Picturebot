@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -19,7 +20,7 @@ namespace Picturebot.ViewModels;
 
 public record ColorLabelOption(ColorLabel Label, string Name, string HexColor);
 
-public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<PictureSelectedMessage> {
+public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<PictureSelectedMessage>, IRecipient<PictureSelectionChangedMessage> {
     private readonly INodeService _nodeService;
     private readonly ICurationQueue _curationQueue;
     private readonly ISettingsService _settingsService;
@@ -36,6 +37,27 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     [ObservableProperty]
     private ColorLabelOption? _selectedColorLabelOption;
+
+    [ObservableProperty]
+    private ObservableCollection<PictureItemViewModel> _selectedPictures = new();
+
+    [ObservableProperty]
+    private string _newTagText = string.Empty;
+
+    public ObservableCollection<string> ActiveKeywords { get; } = new();
+
+    public List<string> QuickTags { get; } = new() { "Selected", "Review", "Highlight", "Portrait", "Landscape" };
+
+    [ObservableProperty]
+    private bool _isQuickTag1Active;
+    [ObservableProperty]
+    private bool _isQuickTag2Active;
+    [ObservableProperty]
+    private bool _isQuickTag3Active;
+    [ObservableProperty]
+    private bool _isQuickTag4Active;
+    [ObservableProperty]
+    private bool _isQuickTag5Active;
 
     public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue, ISettingsService settingsService) {
         _nodeService = nodeService;
@@ -67,6 +89,15 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         SelectedPicture = message.Value;
     }
 
+    public void Receive(PictureSelectionChangedMessage message) {
+        SelectedPictures.Clear();
+        foreach (var pic in message.Value) {
+            SelectedPictures.Add(pic);
+        }
+        UpdateActiveKeywords();
+        UpdateQuickTagStates();
+    }
+
     private PictureItemViewModel? _activePicture;
 
     async partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
@@ -81,12 +112,19 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         if (value == null) {
             SelectedColorLabelOption = null;
+            SelectedPictures.Clear();
+            UpdateActiveKeywords();
+            UpdateQuickTagStates();
             return;
         }
 
         value.PropertyChanged += OnPicturePropertyChanged;
 
         SelectedColorLabelOption = ColorLabelOptions.FirstOrDefault(o => o.Label == value.ColorLabel);
+        SelectedPictures.Clear();
+        SelectedPictures.Add(value);
+        UpdateActiveKeywords();
+        UpdateQuickTagStates();
         await LoadPreviewAsync(value);
     }
 
@@ -96,6 +134,45 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             if (SelectedColorLabelOption != newOption) {
                 SelectedColorLabelOption = newOption;
             }
+        }
+        if (e.PropertyName == nameof(PictureItemViewModel.Keywords)) {
+            UpdateActiveKeywords();
+            UpdateQuickTagStates();
+        }
+    }
+
+    private void UpdateActiveKeywords() {
+        ActiveKeywords.Clear();
+        var uniqueKeywords = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!SelectedPictures.Any() && SelectedPicture != null) {
+            uniqueKeywords = SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        foreach (var kw in uniqueKeywords.OrderBy(k => k)) {
+            ActiveKeywords.Add(kw);
+        }
+    }
+
+    private void UpdateQuickTagStates() {
+        var activeTags = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!SelectedPictures.Any() && SelectedPicture != null) {
+            activeTags = SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        IsQuickTag1Active = activeTags.Contains("Selected");
+        IsQuickTag2Active = activeTags.Contains("Review");
+        IsQuickTag3Active = activeTags.Contains("Highlight");
+        IsQuickTag4Active = activeTags.Contains("Portrait");
+        IsQuickTag5Active = activeTags.Contains("Landscape");
+    }
+
+    partial void OnNewTagTextChanged(string value) {
+        if (value != null && value.EndsWith(",")) {
+            var tag = value.TrimEnd(',');
+            if (!string.IsNullOrWhiteSpace(tag)) {
+                AddKeyword(tag);
+            }
+            NewTagText = string.Empty;
         }
     }
 
@@ -126,53 +203,49 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     [RelayCommand]
     private async Task SetCurationStatus(CurationStatus status) {
-        if (SelectedPicture == null) {
+        var pictureVm = SelectedPicture;
+        if (pictureVm == null) {
             return;
         }
 
-        IsBusy = true;
         try {
-            SelectedPicture.Picture.CurationStatus = status;
-            SelectedPicture.CurationStatus = status; // Update the VM property to trigger UI update
-
-            _curationQueue.Enqueue(SelectedPicture.Picture);
+            pictureVm.CurationStatus = status; // Trigger VM property update (which also updates model & notifies UI)
+            _curationQueue.Enqueue(pictureVm.Picture);
             await Task.CompletedTask;
         } catch (Exception ex) {
-            Log.Error(ex, "Failed to update curation status for {Name}", SelectedPicture.Name);
-        } finally {
-            IsBusy = false;
+            Log.Error(ex, "Failed to update curation status for {Name}", pictureVm.Name);
         }
     }
 
     [RelayCommand]
     private async Task SetColorLabel(ColorLabel label) {
-        if (SelectedPicture == null) {
+        var pictureVm = SelectedPicture;
+        if (pictureVm == null) {
             return;
         }
 
         try {
-            SelectedPicture.Picture.ColorLabel = label;
-            SelectedPicture.ColorLabel = label;
-            _curationQueue.Enqueue(SelectedPicture.Picture);
+            pictureVm.ColorLabel = label;
+            _curationQueue.Enqueue(pictureVm.Picture);
             await Task.CompletedTask;
         } catch (Exception ex) {
-            Log.Error(ex, "Failed to update color label for {Name}", SelectedPicture.Name);
+            Log.Error(ex, "Failed to update color label for {Name}", pictureVm.Name);
         }
     }
 
     [RelayCommand]
     private async Task SetRating(string ratingStr) {
-        if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
+        var pictureVm = SelectedPicture;
+        if (pictureVm == null || !int.TryParse(ratingStr, out var rating)) {
             return;
         }
 
         try {
-            SelectedPicture.Picture.Rating = rating;
-            SelectedPicture.Rating = rating;
-            _curationQueue.Enqueue(SelectedPicture.Picture);
+            pictureVm.Rating = rating;
+            _curationQueue.Enqueue(pictureVm.Picture);
             await Task.CompletedTask;
         } catch (Exception ex) {
-            Log.Error(ex, "Failed to update rating for {Name}", SelectedPicture.Name);
+            Log.Error(ex, "Failed to update rating for {Name}", pictureVm.Name);
         }
     }
 
@@ -186,5 +259,91 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     private void DeleteAsset() {
         // Trigger the asset removal workflow
         Log.Information("Delete asset {Name}", SelectedPicture?.Name);
+    }
+
+    [RelayCommand]
+    private void AddKeyword(string keyword) {
+        if (string.IsNullOrWhiteSpace(keyword)) return;
+        var trimmed = keyword.Trim();
+
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
+        if (!targetVms.Any() && SelectedPicture != null) {
+            targetVms.Add(SelectedPicture);
+        }
+
+        bool changed = false;
+        foreach (var picVm in targetVms) {
+            if (!picVm.Keywords.Contains(trimmed, StringComparer.OrdinalIgnoreCase)) {
+                picVm.AddKeyword(trimmed);
+                _curationQueue.Enqueue(picVm.Picture);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            UpdateActiveKeywords();
+            UpdateQuickTagStates();
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveKeyword(string keyword) {
+        if (string.IsNullOrWhiteSpace(keyword)) return;
+        var trimmed = keyword.Trim();
+
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
+        if (!targetVms.Any() && SelectedPicture != null) {
+            targetVms.Add(SelectedPicture);
+        }
+
+        bool changed = false;
+        foreach (var picVm in targetVms) {
+            var existing = picVm.Keywords.FirstOrDefault(k => k.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+            if (existing != null) {
+                picVm.RemoveKeyword(existing);
+                _curationQueue.Enqueue(picVm.Picture);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            UpdateActiveKeywords();
+            UpdateQuickTagStates();
+        }
+    }
+
+    [RelayCommand]
+    private void CommitNewKeyword() {
+        if (!string.IsNullOrWhiteSpace(NewTagText)) {
+            AddKeyword(NewTagText);
+            NewTagText = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleQuickTag(string tag) {
+        if (string.IsNullOrWhiteSpace(tag)) return;
+
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
+        if (!targetVms.Any() && SelectedPicture != null) {
+            targetVms.Add(SelectedPicture);
+        }
+
+        bool changed = false;
+        foreach (var picVm in targetVms) {
+            var exists = picVm.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase);
+            if (exists) {
+                picVm.RemoveKeyword(tag);
+            } else {
+                picVm.AddKeyword(tag);
+            }
+            _curationQueue.Enqueue(picVm.Picture);
+            changed = true;
+        }
+
+        if (changed) {
+            UpdateActiveKeywords();
+            UpdateQuickTagStates();
+        }
     }
 }

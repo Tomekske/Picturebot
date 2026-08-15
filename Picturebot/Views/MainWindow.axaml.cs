@@ -175,6 +175,23 @@ public partial class MainWindow : SukiWindow {
                 e.Handled = true;
                 return;
             }
+
+            if (e.KeyModifiers == KeyModifiers.Alt) {
+                string? tagToToggle = e.Key switch {
+                    Key.D1 or Key.NumPad1 => "Selected",
+                    Key.D2 or Key.NumPad2 => "Review",
+                    Key.D3 or Key.NumPad3 => "Highlight",
+                    Key.D4 or Key.NumPad4 => "Portrait",
+                    Key.D5 or Key.NumPad5 => "Landscape",
+                    _ => null
+                };
+
+                if (tagToToggle != null) {
+                    vm.GalleryVM.ToggleKeywordCommand.Execute(tagToToggle);
+                    e.Handled = true;
+                    return;
+                }
+            }
         }
         
         base.OnKeyDown(e);

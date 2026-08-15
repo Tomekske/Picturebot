@@ -203,6 +203,7 @@
                     <ListBoxItem Content="Culling" />
                     <ListBoxItem Content="Color Labels" />
                     <ListBoxItem Content="Keyboard Shortcuts" />
+                    <ListBoxItem Content="Keywords" />
                 </ListBox>
 
                 <!-- Vertical Divider -->
@@ -511,6 +512,62 @@
                                 </StackPanel>
                             </ScrollViewer>
                         </StackPanel>
+
+                        <!-- View 5: Keywords -->
+                        <Grid RowDefinitions="Auto,*" Margin="0,0,0,10">
+                            <TextBlock Grid.Row="0" Text="KEYWORDS TAXONOMY" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,16" LetterSpacing="1" />
+                            
+                            <Grid Grid.Row="1" ColumnDefinitions="*, 24, 300">
+                                <!-- Left side: Tree view of global keywords -->
+                                <Border Grid.Column="0" Background="#15FFFFFF" CornerRadius="4" BorderThickness="1" BorderBrush="#33FFFFFF" Padding="8">
+                                    <TreeView ItemsSource="{Binding GlobalKeywords}"
+                                              SelectedItem="{Binding SelectedKeywordNode, Mode=TwoWay}"
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <TreeView.ItemTemplate>
+                                            <TreeDataTemplate DataType="vm:KeywordNodeViewModel" ItemsSource="{Binding Children}">
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="13" />
+                                            </TreeDataTemplate>
+                                        </TreeView.ItemTemplate>
+                                        <TreeView.Styles>
+                                            <Style Selector="TreeViewItem" x:DataType="vm:KeywordNodeViewModel">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                            </Style>
+                                        </TreeView.Styles>
+                                    </TreeView>
+                                </Border>
+
+                                <!-- Right side: Actions panel -->
+                                <StackPanel Grid.Column="2" Spacing="20" IsEnabled="{Binding SelectedKeywordNode, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Selected Keyword Path" Foreground="#888888" FontSize="11" FontWeight="Bold" />
+                                        <TextBox Text="{Binding SelectedKeywordNode.FullPath, Mode=OneWay}" IsReadOnly="True" Height="36" VerticalContentAlignment="Center" Background="#10FFFFFF" />
+                                    </StackPanel>
+
+                                    <!-- Rename -->
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Rename Keyword" Foreground="#888888" FontSize="11" FontWeight="Bold" />
+                                        <Grid ColumnDefinitions="*, 8, Auto">
+                                            <TextBox Grid.Column="0" Text="{Binding RenameText, Mode=TwoWay}" Height="36" VerticalContentAlignment="Center" Watermark="New name..." />
+                                            <Button Grid.Column="2" Content="Rename" Command="{Binding RenameKeywordCommand}" Height="36" Classes="primary" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <!-- Merge -->
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Merge into Tag" Foreground="#888888" FontSize="11" FontWeight="Bold" />
+                                        <Grid ColumnDefinitions="*, 8, Auto">
+                                            <TextBox Grid.Column="0" Text="{Binding MergeTargetText, Mode=TwoWay}" Height="36" VerticalContentAlignment="Center" Watermark="e.g. subject|animal|dog" />
+                                            <Button Grid.Column="2" Content="Merge" Command="{Binding MergeKeywordsCommand}" Height="36" Classes="primary" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <!-- Delete -->
+                                    <StackPanel Spacing="6" Margin="0,10,0,0">
+                                        <Button Content="Delete Globally" Command="{Binding DeleteKeywordCommand}" Background="#FF5555" Foreground="#FFFFFF" BorderThickness="0" HorizontalAlignment="Stretch" Height="38" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
                     </Carousel>
                 </ScrollViewer>
             </Grid>

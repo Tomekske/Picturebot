@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using CommunityToolkit.Mvvm.Messaging;
+using Picturebot.Messages;
 using Picturebot.ViewModels;
 
 namespace Picturebot.Views;
@@ -37,9 +40,17 @@ public partial class GalleryView : UserControl {
     }
 
     private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {
-        if (e.AddedItems.Count > 0 && e.AddedItems[0] is PictureItemViewModel pic) {
+        if (sender is ListBox listBox) {
             if (DataContext is GalleryViewModel vm) {
-                vm.SelectedPicture = pic;
+                vm.SelectedPictures.Clear();
+                foreach (var item in listBox.SelectedItems) {
+                    if (item is PictureItemViewModel pic) {
+                        vm.SelectedPictures.Add(pic);
+                    }
+                }
+                vm.SelectedPicture = listBox.SelectedItem as PictureItemViewModel;
+                
+                WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(vm.SelectedPictures.ToList()));
             }
         }
     }

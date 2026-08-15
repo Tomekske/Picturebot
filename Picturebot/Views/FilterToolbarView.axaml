@@ -1,0 +1,323 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Picturebot.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="40"
+             x:Class="Picturebot.Views.FilterToolbarView"
+             x:DataType="vm:FilterToolbarViewModel">
+
+    <UserControl.Styles>
+        <!-- Base Style for Filter ToggleButtons (Chips) -->
+        <Style Selector="ToggleButton.FilterChip">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Template Override for Hover and Checked transitions -->
+        <Style Selector="ToggleButton.FilterChip /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+
+        <!-- Hover State -->
+        <Style Selector="ToggleButton.FilterChip:pointerover">
+            <Setter Property="Opacity" Value="0.75"/>
+            <Setter Property="Background" Value="#15FFFFFF"/>
+        </Style>
+
+        <!-- Active/Selected State -->
+        <Style Selector="ToggleButton.FilterChip:checked">
+            <Setter Property="Opacity" Value="1.0"/>
+            <Setter Property="Background" Value="#25FFFFFF"/>
+        </Style>
+
+        <!-- Active and Hovered State -->
+        <Style Selector="ToggleButton.FilterChip:checked:pointerover">
+            <Setter Property="Opacity" Value="1.0"/>
+            <Setter Property="Background" Value="#35FFFFFF"/>
+        </Style>
+
+        <!-- Specialized Style for Stars (since they have wider content) -->
+        <Style Selector="ToggleButton.StarChip">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="ToggleButton.StarChip /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="ToggleButton.StarChip:pointerover">
+            <Setter Property="Opacity" Value="0.75"/>
+            <Setter Property="Background" Value="#15FFFFFF"/>
+        </Style>
+
+        <Style Selector="ToggleButton.StarChip:checked">
+            <Setter Property="Opacity" Value="1.0"/>
+            <Setter Property="Background" Value="#25FFFFFF"/>
+        </Style>
+
+        <Style Selector="ToggleButton.StarChip:checked:pointerover">
+            <Setter Property="Opacity" Value="1.0"/>
+            <Setter Property="Background" Value="#35FFFFFF"/>
+        </Style>
+
+        <!-- Dynamic Icon Fills depending on state -->
+        <!-- Picked Flag (Green when active) -->
+        <Style Selector="ToggleButton.PickedFlag Path">
+            <Setter Property="Fill" Value="White" />
+        </Style>
+        <Style Selector="ToggleButton.PickedFlag:checked Path">
+            <Setter Property="Fill" Value="#22C55E" />
+        </Style>
+
+        <!-- Neutral Flag (Neutral Grey when active) -->
+        <Style Selector="ToggleButton.NeutralFlag Path">
+            <Setter Property="Fill" Value="White" />
+        </Style>
+        <Style Selector="ToggleButton.NeutralFlag:checked Path">
+            <Setter Property="Fill" Value="#6B7280" />
+        </Style>
+
+        <!-- Rejected Flag (Red when active) -->
+        <Style Selector="ToggleButton.RejectedFlag Path">
+            <Setter Property="Fill" Value="White" />
+        </Style>
+        <Style Selector="ToggleButton.RejectedFlag:checked Path">
+            <Setter Property="Fill" Value="#EF4444" />
+        </Style>
+
+        <!-- Rating Stars (Gold when active) -->
+        <Style Selector="ToggleButton.StarChip Path">
+            <Setter Property="Fill" Value="White" />
+        </Style>
+        <Style Selector="ToggleButton.StarChip:checked Path">
+            <Setter Property="Fill" Value="#EAB308" />
+        </Style>
+        <Style Selector="ToggleButton.StarChip:checked TextBlock">
+            <Setter Property="Foreground" Value="#EAB308" />
+        </Style>
+
+        <!-- Reset Button Styling -->
+        <Style Selector="Button.ResetBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.ResetBtn /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="Button.ResetBtn:pointerover">
+            <Setter Property="Background" Value="#15FFFFFF"/>
+        </Style>
+
+        <Style Selector="Button.ResetBtn:pointerover Path">
+            <Setter Property="Fill" Value="#EF4444"/>
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+        <!-- Curation Status Group -->
+        <StackPanel Orientation="Horizontal" Spacing="2">
+            <!-- Picked Flag -->
+            <ToggleButton Classes="FilterChip PickedFlag" 
+                          IsChecked="{Binding IsFlaggedActive}"
+                          ToolTip.Tip="Filter Picked (Shift+P)">
+                <Path Data="M14.4,6L14,4H5V21H7V14H12.6L13,16H20V6H14.4Z" 
+                      Width="14" Height="14" Stretch="Uniform"/>
+            </ToggleButton>
+
+            <!-- Neutral Flag -->
+            <ToggleButton Classes="FilterChip NeutralFlag" 
+                          IsChecked="{Binding IsNeutralActive}"
+                          ToolTip.Tip="Filter Neutral / Unflagged">
+                <Path Data="M12.6,12H7V6H14.4L14.8,8H19V12H14.4L14,10H7V12H12.6M14,4H5V21H7V14H12.6L13,16H20V6H14.4L14,4Z" 
+                      Width="14" Height="14" Stretch="Uniform"/>
+            </ToggleButton>
+
+            <!-- Rejected Flag -->
+            <ToggleButton Classes="FilterChip RejectedFlag" 
+                          IsChecked="{Binding IsRejectedActive}"
+                          ToolTip.Tip="Filter Rejected">
+                <Path Data="M12,2C6.47,2 2,6.47 2,12s4.47,10 10,10s10-4.47 10-10S17.53,2 12,2z M12,20c-4.42,0-8-3.58-8-8c0-1.85,0.63-3.55,1.69-4.9L16.9,18.31C15.55,19.37 13.85,20 12,20z M18.31,16.9L7.1,5.69C8.45,4.63 10.15,4 12,4c4.42,0 8,3.58 8,8C20,13.85 19.37,15.55 18.31,16.9z" 
+                      Width="14" Height="14" Stretch="Uniform"/>
+            </ToggleButton>
+        </StackPanel>
+
+        <!-- Vertical Separator -->
+        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+
+        <!-- Color Label Chips Group -->
+        <StackPanel Orientation="Horizontal" Spacing="2">
+            <!-- Green -->
+            <ToggleButton Classes="FilterChip" 
+                          IsChecked="{Binding IsGreenActive}"
+                          ToolTip.Tip="Filter Green">
+                <Ellipse Width="10" Height="10" Fill="#22C55E"/>
+            </ToggleButton>
+
+            <!-- Blue -->
+            <ToggleButton Classes="FilterChip" 
+                          IsChecked="{Binding IsBlueActive}"
+                          ToolTip.Tip="Filter Blue">
+                <Ellipse Width="10" Height="10" Fill="#3B82F6"/>
+            </ToggleButton>
+
+            <!-- Yellow / Orange -->
+            <ToggleButton Classes="FilterChip" 
+                          IsChecked="{Binding IsYellowOrangeActive}"
+                          ToolTip.Tip="Filter Yellow / Orange">
+                <Ellipse Width="10" Height="10" Fill="#EAB308"/>
+            </ToggleButton>
+
+            <!-- Red -->
+            <ToggleButton Classes="FilterChip" 
+                          IsChecked="{Binding IsRedActive}"
+                          ToolTip.Tip="Filter Red">
+                <Ellipse Width="10" Height="10" Fill="#EF4444"/>
+            </ToggleButton>
+
+            <!-- Purple -->
+            <ToggleButton Classes="FilterChip" 
+                          IsChecked="{Binding IsPurpleActive}"
+                          ToolTip.Tip="Filter Purple">
+                <Ellipse Width="10" Height="10" Fill="#A855F7"/>
+            </ToggleButton>
+
+            <!-- Neutral / Grey -->
+            <ToggleButton Classes="FilterChip" 
+                          IsChecked="{Binding IsNoneActive}"
+                          ToolTip.Tip="Filter Neutral / Grey">
+                <Ellipse Width="10" Height="10" Fill="#6B7280"/>
+            </ToggleButton>
+        </StackPanel>
+
+        <!-- Vertical Separator -->
+        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+
+        <!-- Rating Stars Group -->
+        <StackPanel Orientation="Horizontal" Spacing="1">
+            <!-- Rating 0 -->
+            <ToggleButton Classes="StarChip" 
+                          IsChecked="{Binding IsStar0Active}"
+                          ToolTip.Tip="Filter 0 Stars">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <Path Data="M12,15.39L8.24,17.66L9.25,13.38L5.91,10.5L10.29,10.13L12,6.1L13.71,10.13L18.09,10.5L14.75,13.38L15.76,17.66L12,15.39M22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z" 
+                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <TextBlock Text="0" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </ToggleButton>
+
+            <!-- Rating 1 -->
+            <ToggleButton Classes="StarChip" 
+                          IsChecked="{Binding IsStar1Active}"
+                          ToolTip.Tip="Filter Rating >= 1 Star">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
+                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <TextBlock Text="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </ToggleButton>
+
+            <!-- Rating 2 -->
+            <ToggleButton Classes="StarChip" 
+                          IsChecked="{Binding IsStar2Active}"
+                          ToolTip.Tip="Filter Rating >= 2 Stars">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
+                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <TextBlock Text="2" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </ToggleButton>
+
+            <!-- Rating 3 -->
+            <ToggleButton Classes="StarChip" 
+                          IsChecked="{Binding IsStar3Active}"
+                          ToolTip.Tip="Filter Rating >= 3 Stars">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
+                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <TextBlock Text="3" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </ToggleButton>
+
+            <!-- Rating 4 -->
+            <ToggleButton Classes="StarChip" 
+                          IsChecked="{Binding IsStar4Active}"
+                          ToolTip.Tip="Filter Rating >= 4 Stars">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
+                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <TextBlock Text="4" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </ToggleButton>
+
+            <!-- Rating 5 -->
+            <ToggleButton Classes="StarChip" 
+                          IsChecked="{Binding IsStar5Active}"
+                          ToolTip.Tip="Filter Rating >= 5 Stars">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
+                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <TextBlock Text="5" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </ToggleButton>
+        </StackPanel>
+
+        <!-- Clear Reset Button -->
+        <Button Classes="ResetBtn" 
+                Command="{Binding ClearAllCommand}"
+                IsVisible="{Binding IsAnyFilterActive}"
+                ToolTip.Tip="Clear All Filters (Shift+R)"
+                Margin="4,0,0,0">
+            <Path Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" 
+                  Width="11" Height="11" Stretch="Uniform" Fill="White"/>
+        </Button>
+    </StackPanel>
+</UserControl>

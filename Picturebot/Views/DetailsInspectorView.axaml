@@ -176,6 +176,96 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                 </StackPanel>
+
+                <!-- Keywords Section -->
+                <StackPanel Spacing="12" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Text="Keywords"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SukiText}" />
+
+                    <!-- Keywords List Chips -->
+                    <ItemsControl ItemsSource="{Binding ActiveKeywords}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Top" ItemHeight="NaN" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Background="#25FFFFFF"
+                                        BorderBrush="#33FFFFFF"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Margin="0,0,6,6"
+                                        Padding="10,4,6,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding}"
+                                                   Foreground="#E0E0E0"
+                                                   FontSize="12"
+                                                   VerticalAlignment="Center" />
+                                        <Button Classes="Basic"
+                                                Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordCommand}"
+                                                CommandParameter="{Binding}"
+                                                Padding="2"
+                                                MinWidth="16"
+                                                MinHeight="16"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="×" Foreground="#FF5555" FontWeight="Bold" FontSize="12" />
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Add Keyword TextBox -->
+                    <TextBox Name="TagInput"
+                             Text="{Binding NewTagText, Mode=TwoWay}"
+                             Watermark="Add keyword..."
+                             Height="36"
+                             VerticalContentAlignment="Center"
+                             KeyDown="TagInput_KeyDown" />
+
+                    <!-- Quick Tags Bar -->
+                    <TextBlock Text="Quick Tags"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Margin="0,4,0,0" />
+                    <WrapPanel HorizontalAlignment="Left">
+                        <!-- Toggle Button for Selected -->
+                        <ToggleButton Content="Selected"
+                                      IsChecked="{Binding IsQuickTag1Active}"
+                                      Command="{Binding ToggleQuickTagCommand}"
+                                      CommandParameter="Selected"
+                                      Margin="0,0,6,6" />
+                        <!-- Toggle Button for Review -->
+                        <ToggleButton Content="Review"
+                                      IsChecked="{Binding IsQuickTag2Active}"
+                                      Command="{Binding ToggleQuickTagCommand}"
+                                      CommandParameter="Review"
+                                      Margin="0,0,6,6" />
+                        <!-- Toggle Button for Highlight -->
+                        <ToggleButton Content="Highlight"
+                                      IsChecked="{Binding IsQuickTag3Active}"
+                                      Command="{Binding ToggleQuickTagCommand}"
+                                      CommandParameter="Highlight"
+                                      Margin="0,0,6,6" />
+                        <!-- Toggle Button for Portrait -->
+                        <ToggleButton Content="Portrait"
+                                      IsChecked="{Binding IsQuickTag4Active}"
+                                      Command="{Binding ToggleQuickTagCommand}"
+                                      CommandParameter="Portrait"
+                                      Margin="0,0,6,6" />
+                        <!-- Toggle Button for Landscape -->
+                        <ToggleButton Content="Landscape"
+                                      IsChecked="{Binding IsQuickTag5Active}"
+                                      Command="{Binding ToggleQuickTagCommand}"
+                                      CommandParameter="Landscape"
+                                      Margin="0,0,6,6" />
+                    </WrapPanel>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 

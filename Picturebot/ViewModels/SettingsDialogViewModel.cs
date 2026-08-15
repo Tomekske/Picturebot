@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -10,11 +13,25 @@ using CommunityToolkit.Mvvm.Input;
 using Domain.Enums;
 using Domain.Interfaces;
 using Domain.Models;
+using Graph.Domain.Interfaces;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Toasts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Picturebot.ViewModels;
+
+public class KeywordNodeViewModel : ViewModelBase {
+    public string Name { get; set; } = string.Empty;
+    public string FullPath { get; set; } = string.Empty;
+    public ObservableCollection<KeywordNodeViewModel> Children { get; } = new();
+
+    private bool _isExpanded;
+    public bool IsExpanded {
+        get => _isExpanded;
+        set => SetProperty(ref _isExpanded, value);
+    }
+}
 
 public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
@@ -343,5 +360,194 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private void RevertToDefault() {
         var defaults = new SettingsModel();
         LoadSettingsFromModel(defaults);
+    }
+
+    public ObservableCollection<KeywordNodeViewModel> GlobalKeywords { get; } = new();
+
+    [ObservableProperty]
+    private KeywordNodeViewModel? _selectedKeywordNode;
+
+    [ObservableProperty]
+    private string _renameText = string.Empty;
+
+    [ObservableProperty]
+    private string _mergeTargetText = string.Empty;
+
+    partial void OnSelectedKeywordNodeChanged(KeywordNodeViewModel? value) {
+        if (value != null) {
+            RenameText = value.Name;
+        } else {
+            RenameText = string.Empty;
+        }
+    }
+
+    partial void OnSelectedTabIndexChanged(int value) {
+        if (value == 5) { // Keywords tab index
+            LoadGlobalKeywords();
+        }
+    }
+
+    public void LoadGlobalKeywords() {
+        GlobalKeywords.Clear();
+        var allPictures = GetLoadedPictures();
+        if (!allPictures.Any()) return;
+
+        var allTags = allPictures.SelectMany(p => p.Keywords).Distinct().ToList();
+        var roots = new List<KeywordNodeViewModel>();
+
+        foreach (var tag in allTags) {
+            var segments = tag.Split('|', StringSplitOptions.RemoveEmptyEntries);
+            IList<KeywordNodeViewModel> currentList = roots;
+            string currentPath = "";
+
+            for (int i = 0; i < segments.Length; i++) {
+                var segment = segments[i].Trim();
+                currentPath = i == 0 ? segment : $"{currentPath}|{segment}";
+
+                var existingNode = currentList.FirstOrDefault(n => n.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
+                if (existingNode == null) {
+                    existingNode = new KeywordNodeViewModel {
+                        Name = segment,
+                        FullPath = currentPath
+                    };
+                    currentList.Add(existingNode);
+                }
+                currentList = existingNode.Children;
+            }
+        }
+
+        SortKeywordNodes(roots);
+
+        foreach (var r in roots) {
+            GlobalKeywords.Add(r);
+        }
+    }
+
+    private void SortKeywordNodes(IList<KeywordNodeViewModel> nodes) {
+        var sorted = nodes.OrderBy(n => n.Name).ToList();
+        nodes.Clear();
+        foreach (var s in sorted) {
+            nodes.Add(s);
+            SortKeywordNodes(s.Children);
+        }
+    }
+
+    private List<PictureItemViewModel> GetLoadedPictures() {
+        if (MainWindow.Instance?.DataContext is MainWindowViewModel mainVm && mainVm.GalleryVM != null) {
+            return mainVm.GalleryVM.AllPictures.ToList();
+        }
+        return new List<PictureItemViewModel>();
+    }
+
+    [RelayCommand]
+    private void RenameKeyword() {
+        if (SelectedKeywordNode == null || string.IsNullOrWhiteSpace(RenameText)) return;
+        var oldPath = SelectedKeywordNode.FullPath;
+        var newName = RenameText.Trim();
+
+        var parts = oldPath.Split('|');
+        parts[parts.Length - 1] = newName;
+        var newPath = string.Join("|", parts);
+
+        var allPictures = GetLoadedPictures();
+        var curationQueue = App.Services?.GetService<ICurationQueue>();
+
+        foreach (var pic in allPictures) {
+            bool changed = false;
+            for (int i = 0; i < pic.Keywords.Count; i++) {
+                var kw = pic.Keywords[i];
+                if (kw.Equals(oldPath, StringComparison.OrdinalIgnoreCase)) {
+                    pic.Keywords[i] = newPath;
+                    changed = true;
+                } else if (kw.StartsWith(oldPath + "|", StringComparison.OrdinalIgnoreCase)) {
+                    pic.Keywords[i] = newPath + kw.Substring(oldPath.Length);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                pic.Picture.Keywords = pic.Keywords.ToList();
+                pic.NotifyKeywordsChanged();
+                curationQueue?.Enqueue(pic.Picture);
+            }
+        }
+
+        LoadGlobalKeywords();
+        RenameText = string.Empty;
+        SelectedKeywordNode = null;
+    }
+
+    [RelayCommand]
+    private void MergeKeywords() {
+        if (SelectedKeywordNode == null || string.IsNullOrWhiteSpace(MergeTargetText)) return;
+        var sourcePath = SelectedKeywordNode.FullPath;
+        var targetPath = MergeTargetText.Trim().Replace('/', '|');
+
+        var allPictures = GetLoadedPictures();
+        var curationQueue = App.Services?.GetService<ICurationQueue>();
+
+        foreach (var pic in allPictures) {
+            bool changed = false;
+            var newKeywords = new List<string>();
+
+            foreach (var kw in pic.Keywords) {
+                if (kw.Equals(sourcePath, StringComparison.OrdinalIgnoreCase)) {
+                    if (!newKeywords.Contains(targetPath, StringComparer.OrdinalIgnoreCase)) {
+                        newKeywords.Add(targetPath);
+                    }
+                    changed = true;
+                } else if (kw.StartsWith(sourcePath + "|", StringComparison.OrdinalIgnoreCase)) {
+                    var childTargetPath = targetPath + kw.Substring(sourcePath.Length);
+                    if (!newKeywords.Contains(childTargetPath, StringComparer.OrdinalIgnoreCase)) {
+                        newKeywords.Add(childTargetPath);
+                    }
+                    changed = true;
+                } else {
+                    newKeywords.Add(kw);
+                }
+            }
+
+            if (changed) {
+                pic.Keywords.Clear();
+                foreach (var kw in newKeywords) {
+                    pic.Keywords.Add(kw);
+                }
+                pic.Picture.Keywords = pic.Keywords.ToList();
+                pic.NotifyKeywordsChanged();
+                curationQueue?.Enqueue(pic.Picture);
+            }
+        }
+
+        LoadGlobalKeywords();
+        MergeTargetText = string.Empty;
+        SelectedKeywordNode = null;
+    }
+
+    [RelayCommand]
+    private void DeleteKeyword() {
+        if (SelectedKeywordNode == null) return;
+        var pathToDelete = SelectedKeywordNode.FullPath;
+
+        var allPictures = GetLoadedPictures();
+        var curationQueue = App.Services?.GetService<ICurationQueue>();
+
+        foreach (var pic in allPictures) {
+            var toRemove = pic.Keywords.Where(kw => 
+                kw.Equals(pathToDelete, StringComparison.OrdinalIgnoreCase) || 
+                kw.StartsWith(pathToDelete + "|", StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            if (toRemove.Any()) {
+                foreach (var kw in toRemove) {
+                    pic.Keywords.Remove(kw);
+                }
+                pic.Picture.Keywords = pic.Keywords.ToList();
+                pic.NotifyKeywordsChanged();
+                curationQueue?.Enqueue(pic.Picture);
+            }
+        }
+
+        LoadGlobalKeywords();
+        SelectedKeywordNode = null;
     }
 }

@@ -17,6 +17,7 @@ using Database.Domain.Interfaces;
 using Domain.Enums;
 using Domain.Interfaces;
 using Graph.Domain.Interfaces;
+using Graph.Infrastructure.Services;
 using Domain.Messages;
 using Picturebot.Messages;
 using Picturebot.Services;
@@ -49,19 +50,18 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
+    public IReadOnlyList<PictureItemViewModel> AllPictures => _allPictures;
     private int _pendingAutoFlagBatchCount;
 
     [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
-    private ObservableCollection<CurationStatus> _filterStatuses = new();
+    private FilterToolbarViewModel _filterToolbar;
 
-    [ObservableProperty]
-    private ObservableCollection<int> _filterRatings = new();
-
-    [ObservableProperty]
-    private ObservableCollection<ColorLabel> _filterColors = new();
+    public ObservableCollection<CurationStatus> FilterStatuses => FilterToolbar.FilterStatuses;
+    public ObservableCollection<int> FilterRatings => FilterToolbar.FilterRatings;
+    public ObservableCollection<ColorLabel> FilterColors => FilterToolbar.FilterColors;
 
     // Boolean properties for UI bindings
     public bool IsFlaggedFilterActive { get => FilterStatuses.Contains(CurationStatus.Flagged); set => ToggleStatusFilter(CurationStatus.Flagged, value); }
@@ -124,6 +124,8 @@ public partial class GalleryViewModel : ViewModelBase,
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
+    public ObservableCollection<PictureItemViewModel> SelectedPictures { get; } = new();
+
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
         IPictureGroupingService groupingService, INavigationService navigationService,
         ISettingsService settingsService, ICurationQueue curationQueue,
@@ -140,6 +142,8 @@ public partial class GalleryViewModel : ViewModelBase,
         _copyService = copyService;
         _xmpService = xmpService;
         _pickedService = pickedService;
+
+        _filterToolbar = new FilterToolbarViewModel(ApplyFilters);
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -331,7 +335,6 @@ public partial class GalleryViewModel : ViewModelBase,
             return;
         }
 
-        GroupedPictures.Clear();
         foreach (var pic in PicturesList) {
             pic.IsBest = false;
         }
@@ -803,15 +806,10 @@ public partial class GalleryViewModel : ViewModelBase,
 
                 bool hasPicked = _allPictures.Any(p => p.CurationStatus == CurationStatus.Flagged);
                 if (hasPicked) {
-                    FilterStatuses.Clear();
-                    FilterStatuses.Add(CurationStatus.Flagged);
+                    FilterToolbar.SetFlaggedOnly();
                 } else {
-                    FilterStatuses.Clear();
-                    FilterRatings.Clear();
-                    FilterColors.Clear();
+                    FilterToolbar.ClearAll();
                 }
-
-                ApplyFilters();
             } else {
                 var list = children.Where(n => n is Folder || n is Album).ToList();
                 foreach (var child in list) {
@@ -837,38 +835,47 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private void ToggleStatusFilter(CurationStatus status, bool isActive) {
-        if (isActive && !FilterStatuses.Contains(status)) FilterStatuses.Add(status);
-        else if (!isActive) FilterStatuses.Remove(status);
-        ApplyFilters();
+        if (FilterToolbar == null) return;
+        switch (status) {
+            case CurationStatus.Flagged: FilterToolbar.IsFlaggedActive = isActive; break;
+            case CurationStatus.Unflagged: FilterToolbar.IsNeutralActive = isActive; break;
+            case CurationStatus.Rejected: FilterToolbar.IsRejectedActive = isActive; break;
+        }
     }
 
     private void ToggleRatingFilter(int rating, bool isActive) {
-        if (isActive && !FilterRatings.Contains(rating)) FilterRatings.Add(rating);
-        else if (!isActive) FilterRatings.Remove(rating);
-        ApplyFilters();
+        if (FilterToolbar == null) return;
+        switch (rating) {
+            case 0: FilterToolbar.IsStar0Active = isActive; break;
+            case 1: FilterToolbar.IsStar1Active = isActive; break;
+            case 2: FilterToolbar.IsStar2Active = isActive; break;
+            case 3: FilterToolbar.IsStar3Active = isActive; break;
+            case 4: FilterToolbar.IsStar4Active = isActive; break;
+            case 5: FilterToolbar.IsStar5Active = isActive; break;
+        }
     }
 
     private void ToggleColorFilter(ColorLabel color, bool isActive) {
-        if (isActive && !FilterColors.Contains(color)) FilterColors.Add(color);
-        else if (!isActive) FilterColors.Remove(color);
-        ApplyFilters();
+        if (FilterToolbar == null) return;
+        switch (color) {
+            case ColorLabel.Green: FilterToolbar.IsGreenActive = isActive; break;
+            case ColorLabel.Blue: FilterToolbar.IsBlueActive = isActive; break;
+            case ColorLabel.Yellow: FilterToolbar.IsYellowOrangeActive = isActive; break;
+            case ColorLabel.Orange: FilterToolbar.IsYellowOrangeActive = isActive; break;
+            case ColorLabel.Red: FilterToolbar.IsRedActive = isActive; break;
+            case ColorLabel.Purple: FilterToolbar.IsPurpleActive = isActive; break;
+            case ColorLabel.None: FilterToolbar.IsNoneActive = isActive; break;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ShowPickedOnly() {
-        FilterStatuses.Clear();
-        FilterRatings.Clear();
-        FilterColors.Clear();
-        FilterStatuses.Add(CurationStatus.Flagged);
-        ApplyFilters();
+        FilterToolbar.SetFlaggedOnly();
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ClearAllFilters() {
-        FilterStatuses.Clear();
-        FilterRatings.Clear();
-        FilterColors.Clear();
-        ApplyFilters();
+        FilterToolbar.ClearAll();
     }
 
     private bool CanExecuteShortcuts() {
@@ -878,6 +885,7 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private void ApplyFilters() {
+        if (FilterToolbar == null) return;
         var filtered = _allPictures.AsEnumerable();
 
         if (FilterStatuses.Any()) {
@@ -885,7 +893,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         if (FilterRatings.Any()) {
-            filtered = filtered.Where(p => FilterRatings.Contains(p.Rating));
+            filtered = filtered.Where(p => p.Rating >= FilterRatings.Min());
         }
 
         if (FilterColors.Any()) {
@@ -894,10 +902,26 @@ public partial class GalleryViewModel : ViewModelBase,
 
         var filteredList = filtered.ToList();
 
-        PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
+        // Optimize: Only refresh list and grouping if the filtered content actually changed.
+        // Changing properties (like rating) of pictures that are still within the filter should not trigger a full UI layout teardown/refresh.
+        bool listChanged = PicturesList.Count != filteredList.Count;
+        if (!listChanged) {
+            for (int i = 0; i < filteredList.Count; i++) {
+                if (PicturesList[i] != filteredList[i]) {
+                    listChanged = true;
+                    break;
+                }
+            }
+        }
 
-        if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
-            SelectedPicture = PicturesList.FirstOrDefault();
+        if (listChanged) {
+            PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
+
+            if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
+                SelectedPicture = PicturesList.FirstOrDefault();
+            }
+
+            _ = RefreshGalleryGrouping();
         }
 
         // Notify UI about filter state changes
@@ -920,8 +944,6 @@ public partial class GalleryViewModel : ViewModelBase,
         OnPropertyChanged(nameof(IsBlueColorFilterActive));
         OnPropertyChanged(nameof(IsPinkColorFilterActive));
         OnPropertyChanged(nameof(IsPurpleColorFilterActive));
-
-        _ = RefreshGalleryGrouping();
     }
 
     private void UpdateBreadcrumbs(Node? node) {
@@ -964,10 +986,8 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         try {
-            SelectedPicture.Picture.CurationStatus = status;
             SelectedPicture.CurationStatus = status;
             _curationQueue.Enqueue(SelectedPicture.Picture);
-            ApplyFilters();
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update curation status in gallery for {Name}", SelectedPicture.Name);
         }
@@ -980,10 +1000,8 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         try {
-            SelectedPicture.Picture.ColorLabel = label;
             SelectedPicture.ColorLabel = label;
             _curationQueue.Enqueue(SelectedPicture.Picture);
-            ApplyFilters();
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update color label in gallery for {Name}", SelectedPicture.Name);
         }
@@ -996,13 +1014,33 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         try {
-            SelectedPicture.Picture.Rating = rating;
             SelectedPicture.Rating = rating;
             _curationQueue.Enqueue(SelectedPicture.Picture);
-            ApplyFilters();
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in gallery for {Name}", SelectedPicture.Name);
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
+    private void ToggleKeyword(string keyword) {
+        if (string.IsNullOrWhiteSpace(keyword)) return;
+        var trimmed = keyword.Trim();
+
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
+        if (!targetVms.Any() && SelectedPicture != null) {
+            targetVms.Add(SelectedPicture);
+        }
+
+        foreach (var picVm in targetVms) {
+            if (picVm.Keywords.Contains(trimmed, StringComparer.OrdinalIgnoreCase)) {
+                picVm.RemoveKeyword(trimmed);
+            } else {
+                picVm.AddKeyword(trimmed);
+            }
+            _curationQueue.Enqueue(picVm.Picture);
+        }
+
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(targetVms));
     }
 
     public void Receive(ProcessingProgressMessage message) {
@@ -1212,12 +1250,10 @@ public partial class GalleryViewModel : ViewModelBase,
                 PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListInitial);
                 GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsInitial);
 
-                FilterStatuses.Clear();
                 if (hasPickedInitial) {
-                    FilterStatuses.Add(CurationStatus.Flagged);
+                    FilterToolbar.SetFlaggedOnly();
                 } else {
-                    FilterRatings.Clear();
-                    FilterColors.Clear();
+                    FilterToolbar.ClearAll();
                 }
 
                 CanPlayCarousel = pics.Any();
@@ -1318,7 +1354,7 @@ public partial class GalleryViewModel : ViewModelBase,
                         filteredChunk = filteredChunk.Where(p => FilterStatuses.Contains(p.CurationStatus));
                     }
                     if (FilterRatings.Any()) {
-                        filteredChunk = filteredChunk.Where(p => FilterRatings.Contains(p.Rating));
+                        filteredChunk = filteredChunk.Where(p => p.Rating >= FilterRatings.Min());
                     }
                     if (FilterColors.Any()) {
                         filteredChunk = filteredChunk.Where(p => FilterColors.Contains(p.ColorLabel));
@@ -1447,6 +1483,12 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private void OnXmpFileChanged(object sender, FileSystemEventArgs e) {
+        if (XmpService.RecentWrites.TryGetValue(e.FullPath, out var writeTime)) {
+            if (DateTime.UtcNow - writeTime < TimeSpan.FromSeconds(2)) {
+                return;
+            }
+        }
+
         var fileName = Path.GetFileNameWithoutExtension(e.Name);
         if (string.IsNullOrEmpty(fileName)) return;
 
@@ -1470,6 +1512,10 @@ public partial class GalleryViewModel : ViewModelBase,
             if (picVm == null) return;
 
             if (e.ChangeType == WatcherChangeTypes.Deleted) {
+                bool changed = picVm.CurationStatus != CurationStatus.Unflagged ||
+                               picVm.ColorLabel != ColorLabel.None ||
+                               picVm.Rating != 0;
+
                 picVm.Picture.CurationStatus = CurationStatus.Unflagged;
                 picVm.Picture.ColorLabel = ColorLabel.None;
                 picVm.Picture.Rating = 0;
@@ -1477,7 +1523,14 @@ public partial class GalleryViewModel : ViewModelBase,
                 picVm.CurationStatus = CurationStatus.Unflagged;
                 picVm.ColorLabel = ColorLabel.None;
                 picVm.Rating = 0;
+
+                if (changed) {
+                    ApplyFilters();
+                }
             } else {
+                var originalStatus = picVm.Picture.CurationStatus;
+                var originalColor = picVm.Picture.ColorLabel;
+                var originalRating = picVm.Picture.Rating;
                 var originalCapturedAt = picVm.Picture.CapturedAt;
 
                 await _xmpService.LoadMetadataAsync(picVm.Picture);
@@ -1486,17 +1539,30 @@ public partial class GalleryViewModel : ViewModelBase,
                 picVm.ColorLabel = picVm.Picture.ColorLabel;
                 picVm.Rating = picVm.Picture.Rating;
 
+                bool changed = picVm.Picture.CurationStatus != originalStatus ||
+                               picVm.Picture.ColorLabel != originalColor ||
+                               picVm.Picture.Rating != originalRating ||
+                               picVm.Picture.CapturedAt != originalCapturedAt;
+
                 if (picVm.Picture.CapturedAt != originalCapturedAt) {
                     await _nodeService.UpdateNodeAsync(picVm.Picture);
                     _ = RefreshGalleryGrouping();
                 }
-            }
 
-            ApplyFilters();
+                if (changed) {
+                    ApplyFilters();
+                }
+            }
         });
     }
 
     private void OnXmpFileRenamed(object sender, RenamedEventArgs e) {
+        if (XmpService.RecentWrites.TryGetValue(e.FullPath, out var writeTime)) {
+            if (DateTime.UtcNow - writeTime < TimeSpan.FromSeconds(2)) {
+                return;
+            }
+        }
+
         var oldName = Path.GetFileNameWithoutExtension(e.OldName);
         var newName = Path.GetFileNameWithoutExtension(e.Name);
         var fileDir = Path.GetDirectoryName(e.FullPath);
@@ -1515,9 +1581,17 @@ public partial class GalleryViewModel : ViewModelBase,
                 return;
             }
 
+            bool changed = false;
+
             if (!string.IsNullOrEmpty(oldName)) {
                 var oldPicVm = _allPictures.FirstOrDefault(p => p.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
                 if (oldPicVm != null) {
+                    if (oldPicVm.CurationStatus != CurationStatus.Unflagged ||
+                        oldPicVm.ColorLabel != ColorLabel.None ||
+                        oldPicVm.Rating != 0) {
+                        changed = true;
+                    }
+
                     oldPicVm.Picture.CurationStatus = CurationStatus.Unflagged;
                     oldPicVm.Picture.ColorLabel = ColorLabel.None;
                     oldPicVm.Picture.Rating = 0;
@@ -1531,6 +1605,9 @@ public partial class GalleryViewModel : ViewModelBase,
             if (!string.IsNullOrEmpty(newName)) {
                 var newPicVm = _allPictures.FirstOrDefault(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
                 if (newPicVm != null) {
+                    var originalStatus = newPicVm.Picture.CurationStatus;
+                    var originalColor = newPicVm.Picture.ColorLabel;
+                    var originalRating = newPicVm.Picture.Rating;
                     var originalCapturedAt = newPicVm.Picture.CapturedAt;
 
                     await _xmpService.LoadMetadataAsync(newPicVm.Picture);
@@ -1539,6 +1616,13 @@ public partial class GalleryViewModel : ViewModelBase,
                     newPicVm.ColorLabel = newPicVm.Picture.ColorLabel;
                     newPicVm.Rating = newPicVm.Picture.Rating;
 
+                    if (newPicVm.Picture.CurationStatus != originalStatus ||
+                        newPicVm.Picture.ColorLabel != originalColor ||
+                        newPicVm.Picture.Rating != originalRating ||
+                        newPicVm.Picture.CapturedAt != originalCapturedAt) {
+                        changed = true;
+                    }
+
                     if (newPicVm.Picture.CapturedAt != originalCapturedAt) {
                         await _nodeService.UpdateNodeAsync(newPicVm.Picture);
                         _ = RefreshGalleryGrouping();
@@ -1546,7 +1630,9 @@ public partial class GalleryViewModel : ViewModelBase,
                 }
             }
 
-            ApplyFilters();
+            if (changed) {
+                ApplyFilters();
+            }
         });
     }
 
