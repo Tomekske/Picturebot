@@ -422,4 +422,27 @@ public class XmpServiceTests : IDisposable {
         Assert.That(pictureLoad.Keywords, Contains.Item("subject|animal|horse"));
         Assert.That(pictureLoad.Keywords, Contains.Item("subject|nature|forest"));
     }
+
+    [Test]
+    public void KeywordsFiltering_ShouldMatchCorrectlyBasedOnAnyAndAllOperators() {
+        // Arrange
+        var pic1 = new Picture { Keywords = new List<string> { "landscape", "summer" } };
+        var pic2 = new Picture { Keywords = new List<string> { "portrait", "summer", "black|white" } };
+        var pic3 = new Picture { Keywords = new List<string> { "portrait", "winter" } };
+
+        var pictures = new List<Picture> { pic1, pic2, pic3 };
+
+        // Test case 1: OR (ANY) matching "summer" and "portrait" -> should match pic1, pic2, pic3
+        var filterTagsAny = new List<string> { "summer", "portrait" };
+        var matchedAny = pictures.Where(p => filterTagsAny.Any(tag => p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase))).ToList();
+        Assert.That(matchedAny, Has.Count.EqualTo(3));
+
+        // Test case 2: AND (ALL) matching "summer" and "portrait" -> should only match pic2
+        var filterTagsAll = new List<string> { "summer", "portrait" };
+        var matchedAll = pictures.Where(p => filterTagsAll.All(tag => p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase))).ToList();
+        Assert.Multiple(() => {
+            Assert.That(matchedAll, Has.Count.EqualTo(1));
+            Assert.That(matchedAll[0].Keywords, Contains.Item("black|white"));
+        });
+    }
 }

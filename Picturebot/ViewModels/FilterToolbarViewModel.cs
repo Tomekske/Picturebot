@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,6 +7,33 @@ using CommunityToolkit.Mvvm.Input;
 using Domain.Enums;
 
 namespace Picturebot.ViewModels;
+
+public partial class TagFilterItemViewModel : ViewModelBase
+{
+    private readonly Action _onToggled;
+
+    [ObservableProperty]
+    private string _name = string.Empty;
+
+    [ObservableProperty]
+    private int _count;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public TagFilterItemViewModel(string name, int count, bool isSelected, Action onToggled)
+    {
+        _name = name;
+        _count = count;
+        _isSelected = isSelected;
+        _onToggled = onToggled;
+    }
+
+    partial void OnIsSelectedChanged(bool value)
+    {
+        _onToggled();
+    }
+}
 
 public partial class FilterToolbarViewModel : ViewModelBase
 {
@@ -15,6 +43,18 @@ public partial class FilterToolbarViewModel : ViewModelBase
     public ObservableCollection<CurationStatus> FilterStatuses { get; } = new();
     public ObservableCollection<int> FilterRatings { get; } = new();
     public ObservableCollection<ColorLabel> FilterColors { get; } = new();
+
+    public ObservableCollection<TagFilterItemViewModel> AllTags { get; } = new();
+    public ObservableCollection<TagFilterItemViewModel> VisibleTags { get; } = new();
+
+    [ObservableProperty]
+    private string _tagSearchText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isMatchAll;
+
+    [ObservableProperty]
+    private bool _isMatchAny = true;
 
     public FilterToolbarViewModel(Action? onFilterChanged = null)
     {
@@ -69,7 +109,8 @@ public partial class FilterToolbarViewModel : ViewModelBase
     public bool IsAnyFilterActive =>
         IsFlaggedActive || IsNeutralActive || IsRejectedActive ||
         IsGreenActive || IsBlueActive || IsYellowOrangeActive || IsRedActive || IsPurpleActive || IsNoneActive ||
-        IsStar0Active || IsStar1Active || IsStar2Active || IsStar3Active || IsStar4Active || IsStar5Active;
+        IsStar0Active || IsStar1Active || IsStar2Active || IsStar3Active || IsStar4Active || IsStar5Active ||
+        IsTagFilterActive;
 
     partial void OnIsFlaggedActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsNeutralActiveChanged(bool value) => UpdateCollectionsAndNotify();
@@ -139,6 +180,8 @@ public partial class FilterToolbarViewModel : ViewModelBase
         if (IsPurpleActive) FilterColors.Add(ColorLabel.Purple);
         if (IsNoneActive) FilterColors.Add(ColorLabel.None);
 
+        OnPropertyChanged(nameof(IsTagFilterActive));
+        OnPropertyChanged(nameof(ActiveTagFiltersCountText));
         OnPropertyChanged(nameof(IsAnyFilterActive));
         _onFilterChanged?.Invoke();
     }
@@ -196,6 +239,100 @@ public partial class FilterToolbarViewModel : ViewModelBase
             IsStar3Active = false;
             IsStar4Active = false;
             IsStar5Active = false;
+
+            foreach (var tag in AllTags)
+            {
+                tag.IsSelected = false;
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
+            UpdateCollectionsAndNotify();
+        }
+    }
+
+    public bool IsTagFilterActive => AllTags.Any(t => t.IsSelected);
+
+    public string ActiveTagFiltersCountText =>
+        AllTags.Any(t => t.IsSelected) ? $" ({AllTags.Count(t => t.IsSelected)})" : "";
+
+    partial void OnTagSearchTextChanged(string value) => RefreshVisibleTags();
+
+    partial void OnIsMatchAllChanged(bool value)
+    {
+        if (value) IsMatchAny = false;
+        UpdateCollectionsAndNotify();
+    }
+
+    partial void OnIsMatchAnyChanged(bool value)
+    {
+        if (value) IsMatchAll = false;
+        UpdateCollectionsAndNotify();
+    }
+
+    public void UpdateAvailableTags(IEnumerable<PictureItemViewModel> pictures)
+    {
+        var tagCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pic in pictures)
+        {
+            if (pic.Keywords != null)
+            {
+                foreach (var tag in pic.Keywords)
+                {
+                    if (tagCounts.ContainsKey(tag))
+                        tagCounts[tag]++;
+                    else
+                        tagCounts[tag] = 1;
+                }
+            }
+        }
+
+        var selectedTags = AllTags.Where(t => t.IsSelected).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        _isUpdating = true;
+        try
+        {
+            AllTags.Clear();
+            foreach (var kvp in tagCounts.OrderBy(k => k.Key))
+            {
+                var isSel = selectedTags.Contains(kvp.Key);
+                AllTags.Add(new TagFilterItemViewModel(kvp.Key, kvp.Value, isSel, UpdateCollectionsAndNotify));
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
+        }
+
+        RefreshVisibleTags();
+        OnPropertyChanged(nameof(IsTagFilterActive));
+        OnPropertyChanged(nameof(ActiveTagFiltersCountText));
+    }
+
+    public void RefreshVisibleTags()
+    {
+        VisibleTags.Clear();
+        var search = TagSearchText?.Trim();
+        foreach (var tag in AllTags)
+        {
+            if (string.IsNullOrEmpty(search) || tag.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+            {
+                VisibleTags.Add(tag);
+            }
+        }
+    }
+
+    [RelayCommand]
+    public void ClearTagFilters()
+    {
+        _isUpdating = true;
+        try
+        {
+            foreach (var tag in AllTags)
+            {
+                tag.IsSelected = false;
+            }
         }
         finally
         {

@@ -310,6 +310,74 @@
             </ToggleButton>
         </StackPanel>
 
+        <!-- Vertical Separator -->
+        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+
+        <!-- Tags Dropdown Button -->
+        <Button Classes.primary="{Binding IsTagFilterActive}"
+                Height="24"
+                CornerRadius="12"
+                Padding="8,0"
+                Margin="1,0"
+                Cursor="Hand"
+                VerticalAlignment="Center">
+            <Button.Styles>
+                <Style Selector="Button">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="#33FFFFFF"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                </Style>
+                <Style Selector="Button.primary">
+                    <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor}"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                </Style>
+            </Button.Styles>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <!-- Tag Icon -->
+                <Path Data="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 8.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z" 
+                      Width="11" Height="11" Stretch="Uniform" Fill="White" VerticalAlignment="Center"/>
+                <TextBlock Text="Tags" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                <TextBlock Text="{Binding ActiveTagFiltersCountText}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Foreground="White" IsVisible="{Binding IsTagFilterActive}"/>
+                <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" Foreground="White"/>
+            </StackPanel>
+            <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedLeft">
+                    <Border x:DataType="vm:FilterToolbarViewModel" Width="250" Background="#1E1E22" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel Spacing="10">
+                            <!-- Search query TextBox -->
+                            <TextBox Text="{Binding TagSearchText, Mode=TwoWay}" Watermark="Search tags..." Height="32" VerticalContentAlignment="Center"/>
+
+                            <!-- Matching Logic Operator -->
+                            <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
+                                <RadioButton Content="ANY (OR)" IsChecked="{Binding IsMatchAny, Mode=TwoWay}" GroupName="MatchOperator" FontSize="11" Foreground="White"/>
+                                <RadioButton Content="ALL (AND)" IsChecked="{Binding IsMatchAll, Mode=TwoWay}" GroupName="MatchOperator" FontSize="11" Foreground="White"/>
+                            </StackPanel>
+
+                            <!-- Checklist of tags -->
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding VisibleTags}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:TagFilterItemViewModel">
+                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2" HorizontalAlignment="Stretch">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="{Binding Name}" FontSize="12" Foreground="White" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Count, StringFormat='({0})'}" FontSize="10" Foreground="#888888" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <!-- Clear button inside flyout -->
+                            <Button Content="Clear Filter" Command="{Binding ClearTagFiltersCommand}" HorizontalAlignment="Stretch" Height="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Classes="secondary" FontSize="11"/>
+                        </StackPanel>
+                    </Border>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+
         <!-- Clear Reset Button -->
         <Button Classes="ResetBtn" 
                 Command="{Binding ClearAllCommand}"

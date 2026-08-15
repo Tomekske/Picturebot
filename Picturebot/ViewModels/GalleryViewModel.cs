@@ -35,7 +35,8 @@ public partial class GalleryViewModel : ViewModelBase,
     IRecipient<NodeUpdatedMessage>,
     IRecipient<ProcessingProgressMessage>,
     IRecipient<ProcessingCompletedMessage>,
-    IRecipient<CurationCompletedMessage> {
+    IRecipient<CurationCompletedMessage>,
+    IRecipient<PictureKeywordsChangedMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly ICurationQueue _curationQueue;
@@ -260,6 +261,13 @@ public partial class GalleryViewModel : ViewModelBase,
         } else {
             UpdateGallery(message.Value);
         }
+    }
+
+    public void Receive(PictureKeywordsChangedMessage message) {
+        if (FilterToolbar != null) {
+            FilterToolbar.UpdateAvailableTags(_allPictures);
+        }
+        ApplyFilters();
     }
 
     [RelayCommand]
@@ -824,12 +832,20 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         UpdateBreadcrumbs(currentNode);
+        if (FilterToolbar != null) {
+            FilterToolbar.UpdateAvailableTags(_allPictures);
+        }
     }
 
     private void OnPictureItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
         if (e.PropertyName == nameof(PictureItemViewModel.CurationStatus) ||
             e.PropertyName == nameof(PictureItemViewModel.Rating) ||
             e.PropertyName == nameof(PictureItemViewModel.ColorLabel)) {
+            ApplyFilters();
+        } else if (e.PropertyName == nameof(PictureItemViewModel.Keywords)) {
+            if (FilterToolbar != null) {
+                FilterToolbar.UpdateAvailableTags(_allPictures);
+            }
             ApplyFilters();
         }
     }
@@ -884,9 +900,9 @@ public partial class GalleryViewModel : ViewModelBase,
         return focused is not TextBox && focused is not NumericUpDown && focused is not ComboBox;
     }
 
-    private void ApplyFilters() {
-        if (FilterToolbar == null) return;
-        var filtered = _allPictures.AsEnumerable();
+    private IEnumerable<PictureItemViewModel> ApplyFilterPredicate(IEnumerable<PictureItemViewModel> source) {
+        if (FilterToolbar == null) return source;
+        var filtered = source;
 
         if (FilterStatuses.Any()) {
             filtered = filtered.Where(p => FilterStatuses.Contains(p.CurationStatus));
@@ -900,6 +916,23 @@ public partial class GalleryViewModel : ViewModelBase,
             filtered = filtered.Where(p => FilterColors.Contains(p.ColorLabel));
         }
 
+        if (FilterToolbar.IsTagFilterActive) {
+            var selectedTagNames = FilterToolbar.AllTags.Where(t => t.IsSelected).Select(t => t.Name).ToList();
+            if (selectedTagNames.Any()) {
+                if (FilterToolbar.IsMatchAll) {
+                    filtered = filtered.Where(p => selectedTagNames.All(tag => p.Keywords != null && p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+                } else {
+                    filtered = filtered.Where(p => selectedTagNames.Any(tag => p.Keywords != null && p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+                }
+            }
+        }
+
+        return filtered;
+    }
+
+    private void ApplyFilters() {
+        if (FilterToolbar == null) return;
+        var filtered = ApplyFilterPredicate(_allPictures);
         var filteredList = filtered.ToList();
 
         // Optimize: Only refresh list and grouping if the filtered content actually changed.
@@ -1247,13 +1280,16 @@ public partial class GalleryViewModel : ViewModelBase,
                 }
 
                 _allPictures.AddRange(initialPicsList);
+                if (FilterToolbar != null) {
+                    FilterToolbar.UpdateAvailableTags(_allPictures);
+                }
                 PicturesList = new ObservableCollection<PictureItemViewModel>(filteredListInitial);
                 GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVmsInitial);
 
                 if (hasPickedInitial) {
-                    FilterToolbar.SetFlaggedOnly();
+                    FilterToolbar?.SetFlaggedOnly();
                 } else {
-                    FilterToolbar.ClearAll();
+                    FilterToolbar?.ClearAll();
                 }
 
                 CanPlayCarousel = pics.Any();
@@ -1347,19 +1383,12 @@ public partial class GalleryViewModel : ViewModelBase,
                     }
 
                     _allPictures.AddRange(chunkVms);
+                    if (FilterToolbar != null) {
+                        FilterToolbar.UpdateAvailableTags(_allPictures);
+                    }
 
                     // Re-apply filters on chunk
-                    var filteredChunk = chunkVms.AsEnumerable();
-                    if (FilterStatuses.Any()) {
-                        filteredChunk = filteredChunk.Where(p => FilterStatuses.Contains(p.CurationStatus));
-                    }
-                    if (FilterRatings.Any()) {
-                        filteredChunk = filteredChunk.Where(p => p.Rating >= FilterRatings.Min());
-                    }
-                    if (FilterColors.Any()) {
-                        filteredChunk = filteredChunk.Where(p => FilterColors.Contains(p.ColorLabel));
-                    }
-                    var filteredChunkList = filteredChunk.ToList();
+                    var filteredChunkList = ApplyFilterPredicate(chunkVms).ToList();
 
                     // Add to flat PicturesList
                     foreach (var picVm in filteredChunkList) {
@@ -1514,17 +1543,26 @@ public partial class GalleryViewModel : ViewModelBase,
             if (e.ChangeType == WatcherChangeTypes.Deleted) {
                 bool changed = picVm.CurationStatus != CurationStatus.Unflagged ||
                                picVm.ColorLabel != ColorLabel.None ||
-                               picVm.Rating != 0;
+                               picVm.Rating != 0 ||
+                               picVm.Keywords.Any();
 
                 picVm.Picture.CurationStatus = CurationStatus.Unflagged;
                 picVm.Picture.ColorLabel = ColorLabel.None;
                 picVm.Picture.Rating = 0;
+                picVm.Picture.Keywords = new List<string>();
 
                 picVm.CurationStatus = CurationStatus.Unflagged;
                 picVm.ColorLabel = ColorLabel.None;
                 picVm.Rating = 0;
+                if (picVm.Keywords.Any()) {
+                    picVm.Keywords.Clear();
+                    picVm.NotifyKeywordsChanged();
+                }
 
                 if (changed) {
+                    if (FilterToolbar != null) {
+                        FilterToolbar.UpdateAvailableTags(_allPictures);
+                    }
                     ApplyFilters();
                 }
             } else {
@@ -1539,6 +1577,8 @@ public partial class GalleryViewModel : ViewModelBase,
                 picVm.ColorLabel = picVm.Picture.ColorLabel;
                 picVm.Rating = picVm.Picture.Rating;
 
+                bool keywordsChanged = SyncKeywords(picVm);
+
                 bool changed = picVm.Picture.CurationStatus != originalStatus ||
                                picVm.Picture.ColorLabel != originalColor ||
                                picVm.Picture.Rating != originalRating ||
@@ -1549,7 +1589,10 @@ public partial class GalleryViewModel : ViewModelBase,
                     _ = RefreshGalleryGrouping();
                 }
 
-                if (changed) {
+                if (changed || keywordsChanged) {
+                    if (FilterToolbar != null) {
+                        FilterToolbar.UpdateAvailableTags(_allPictures);
+                    }
                     ApplyFilters();
                 }
             }
@@ -1588,17 +1631,23 @@ public partial class GalleryViewModel : ViewModelBase,
                 if (oldPicVm != null) {
                     if (oldPicVm.CurationStatus != CurationStatus.Unflagged ||
                         oldPicVm.ColorLabel != ColorLabel.None ||
-                        oldPicVm.Rating != 0) {
+                        oldPicVm.Rating != 0 ||
+                        oldPicVm.Keywords.Any()) {
                         changed = true;
                     }
 
                     oldPicVm.Picture.CurationStatus = CurationStatus.Unflagged;
                     oldPicVm.Picture.ColorLabel = ColorLabel.None;
                     oldPicVm.Picture.Rating = 0;
+                    oldPicVm.Picture.Keywords = new List<string>();
 
                     oldPicVm.CurationStatus = CurationStatus.Unflagged;
                     oldPicVm.ColorLabel = ColorLabel.None;
                     oldPicVm.Rating = 0;
+                    if (oldPicVm.Keywords.Any()) {
+                        oldPicVm.Keywords.Clear();
+                        oldPicVm.NotifyKeywordsChanged();
+                    }
                 }
             }
 
@@ -1616,10 +1665,13 @@ public partial class GalleryViewModel : ViewModelBase,
                     newPicVm.ColorLabel = newPicVm.Picture.ColorLabel;
                     newPicVm.Rating = newPicVm.Picture.Rating;
 
+                    bool keywordsChanged = SyncKeywords(newPicVm);
+
                     if (newPicVm.Picture.CurationStatus != originalStatus ||
                         newPicVm.Picture.ColorLabel != originalColor ||
                         newPicVm.Picture.Rating != originalRating ||
-                        newPicVm.Picture.CapturedAt != originalCapturedAt) {
+                        newPicVm.Picture.CapturedAt != originalCapturedAt ||
+                        keywordsChanged) {
                         changed = true;
                     }
 
@@ -1631,9 +1683,26 @@ public partial class GalleryViewModel : ViewModelBase,
             }
 
             if (changed) {
+                if (FilterToolbar != null) {
+                    FilterToolbar.UpdateAvailableTags(_allPictures);
+                }
                 ApplyFilters();
             }
         });
+    }
+
+    private bool SyncKeywords(PictureItemViewModel picVm) {
+        var originalKeywords = picVm.Keywords.ToList();
+        var newKeywords = picVm.Picture.Keywords ?? new List<string>();
+        bool keywordsChanged = !originalKeywords.SequenceEqual(newKeywords);
+        if (keywordsChanged) {
+            picVm.Keywords.Clear();
+            foreach (var kw in newKeywords) {
+                picVm.Keywords.Add(kw);
+            }
+            picVm.NotifyKeywordsChanged();
+        }
+        return keywordsChanged;
     }
 
     private enum Orientation {

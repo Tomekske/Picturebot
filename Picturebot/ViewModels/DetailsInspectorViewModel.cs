@@ -283,6 +283,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         if (changed) {
             UpdateActiveKeywords();
             UpdateQuickTagStates();
+            WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
         }
     }
 
@@ -309,6 +310,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         if (changed) {
             UpdateActiveKeywords();
             UpdateQuickTagStates();
+            WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
         }
     }
 
@@ -344,6 +346,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         if (changed) {
             UpdateActiveKeywords();
             UpdateQuickTagStates();
+            WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
         }
     }
 }
