@@ -92,10 +92,10 @@ public class Settings {
     ///     The semicolon-separated list of quick tag presets.
     /// </summary>
     public string QuickTagPresets { get; set; } = string.Empty;
-
-    /// <summary>
-    ///     The semicolon-separated list of all globally defined keyword taxonomy paths
-    ///     (e.g. "Animal|Dog|Labrador;Animal|Cat;Architecture").
-    /// </summary>
     public string GlobalKeywordTaxonomy { get; set; } = string.Empty;
+
+    public string MasterTagsJson { get; set; } = "[]";
+    public string HierarchyNodesJson { get; set; } = "[]";
+    public string TagGroupsJson { get; set; } = "[]";
+    public string? ActiveTagGroupId { get; set; }
 }

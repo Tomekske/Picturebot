@@ -21,18 +21,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Picturebot.ViewModels;
 
-public class KeywordNodeViewModel : ViewModelBase {
-    public string Name { get; set; } = string.Empty;
-    public string FullPath { get; set; } = string.Empty;
-    public ObservableCollection<KeywordNodeViewModel> Children { get; } = new();
-
-    private bool _isExpanded;
-    public bool IsExpanded {
-        get => _isExpanded;
-        set => SetProperty(ref _isExpanded, value);
-    }
-}
-
 public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
 
@@ -156,7 +144,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     }
 
     public SettingsDialogViewModel() {
-        // Fallback or Designer constructor
         _settingsService = null!;
     }
 
@@ -209,17 +196,25 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
-        // Quick Tag Presets
-        QuickTagPresetsList.Clear();
-        var presets = (settings.QuickTagPresets ?? string.Empty)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        foreach (var p in presets) QuickTagPresetsList.Add(p);
+        // Master Tags
+        MasterTags.Clear();
+        foreach (var tag in settings.MasterTags) {
+            MasterTags.Add(tag);
+        }
 
-        // Global Keyword Taxonomy
-        _taxonomyPaths.Clear();
-        var paths = (settings.GlobalKeywordTaxonomy ?? string.Empty)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        foreach (var path in paths) _taxonomyPaths.Add(path);
+        // Hierarchy Nodes
+        HierarchyNodes.Clear();
+        foreach (var node in settings.HierarchyNodes) {
+            HierarchyNodes.Add(node);
+        }
+
+        // Tag Groups
+        TagGroups.Clear();
+        foreach (var group in settings.TagGroups) {
+            TagGroups.Add(group);
+        }
+
+        SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupId == settings.ActiveTagGroupId) ?? TagGroups.FirstOrDefault();
 
         ThemeIndex = settings.ThemeMode switch {
             ThemeMode.Light => 0,
@@ -304,50 +299,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             return;
         }
 
-        var settings = new SettingsModel {
-            LibraryPath = LibraryLocation,
-            GroupingThreshold = GroupingThreshold,
-            BurstTimeThresholdSeconds = BurstTimeThreshold,
-            BurstFallbackTimeThresholdSeconds = BurstFallbackThreshold,
-            LaunchMaximized = LaunchFullScreen,
-            RedLabelName = RedLabelName,
-            OrangeLabelName = OrangeLabelName,
-            YellowLabelName = YellowLabelName,
-            GreenLabelName = GreenLabelName,
-            BlueLabelName = BlueLabelName,
-            PinkLabelName = PinkLabelName,
-            PurpleLabelName = PurpleLabelName,
-            RedLabelShortcut = RedLabelShortcut,
-            OrangeLabelShortcut = OrangeLabelShortcut,
-            YellowLabelShortcut = YellowLabelShortcut,
-            GreenLabelShortcut = GreenLabelShortcut,
-            BlueLabelShortcut = BlueLabelShortcut,
-            PinkLabelShortcut = PinkLabelShortcut,
-            PurpleLabelShortcut = PurpleLabelShortcut,
-            NoneLabelShortcut = NoneLabelShortcut,
-            FullscreenShortcut = FullscreenShortcut,
-            OpenInExplorerShortcut = OpenInExplorerShortcut,
-            Rating0Shortcut = Rating0Shortcut,
-            Rating1Shortcut = Rating1Shortcut,
-            Rating2Shortcut = Rating2Shortcut,
-            Rating3Shortcut = Rating3Shortcut,
-            Rating4Shortcut = Rating4Shortcut,
-            Rating5Shortcut = Rating5Shortcut,
-            CurationPickedShortcut = CurationPickedShortcut,
-            CurationRejectedShortcut = CurationRejectedShortcut,
-            CurationNeutralShortcut = CurationNeutralShortcut,
-            CopyToEditShortcut = CopyToEditShortcut,
-            CopyToPrintShortcut = CopyToPrintShortcut,
-            EditFolderPath = EditFolderPath,
-            PrintFolderPath = PrintFolderPath,
-            QuickTagPresets = string.Join(";", QuickTagPresetsList),
-            ThemeMode = ThemeIndex switch {
-                0 => ThemeMode.Light,
-                1 => ThemeMode.Dark,
-                _ => ThemeMode.System
-            }
-        };
-
         await _settingsService.UpdateAsync(BuildCurrentSettingsModel());
 
         MainWindow.ToastManager.CreateToast()
@@ -397,8 +348,10 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             CopyToPrintShortcut = CopyToPrintShortcut,
             EditFolderPath = EditFolderPath,
             PrintFolderPath = PrintFolderPath,
-            QuickTagPresets = string.Join(";", QuickTagPresetsList),
-            GlobalKeywordTaxonomy = string.Join(";", _taxonomyPaths),
+            MasterTags = MasterTags.ToList(),
+            HierarchyNodes = HierarchyNodes.ToList(),
+            TagGroups = TagGroups.ToList(),
+            ActiveTagGroupId = SelectedTagGroup?.GroupId,
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,
                 1 => ThemeMode.Dark,
@@ -422,235 +375,243 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         LoadSettingsFromModel(defaults);
     }
 
-    public ObservableCollection<KeywordNodeViewModel> GlobalKeywords { get; } = new();
-
-    // Private list of all globally defined keyword taxonomy paths.
-    // This is the canonical source of truth — independent of which album is open.
-    private readonly List<string> _taxonomyPaths = new();
-
-    // ── Quick Tag Presets ─────────────────────────────────────────────────────
-    public ObservableCollection<string> QuickTagPresetsList { get; } = new();
+    // ── SECTION 1: MASTER TAGS POOL ───────────────────────────────────────────
+    public ObservableCollection<Tag> MasterTags { get; } = new();
 
     [ObservableProperty]
-    private string _newPresetText = string.Empty;
-
-    [RelayCommand]
-    private void AddPreset() {
-        var tag = NewPresetText.Trim();
-        if (string.IsNullOrWhiteSpace(tag)) return;
-        if (!QuickTagPresetsList.Contains(tag, StringComparer.OrdinalIgnoreCase)) {
-            QuickTagPresetsList.Add(tag);
-        }
-        NewPresetText = string.Empty;
-    }
-
-    [RelayCommand]
-    private void RemovePreset(string? tag) {
-        if (tag != null) {
-            QuickTagPresetsList.Remove(tag);
-        }
-    }
-
-    [RelayCommand]
-    private void MovePresetUp(string? tag) {
-        if (tag == null) return;
-        var idx = QuickTagPresetsList.IndexOf(tag);
-        if (idx > 0) QuickTagPresetsList.Move(idx, idx - 1);
-    }
-
-    [RelayCommand]
-    private void MovePresetDown(string? tag) {
-        if (tag == null) return;
-        var idx = QuickTagPresetsList.IndexOf(tag);
-        if (idx >= 0 && idx < QuickTagPresetsList.Count - 1) QuickTagPresetsList.Move(idx, idx + 1);
-    }
-
-    // ── Keyword Taxonomy ─────────────────────────────────────────────────────
+    private Tag? _selectedMasterTag;
 
     [ObservableProperty]
-    private KeywordNodeViewModel? _selectedKeywordNode;
+    private string _newMasterTagName = string.Empty;
 
     [ObservableProperty]
-    private string _renameText = string.Empty;
+    private string _renameMasterTagName = string.Empty;
+
+    partial void OnSelectedMasterTagChanged(Tag? value) {
+        RenameMasterTagName = value?.Name ?? string.Empty;
+    }
+
+    [RelayCommand]
+    private void AddMasterTag() {
+        var name = NewMasterTagName.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+        if (!MasterTags.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) {
+            var newTag = new Tag { Name = name };
+            MasterTags.Add(newTag);
+            SelectedMasterTag = newTag;
+            RefreshTagGroupViews();
+        }
+        NewMasterTagName = string.Empty;
+    }
+
+    [RelayCommand]
+    private void RenameMasterTag() {
+        if (SelectedMasterTag == null) return;
+        var newName = RenameMasterTagName.Trim();
+        if (string.IsNullOrWhiteSpace(newName)) return;
+
+        SelectedMasterTag.Name = newName;
+        // Update any hierarchy nodes linked to this tag
+        UpdateNodeNamesForTag(HierarchyNodes, SelectedMasterTag.Id, newName);
+
+        // Trigger UI update by resetting selection
+        var temp = SelectedMasterTag;
+        SelectedMasterTag = null;
+        SelectedMasterTag = temp;
+
+        RefreshTagGroupViews();
+        OnPropertyChanged(nameof(SelectedNodeXmpPath));
+    }
+
+    private static void UpdateNodeNamesForTag(IEnumerable<HierarchyNode> list, Guid tagId, string newName) {
+        foreach (var node in list) {
+            if (node.TagId == tagId) {
+                node.Name = newName;
+            }
+            UpdateNodeNamesForTag(node.Children, tagId, newName);
+        }
+    }
+
+    [RelayCommand]
+    private void DeleteMasterTag() {
+        if (SelectedMasterTag == null) return;
+        var tagId = SelectedMasterTag.Id;
+
+        // 1. Remove from MasterTags
+        MasterTags.Remove(SelectedMasterTag);
+        SelectedMasterTag = null;
+
+        // 2. Unlink from HierarchyNodes
+        UnlinkTagFromTree(HierarchyNodes, tagId);
+
+        // 3. Remove from all TagGroups
+        foreach (var group in TagGroups) {
+            group.TagIds.Remove(tagId);
+        }
+
+        RefreshTagGroupViews();
+        OnPropertyChanged(nameof(SelectedNodeXmpPath));
+    }
+
+    private static void UnlinkTagFromTree(IEnumerable<HierarchyNode> list, Guid tagId) {
+        foreach (var node in list) {
+            if (node.TagId == tagId) {
+                node.TagId = null;
+            }
+            UnlinkTagFromTree(node.Children, tagId);
+        }
+    }
+
+    // ── SECTION 2: HIERARCHY TAXONOMY ──────────────────────────────────────────
+    public ObservableCollection<HierarchyNode> HierarchyNodes { get; } = new();
 
     [ObservableProperty]
-    private string _addKeywordText = string.Empty;
+    private HierarchyNode? _selectedHierarchyNode;
 
-    partial void OnSelectedKeywordNodeChanged(KeywordNodeViewModel? value) {
-        RenameText = value?.Name ?? string.Empty;
+    [ObservableProperty]
+    private string _newChildNodeName = string.Empty;
+
+    [ObservableProperty]
+    private Tag? _selectedSubNodeTag;
+
+    partial void OnSelectedHierarchyNodeChanged(HierarchyNode? value) {
+        OnPropertyChanged(nameof(SelectedNodeXmpPath));
     }
 
-    partial void OnSelectedTabIndexChanged(int value) {
-        if (value == 5) { // Keywords tab
-            LoadGlobalKeywords();
+    public string SelectedNodeXmpPath {
+        get {
+            if (SelectedHierarchyNode == null) return string.Empty;
+            return FindNodePath(HierarchyNodes, SelectedHierarchyNode, "") ?? SelectedHierarchyNode.Name;
         }
     }
 
-    public void LoadGlobalKeywords() {
-        // Build a unified set: start from the stored global taxonomy,
-        // then discover any keyword paths already on loaded pictures
-        // (covers keywords added before this feature existed).
-        var allPaths = new HashSet<string>(_taxonomyPaths, StringComparer.OrdinalIgnoreCase);
-
-        bool discovered = false;
-        foreach (var pic in GetLoadedPictures()) {
-            foreach (var kw in pic.Keywords) {
-                if (!string.IsNullOrWhiteSpace(kw) && allPaths.Add(kw)) {
-                    discovered = true;
-                }
-            }
+    private static string? FindNodePath(IEnumerable<HierarchyNode> nodes, HierarchyNode target, string currentPath) {
+        foreach (var node in nodes) {
+            var path = string.IsNullOrEmpty(currentPath) ? node.Name : $"{currentPath}|{node.Name}";
+            if (node == target) return path;
+            var childResult = FindNodePath(node.Children, target, path);
+            if (childResult != null) return childResult;
         }
-
-        // Persist any newly discovered paths back into the taxonomy
-        if (discovered) {
-            _taxonomyPaths.Clear();
-            _taxonomyPaths.AddRange(allPaths);
-        }
-
-        RebuildKeywordTree(allPaths);
-    }
-
-    private void RebuildKeywordTree(IEnumerable<string> paths) {
-        GlobalKeywords.Clear();
-        var roots = new List<KeywordNodeViewModel>();
-
-        foreach (var path in paths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)) {
-            var segments = path.Split('|', StringSplitOptions.RemoveEmptyEntries);
-            IList<KeywordNodeViewModel> currentList = roots;
-            var currentPath = string.Empty;
-
-            for (int i = 0; i < segments.Length; i++) {
-                var segment = segments[i].Trim();
-                currentPath = i == 0 ? segment : $"{currentPath}|{segment}";
-
-                var existing = currentList.FirstOrDefault(n =>
-                    n.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
-                if (existing == null) {
-                    existing = new KeywordNodeViewModel { Name = segment, FullPath = currentPath };
-                    currentList.Add(existing);
-                }
-                currentList = existing.Children;
-            }
-        }
-
-        foreach (var root in roots) GlobalKeywords.Add(root);
-    }
-
-    private async Task PersistTaxonomy() {
-        if (_settingsService == null) return;
-        await _settingsService.UpdateAsync(BuildCurrentSettingsModel());
-    }
-
-    private void SortKeywordNodes(IList<KeywordNodeViewModel> nodes) {
-        var sorted = nodes.OrderBy(n => n.Name).ToList();
-        nodes.Clear();
-        foreach (var s in sorted) {
-            nodes.Add(s);
-            SortKeywordNodes(s.Children);
-        }
-    }
-
-    private List<PictureItemViewModel> GetLoadedPictures() {
-        if (MainWindow.Instance?.DataContext is MainWindowViewModel mainVm && mainVm.GalleryVM != null) {
-            return mainVm.GalleryVM.AllPictures.ToList();
-        }
-        return new List<PictureItemViewModel>();
+        return null;
     }
 
     [RelayCommand]
-    private async Task AddKeyword() {
-        var raw = AddKeywordText.Trim().Replace('/', '|');
-        if (string.IsNullOrWhiteSpace(raw)) return;
-        if (_taxonomyPaths.Contains(raw, StringComparer.OrdinalIgnoreCase)) {
-            AddKeywordText = string.Empty;
-            return;
+    private void AddChildNode() {
+        string name = SelectedSubNodeTag?.Name ?? NewChildNodeName.Trim().Replace('/', '|');
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        // Two-way sync: Ensure tag exists in MasterTags pool
+        var tag = MasterTags.FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (tag == null) {
+            tag = new Tag { Name = name };
+            MasterTags.Add(tag);
+            RefreshTagGroupViews();
         }
 
-        _taxonomyPaths.Add(raw);
-        AddKeywordText = string.Empty;
-        LoadGlobalKeywords();
+        var newNode = new HierarchyNode {
+            Name = tag.Name,
+            TagId = tag.Id
+        };
 
-        // Auto-select the newly added leaf node
-        var segments = raw.Split('|', StringSplitOptions.RemoveEmptyEntries);
-        KeywordNodeViewModel? node = GlobalKeywords
-            .FirstOrDefault(n => n.Name.Equals(segments[0], StringComparison.OrdinalIgnoreCase));
-        for (int i = 1; i < segments.Length && node != null; i++) {
-            node.IsExpanded = true;
-            node = node.Children.FirstOrDefault(c =>
-                c.Name.Equals(segments[i], StringComparison.OrdinalIgnoreCase));
+        if (SelectedHierarchyNode != null) {
+            SelectedHierarchyNode.Children.Add(newNode);
+        } else {
+            HierarchyNodes.Add(newNode);
         }
-        SelectedKeywordNode = node;
 
-        await PersistTaxonomy();
+        NewChildNodeName = string.Empty;
+        SelectedSubNodeTag = null;
+        SelectedHierarchyNode = newNode;
+        OnPropertyChanged(nameof(SelectedNodeXmpPath));
     }
 
     [RelayCommand]
-    private async Task RenameKeyword() {
-        if (SelectedKeywordNode == null || string.IsNullOrWhiteSpace(RenameText)) return;
-        var oldPath = SelectedKeywordNode.FullPath;
-        var parts = oldPath.Split('|');
-        parts[parts.Length - 1] = RenameText.Trim();
-        var newPath = string.Join("|", parts);
+    private void DeleteSelectedNode() {
+        if (SelectedHierarchyNode == null) return;
+        RemoveNodeFromTree(HierarchyNodes, SelectedHierarchyNode);
+        SelectedHierarchyNode = null;
+        OnPropertyChanged(nameof(SelectedNodeXmpPath));
+    }
 
-        // Update taxonomy paths
-        for (int i = 0; i < _taxonomyPaths.Count; i++) {
-            if (_taxonomyPaths[i].Equals(oldPath, StringComparison.OrdinalIgnoreCase))
-                _taxonomyPaths[i] = newPath;
-            else if (_taxonomyPaths[i].StartsWith(oldPath + "|", StringComparison.OrdinalIgnoreCase))
-                _taxonomyPaths[i] = newPath + _taxonomyPaths[i].Substring(oldPath.Length);
+    private static bool RemoveNodeFromTree(IList<HierarchyNode> list, HierarchyNode target) {
+        if (list.Remove(target)) return true;
+        foreach (var item in list) {
+            if (RemoveNodeFromTree(item.Children, target)) return true;
         }
+        return false;
+    }
 
-        // Rename in all loaded pictures
-        var curationQueue = App.Services?.GetService<ICurationQueue>();
-        foreach (var pic in GetLoadedPictures()) {
-            bool changed = false;
-            for (int i = 0; i < pic.Keywords.Count; i++) {
-                var kw = pic.Keywords[i];
-                if (kw.Equals(oldPath, StringComparison.OrdinalIgnoreCase)) {
-                    pic.Keywords[i] = newPath; changed = true;
-                } else if (kw.StartsWith(oldPath + "|", StringComparison.OrdinalIgnoreCase)) {
-                    pic.Keywords[i] = newPath + kw.Substring(oldPath.Length); changed = true;
-                }
-            }
-            if (changed) {
-                pic.Picture.Keywords = pic.Keywords.ToList();
-                pic.NotifyKeywordsChanged();
-                curationQueue?.Enqueue(pic.Picture);
-            }
-        }
+    // ── SECTION 3: TAG GROUPS ──────────────────────────────────────────────────
+    public ObservableCollection<TagGroup> TagGroups { get; } = new();
 
-        LoadGlobalKeywords();
-        RenameText = string.Empty;
-        SelectedKeywordNode = null;
-        await PersistTaxonomy();
+    [ObservableProperty]
+    private TagGroup? _selectedTagGroup;
+
+    [ObservableProperty]
+    private string _newTagGroupName = string.Empty;
+
+    [ObservableProperty]
+    private Tag? _selectedTagToAddToGroup;
+
+    public ObservableCollection<Tag> SelectedGroupTags { get; } = new();
+    public ObservableCollection<Tag> AvailableTagsForGroup { get; } = new();
+
+    partial void OnSelectedTagGroupChanged(TagGroup? value) {
+        RefreshTagGroupViews();
     }
 
     [RelayCommand]
-    private async Task DeleteKeyword() {
-        if (SelectedKeywordNode == null) return;
-        var pathToDelete = SelectedKeywordNode.FullPath;
+    private void AddTagGroup() {
+        var name = NewTagGroupName.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
 
-        // Remove path and all child paths from the taxonomy
-        _taxonomyPaths.RemoveAll(p =>
-            p.Equals(pathToDelete, StringComparison.OrdinalIgnoreCase) ||
-            p.StartsWith(pathToDelete + "|", StringComparison.OrdinalIgnoreCase));
+        var newGroup = new TagGroup { GroupName = name };
+        TagGroups.Add(newGroup);
+        SelectedTagGroup = newGroup;
+        NewTagGroupName = string.Empty;
+    }
 
-        // Remove from all loaded pictures
-        var curationQueue = App.Services?.GetService<ICurationQueue>();
-        foreach (var pic in GetLoadedPictures()) {
-            var toRemove = pic.Keywords.Where(kw =>
-                kw.Equals(pathToDelete, StringComparison.OrdinalIgnoreCase) ||
-                kw.StartsWith(pathToDelete + "|", StringComparison.OrdinalIgnoreCase)).ToList();
-            if (toRemove.Any()) {
-                foreach (var kw in toRemove) pic.Keywords.Remove(kw);
-                pic.Picture.Keywords = pic.Keywords.ToList();
-                pic.NotifyKeywordsChanged();
-                curationQueue?.Enqueue(pic.Picture);
+    [RelayCommand]
+    private void DeleteTagGroup() {
+        if (SelectedTagGroup == null) return;
+        TagGroups.Remove(SelectedTagGroup);
+        SelectedTagGroup = TagGroups.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void AddTagToGroup() {
+        if (SelectedTagGroup == null || SelectedTagToAddToGroup == null) return;
+        if (!SelectedTagGroup.TagIds.Contains(SelectedTagToAddToGroup.Id)) {
+            SelectedTagGroup.TagIds.Add(SelectedTagToAddToGroup.Id);
+            RefreshTagGroupViews();
+        }
+        SelectedTagToAddToGroup = null;
+    }
+
+    [RelayCommand]
+    private void RemoveTagFromGroup(Tag? tag) {
+        if (SelectedTagGroup == null || tag == null) return;
+        SelectedTagGroup.TagIds.Remove(tag.Id);
+        RefreshTagGroupViews();
+    }
+
+    private void RefreshTagGroupViews() {
+        SelectedGroupTags.Clear();
+        AvailableTagsForGroup.Clear();
+
+        if (SelectedTagGroup == null) return;
+
+        var tagMap = MasterTags.ToDictionary(t => t.Id);
+        foreach (var id in SelectedTagGroup.TagIds) {
+            if (tagMap.TryGetValue(id, out var tag)) {
+                SelectedGroupTags.Add(tag);
             }
         }
 
-        LoadGlobalKeywords();
-        SelectedKeywordNode = null;
-        await PersistTaxonomy();
+        foreach (var tag in MasterTags) {
+            if (!SelectedTagGroup.TagIds.Contains(tag.Id)) {
+                AvailableTagsForGroup.Add(tag);
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Domain.Enums;
 using Domain.Interfaces;
+using Domain.Models;
 using Graph.Domain.Interfaces;
 using Picturebot.Messages;
 using Picturebot.Utilities;
@@ -24,7 +25,8 @@ public partial class QuickTagButtonViewModel : ObservableObject {
     [ObservableProperty]
     private bool _isActive;
 
-    public string Name { get; set; } = string.Empty;
+    public Tag Tag { get; set; } = new();
+    public string Name => Tag.Name;
 }
 
 public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<PictureSelectedMessage>, IRecipient<PictureSelectionChangedMessage> {
@@ -53,7 +55,11 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     public ObservableCollection<string> ActiveKeywords { get; } = new();
 
-    // Dynamic Quick Tag buttons driven by settings presets
+    public ObservableCollection<TagGroup> AvailableTagGroups { get; } = new();
+
+    [ObservableProperty]
+    private TagGroup? _activeTagGroup;
+
     public ObservableCollection<QuickTagButtonViewModel> QuickTagButtons { get; } = new();
 
     public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue, ISettingsService settingsService) {
@@ -62,13 +68,19 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         _settingsService = settingsService;
         _settingsService.PropertyChanged += OnSettingsChanged;
         WeakReferenceMessenger.Default.RegisterAll(this);
-        BuildQuickTagButtons();
+        RefreshTagGroups();
     }
 
     private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
         if (e.PropertyName == nameof(ISettingsService.Current)) {
-            Avalonia.Threading.Dispatcher.UIThread.Post(BuildQuickTagButtons);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                RefreshTagGroups();
+            });
         }
+    }
+
+    partial void OnActiveTagGroupChanged(TagGroup? value) {
+        BuildQuickTagButtons();
     }
 
     public string RedLabelName => _settingsService.Current.RedLabelName;
@@ -158,20 +170,38 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
     }
 
+    private void RefreshTagGroups() {
+        AvailableTagGroups.Clear();
+        var groups = _settingsService.Current.TagGroups;
+        foreach (var g in groups) {
+            AvailableTagGroups.Add(g);
+        }
+
+        var activeId = _settingsService.Current.ActiveTagGroupId;
+        ActiveTagGroup = AvailableTagGroups.FirstOrDefault(g => g.GroupId == activeId) ?? AvailableTagGroups.FirstOrDefault();
+    }
+
     private void BuildQuickTagButtons() {
-        var presetString = _settingsService.Current.QuickTagPresets ?? string.Empty;
-        var presets = presetString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var activeTags = GetActiveTags();
         QuickTagButtons.Clear();
-        foreach (var p in presets) {
-            QuickTagButtons.Add(new QuickTagButtonViewModel { Name = p, IsActive = activeTags.Contains(p) });
+        if (ActiveTagGroup == null) return;
+
+        var masterTags = _settingsService.Current.MasterTags.ToDictionary(t => t.Id);
+        var activeTags = GetActiveTags();
+
+        foreach (var tagId in ActiveTagGroup.TagIds) {
+            if (masterTags.TryGetValue(tagId, out var tag)) {
+                var paths = GetKeywordPathsForTag(tag);
+                bool isActive = paths.Any(p => activeTags.Contains(p) || activeTags.Contains(tag.Name));
+                QuickTagButtons.Add(new QuickTagButtonViewModel { Tag = tag, IsActive = isActive });
+            }
         }
     }
 
     private void UpdateQuickTagStates() {
         var activeTags = GetActiveTags();
         foreach (var btn in QuickTagButtons) {
-            btn.IsActive = activeTags.Contains(btn.Name);
+            var paths = GetKeywordPathsForTag(btn.Tag);
+            btn.IsActive = paths.Any(p => activeTags.Contains(p) || activeTags.Contains(btn.Tag.Name));
         }
     }
 
@@ -181,6 +211,43 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         if (SelectedPicture != null)
             return SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
         return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private List<string> GetKeywordPathsForTag(Tag tag) {
+        var paths = new List<string>();
+        var hierarchy = _settingsService.Current.HierarchyNodes;
+        var linkedNodes = FindLinkedHierarchyNodes(hierarchy, tag.Id);
+        if (linkedNodes.Any()) {
+            foreach (var node in linkedNodes) {
+                var path = FindNodePath(hierarchy, node, "");
+                if (!string.IsNullOrEmpty(path)) {
+                    paths.Add(path);
+                }
+            }
+        }
+        if (!paths.Any()) {
+            paths.Add(tag.Name);
+        }
+        return paths;
+    }
+
+    private static List<HierarchyNode> FindLinkedHierarchyNodes(IEnumerable<HierarchyNode> nodes, Guid tagId) {
+        var list = new List<HierarchyNode>();
+        foreach (var node in nodes) {
+            if (node.TagId == tagId) list.Add(node);
+            list.AddRange(FindLinkedHierarchyNodes(node.Children, tagId));
+        }
+        return list;
+    }
+
+    private static string? FindNodePath(IEnumerable<HierarchyNode> nodes, HierarchyNode target, string currentPath) {
+        foreach (var node in nodes) {
+            var path = string.IsNullOrEmpty(currentPath) ? node.Name : $"{currentPath}|{node.Name}";
+            if (node == target) return path;
+            var childResult = FindNodePath(node.Children, target, path);
+            if (childResult != null) return childResult;
+        }
+        return null;
     }
 
     partial void OnNewTagTextChanged(string value) {
@@ -226,7 +293,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
 
         try {
-            pictureVm.CurationStatus = status; // Trigger VM property update (which also updates model & notifies UI)
+            pictureVm.CurationStatus = status;
             _curationQueue.Enqueue(pictureVm.Picture);
             await Task.CompletedTask;
         } catch (Exception ex) {
@@ -268,13 +335,11 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     [RelayCommand]
     private void EditMetadata() {
-        // Trigger the metadata editing mode
         Log.Information("Edit metadata for {Name}", SelectedPicture?.Name);
     }
 
     [RelayCommand]
     private void DeleteAsset() {
-        // Trigger the asset removal workflow
         Log.Information("Delete asset {Name}", SelectedPicture?.Name);
     }
 
@@ -340,8 +405,10 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     }
 
     [RelayCommand]
-    private void ToggleQuickTag(string tag) {
-        if (string.IsNullOrWhiteSpace(tag)) return;
+    private void ToggleQuickTag(QuickTagButtonViewModel? buttonVm) {
+        if (buttonVm == null) return;
+        var tag = buttonVm.Tag;
+        var paths = GetKeywordPathsForTag(tag);
 
         var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
         if (!targetVms.Any() && SelectedPicture != null) {
@@ -350,11 +417,17 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         bool changed = false;
         foreach (var picVm in targetVms) {
-            var exists = picVm.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase);
-            if (exists) {
-                picVm.RemoveKeyword(tag);
+            bool hasAny = paths.Any(p => picVm.Keywords.Contains(p, StringComparer.OrdinalIgnoreCase));
+            if (hasAny) {
+                foreach (var p in paths) {
+                    picVm.RemoveKeyword(p);
+                }
             } else {
-                picVm.AddKeyword(tag);
+                foreach (var p in paths) {
+                    if (!picVm.Keywords.Contains(p, StringComparer.OrdinalIgnoreCase)) {
+                        picVm.AddKeyword(p);
+                    }
+                }
             }
             _curationQueue.Enqueue(picVm.Picture);
             changed = true;

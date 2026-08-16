@@ -6,6 +6,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:converters="using:Picturebot.Converters"
+             xmlns:models="using:Domain.Models"
              xmlns:enums="using:Domain.Enums"
              mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="800"
              x:Class="Picturebot.Views.DetailsInspectorView"
@@ -228,16 +229,27 @@
                              KeyDown="TagInput_KeyDown" />
 
                     <!-- Quick Tags Bar -->
-                    <TextBlock Text="Quick Tags"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SukiLowText}"
-                               Margin="0,4,0,0" />
-                    <WrapPanel HorizontalAlignment="Left">
+                    <StackPanel Spacing="6" Margin="0,4,0,0">
+                        <TextBlock Text="Quick Tags"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SukiLowText}" />
+
+                        <ComboBox ItemsSource="{Binding AvailableTagGroups}"
+                                  SelectedItem="{Binding ActiveTagGroup, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  PlaceholderText="Select Tag Group...">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="models:TagGroup">
+                                    <TextBlock Text="{Binding GroupName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
                         <ItemsControl ItemsSource="{Binding QuickTagButtons}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel />
+                                    <WrapPanel HorizontalAlignment="Left" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
@@ -245,12 +257,12 @@
                                     <ToggleButton Content="{Binding Name}"
                                                   IsChecked="{Binding IsActive}"
                                                   Command="{Binding $parent[ItemsControl].((vm:DetailsInspectorViewModel)DataContext).ToggleQuickTagCommand}"
-                                                  CommandParameter="{Binding Name}"
+                                                  CommandParameter="{Binding}"
                                                   Margin="0,0,6,6" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </WrapPanel>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
