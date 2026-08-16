@@ -20,6 +20,13 @@ namespace Picturebot.ViewModels;
 
 public record ColorLabelOption(ColorLabel Label, string Name, string HexColor);
 
+public partial class QuickTagButtonViewModel : ObservableObject {
+    [ObservableProperty]
+    private bool _isActive;
+
+    public string Name { get; set; } = string.Empty;
+}
+
 public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<PictureSelectedMessage>, IRecipient<PictureSelectionChangedMessage> {
     private readonly INodeService _nodeService;
     private readonly ICurationQueue _curationQueue;
@@ -46,24 +53,22 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     public ObservableCollection<string> ActiveKeywords { get; } = new();
 
-    public List<string> QuickTags { get; } = new() { "Selected", "Review", "Highlight", "Portrait", "Landscape" };
-
-    [ObservableProperty]
-    private bool _isQuickTag1Active;
-    [ObservableProperty]
-    private bool _isQuickTag2Active;
-    [ObservableProperty]
-    private bool _isQuickTag3Active;
-    [ObservableProperty]
-    private bool _isQuickTag4Active;
-    [ObservableProperty]
-    private bool _isQuickTag5Active;
+    // Dynamic Quick Tag buttons driven by settings presets
+    public ObservableCollection<QuickTagButtonViewModel> QuickTagButtons { get; } = new();
 
     public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue, ISettingsService settingsService) {
         _nodeService = nodeService;
         _curationQueue = curationQueue;
         _settingsService = settingsService;
+        _settingsService.PropertyChanged += OnSettingsChanged;
         WeakReferenceMessenger.Default.RegisterAll(this);
+        BuildQuickTagButtons();
+    }
+
+    private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+        if (e.PropertyName == nameof(ISettingsService.Current)) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(BuildQuickTagButtons);
+        }
     }
 
     public string RedLabelName => _settingsService.Current.RedLabelName;
@@ -153,17 +158,29 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
     }
 
-    private void UpdateQuickTagStates() {
-        var activeTags = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!SelectedPictures.Any() && SelectedPicture != null) {
-            activeTags = SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private void BuildQuickTagButtons() {
+        var presetString = _settingsService.Current.QuickTagPresets ?? string.Empty;
+        var presets = presetString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var activeTags = GetActiveTags();
+        QuickTagButtons.Clear();
+        foreach (var p in presets) {
+            QuickTagButtons.Add(new QuickTagButtonViewModel { Name = p, IsActive = activeTags.Contains(p) });
         }
+    }
 
-        IsQuickTag1Active = activeTags.Contains("Selected");
-        IsQuickTag2Active = activeTags.Contains("Review");
-        IsQuickTag3Active = activeTags.Contains("Highlight");
-        IsQuickTag4Active = activeTags.Contains("Portrait");
-        IsQuickTag5Active = activeTags.Contains("Landscape");
+    private void UpdateQuickTagStates() {
+        var activeTags = GetActiveTags();
+        foreach (var btn in QuickTagButtons) {
+            btn.IsActive = activeTags.Contains(btn.Name);
+        }
+    }
+
+    private HashSet<string> GetActiveTags() {
+        if (SelectedPictures.Any())
+            return SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (SelectedPicture != null)
+            return SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
     partial void OnNewTagTextChanged(string value) {

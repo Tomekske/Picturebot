@@ -87,4 +87,15 @@ public class Settings {
     ///     The destination folder for files copied for printing.
     /// </summary>
     public string PrintFolderPath { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The semicolon-separated list of quick tag presets.
+    /// </summary>
+    public string QuickTagPresets { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The semicolon-separated list of all globally defined keyword taxonomy paths
+    ///     (e.g. "Animal|Dog|Labrador;Animal|Cat;Architecture").
+    /// </summary>
+    public string GlobalKeywordTaxonomy { get; set; } = string.Empty;
 }

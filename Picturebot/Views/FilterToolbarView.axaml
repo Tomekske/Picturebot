@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="40"
              x:Class="Picturebot.Views.FilterToolbarView"
              x:DataType="vm:FilterToolbarViewModel">
@@ -132,13 +133,15 @@
             <Setter Property="Foreground" Value="#EAB308" />
         </Style>
 
-        <!-- Reset Button Styling -->
         <Style Selector="Button.ResetBtn">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
@@ -157,8 +160,8 @@
             <Setter Property="Background" Value="#15FFFFFF"/>
         </Style>
 
-        <Style Selector="Button.ResetBtn:pointerover Path">
-            <Setter Property="Fill" Value="#EF4444"/>
+        <Style Selector="Button.ResetBtn:pointerover icons|MaterialIcon">
+            <Setter Property="Foreground" Value="#EF4444"/>
         </Style>
     </UserControl.Styles>
 
@@ -384,8 +387,7 @@
                 IsVisible="{Binding IsAnyFilterActive}"
                 ToolTip.Tip="Clear All Filters (Shift+R)"
                 Margin="4,0,0,0">
-            <Path Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" 
-                  Width="11" Height="11" Stretch="Uniform" Fill="White"/>
+            <icons:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="White"/>
         </Button>
     </StackPanel>
 </UserControl>

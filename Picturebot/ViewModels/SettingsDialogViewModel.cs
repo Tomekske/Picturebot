@@ -209,6 +209,18 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
+        // Quick Tag Presets
+        QuickTagPresetsList.Clear();
+        var presets = (settings.QuickTagPresets ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var p in presets) QuickTagPresetsList.Add(p);
+
+        // Global Keyword Taxonomy
+        _taxonomyPaths.Clear();
+        var paths = (settings.GlobalKeywordTaxonomy ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var path in paths) _taxonomyPaths.Add(path);
+
         ThemeIndex = settings.ThemeMode switch {
             ThemeMode.Light => 0,
             ThemeMode.Dark => 1,
@@ -328,6 +340,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             CopyToPrintShortcut = CopyToPrintShortcut,
             EditFolderPath = EditFolderPath,
             PrintFolderPath = PrintFolderPath,
+            QuickTagPresets = string.Join(";", QuickTagPresetsList),
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,
                 1 => ThemeMode.Dark,
@@ -335,7 +348,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             }
         };
 
-        await _settingsService.UpdateAsync(settings);
+        await _settingsService.UpdateAsync(BuildCurrentSettingsModel());
 
         MainWindow.ToastManager.CreateToast()
             .WithTitle("Settings")
@@ -345,6 +358,53 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             .Queue();
 
         CloseDialog(parameter);
+    }
+
+    private SettingsModel BuildCurrentSettingsModel() {
+        return new SettingsModel {
+            LibraryPath = LibraryLocation,
+            GroupingThreshold = GroupingThreshold,
+            BurstTimeThresholdSeconds = BurstTimeThreshold,
+            BurstFallbackTimeThresholdSeconds = BurstFallbackThreshold,
+            LaunchMaximized = LaunchFullScreen,
+            RedLabelName = RedLabelName,
+            OrangeLabelName = OrangeLabelName,
+            YellowLabelName = YellowLabelName,
+            GreenLabelName = GreenLabelName,
+            BlueLabelName = BlueLabelName,
+            PinkLabelName = PinkLabelName,
+            PurpleLabelName = PurpleLabelName,
+            RedLabelShortcut = RedLabelShortcut,
+            OrangeLabelShortcut = OrangeLabelShortcut,
+            YellowLabelShortcut = YellowLabelShortcut,
+            GreenLabelShortcut = GreenLabelShortcut,
+            BlueLabelShortcut = BlueLabelShortcut,
+            PinkLabelShortcut = PinkLabelShortcut,
+            PurpleLabelShortcut = PurpleLabelShortcut,
+            NoneLabelShortcut = NoneLabelShortcut,
+            FullscreenShortcut = FullscreenShortcut,
+            OpenInExplorerShortcut = OpenInExplorerShortcut,
+            Rating0Shortcut = Rating0Shortcut,
+            Rating1Shortcut = Rating1Shortcut,
+            Rating2Shortcut = Rating2Shortcut,
+            Rating3Shortcut = Rating3Shortcut,
+            Rating4Shortcut = Rating4Shortcut,
+            Rating5Shortcut = Rating5Shortcut,
+            CurationPickedShortcut = CurationPickedShortcut,
+            CurationRejectedShortcut = CurationRejectedShortcut,
+            CurationNeutralShortcut = CurationNeutralShortcut,
+            CopyToEditShortcut = CopyToEditShortcut,
+            CopyToPrintShortcut = CopyToPrintShortcut,
+            EditFolderPath = EditFolderPath,
+            PrintFolderPath = PrintFolderPath,
+            QuickTagPresets = string.Join(";", QuickTagPresetsList),
+            GlobalKeywordTaxonomy = string.Join(";", _taxonomyPaths),
+            ThemeMode = ThemeIndex switch {
+                0 => ThemeMode.Light,
+                1 => ThemeMode.Dark,
+                _ => ThemeMode.System
+            }
+        };
     }
 
     [RelayCommand]
@@ -364,6 +424,49 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     public ObservableCollection<KeywordNodeViewModel> GlobalKeywords { get; } = new();
 
+    // Private list of all globally defined keyword taxonomy paths.
+    // This is the canonical source of truth — independent of which album is open.
+    private readonly List<string> _taxonomyPaths = new();
+
+    // ── Quick Tag Presets ─────────────────────────────────────────────────────
+    public ObservableCollection<string> QuickTagPresetsList { get; } = new();
+
+    [ObservableProperty]
+    private string _newPresetText = string.Empty;
+
+    [RelayCommand]
+    private void AddPreset() {
+        var tag = NewPresetText.Trim();
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        if (!QuickTagPresetsList.Contains(tag, StringComparer.OrdinalIgnoreCase)) {
+            QuickTagPresetsList.Add(tag);
+        }
+        NewPresetText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void RemovePreset(string? tag) {
+        if (tag != null) {
+            QuickTagPresetsList.Remove(tag);
+        }
+    }
+
+    [RelayCommand]
+    private void MovePresetUp(string? tag) {
+        if (tag == null) return;
+        var idx = QuickTagPresetsList.IndexOf(tag);
+        if (idx > 0) QuickTagPresetsList.Move(idx, idx - 1);
+    }
+
+    [RelayCommand]
+    private void MovePresetDown(string? tag) {
+        if (tag == null) return;
+        var idx = QuickTagPresetsList.IndexOf(tag);
+        if (idx >= 0 && idx < QuickTagPresetsList.Count - 1) QuickTagPresetsList.Move(idx, idx + 1);
+    }
+
+    // ── Keyword Taxonomy ─────────────────────────────────────────────────────
+
     [ObservableProperty]
     private KeywordNodeViewModel? _selectedKeywordNode;
 
@@ -371,56 +474,71 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _renameText = string.Empty;
 
     [ObservableProperty]
-    private string _mergeTargetText = string.Empty;
+    private string _addKeywordText = string.Empty;
 
     partial void OnSelectedKeywordNodeChanged(KeywordNodeViewModel? value) {
-        if (value != null) {
-            RenameText = value.Name;
-        } else {
-            RenameText = string.Empty;
-        }
+        RenameText = value?.Name ?? string.Empty;
     }
 
     partial void OnSelectedTabIndexChanged(int value) {
-        if (value == 5) { // Keywords tab index
+        if (value == 5) { // Keywords tab
             LoadGlobalKeywords();
         }
     }
 
     public void LoadGlobalKeywords() {
-        GlobalKeywords.Clear();
-        var allPictures = GetLoadedPictures();
-        if (!allPictures.Any()) return;
+        // Build a unified set: start from the stored global taxonomy,
+        // then discover any keyword paths already on loaded pictures
+        // (covers keywords added before this feature existed).
+        var allPaths = new HashSet<string>(_taxonomyPaths, StringComparer.OrdinalIgnoreCase);
 
-        var allTags = allPictures.SelectMany(p => p.Keywords).Distinct().ToList();
+        bool discovered = false;
+        foreach (var pic in GetLoadedPictures()) {
+            foreach (var kw in pic.Keywords) {
+                if (!string.IsNullOrWhiteSpace(kw) && allPaths.Add(kw)) {
+                    discovered = true;
+                }
+            }
+        }
+
+        // Persist any newly discovered paths back into the taxonomy
+        if (discovered) {
+            _taxonomyPaths.Clear();
+            _taxonomyPaths.AddRange(allPaths);
+        }
+
+        RebuildKeywordTree(allPaths);
+    }
+
+    private void RebuildKeywordTree(IEnumerable<string> paths) {
+        GlobalKeywords.Clear();
         var roots = new List<KeywordNodeViewModel>();
 
-        foreach (var tag in allTags) {
-            var segments = tag.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var path in paths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)) {
+            var segments = path.Split('|', StringSplitOptions.RemoveEmptyEntries);
             IList<KeywordNodeViewModel> currentList = roots;
-            string currentPath = "";
+            var currentPath = string.Empty;
 
             for (int i = 0; i < segments.Length; i++) {
                 var segment = segments[i].Trim();
                 currentPath = i == 0 ? segment : $"{currentPath}|{segment}";
 
-                var existingNode = currentList.FirstOrDefault(n => n.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
-                if (existingNode == null) {
-                    existingNode = new KeywordNodeViewModel {
-                        Name = segment,
-                        FullPath = currentPath
-                    };
-                    currentList.Add(existingNode);
+                var existing = currentList.FirstOrDefault(n =>
+                    n.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
+                if (existing == null) {
+                    existing = new KeywordNodeViewModel { Name = segment, FullPath = currentPath };
+                    currentList.Add(existing);
                 }
-                currentList = existingNode.Children;
+                currentList = existing.Children;
             }
         }
 
-        SortKeywordNodes(roots);
+        foreach (var root in roots) GlobalKeywords.Add(root);
+    }
 
-        foreach (var r in roots) {
-            GlobalKeywords.Add(r);
-        }
+    private async Task PersistTaxonomy() {
+        if (_settingsService == null) return;
+        await _settingsService.UpdateAsync(BuildCurrentSettingsModel());
     }
 
     private void SortKeywordNodes(IList<KeywordNodeViewModel> nodes) {
@@ -440,31 +558,60 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    private void RenameKeyword() {
+    private async Task AddKeyword() {
+        var raw = AddKeywordText.Trim().Replace('/', '|');
+        if (string.IsNullOrWhiteSpace(raw)) return;
+        if (_taxonomyPaths.Contains(raw, StringComparer.OrdinalIgnoreCase)) {
+            AddKeywordText = string.Empty;
+            return;
+        }
+
+        _taxonomyPaths.Add(raw);
+        AddKeywordText = string.Empty;
+        LoadGlobalKeywords();
+
+        // Auto-select the newly added leaf node
+        var segments = raw.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        KeywordNodeViewModel? node = GlobalKeywords
+            .FirstOrDefault(n => n.Name.Equals(segments[0], StringComparison.OrdinalIgnoreCase));
+        for (int i = 1; i < segments.Length && node != null; i++) {
+            node.IsExpanded = true;
+            node = node.Children.FirstOrDefault(c =>
+                c.Name.Equals(segments[i], StringComparison.OrdinalIgnoreCase));
+        }
+        SelectedKeywordNode = node;
+
+        await PersistTaxonomy();
+    }
+
+    [RelayCommand]
+    private async Task RenameKeyword() {
         if (SelectedKeywordNode == null || string.IsNullOrWhiteSpace(RenameText)) return;
         var oldPath = SelectedKeywordNode.FullPath;
-        var newName = RenameText.Trim();
-
         var parts = oldPath.Split('|');
-        parts[parts.Length - 1] = newName;
+        parts[parts.Length - 1] = RenameText.Trim();
         var newPath = string.Join("|", parts);
 
-        var allPictures = GetLoadedPictures();
-        var curationQueue = App.Services?.GetService<ICurationQueue>();
+        // Update taxonomy paths
+        for (int i = 0; i < _taxonomyPaths.Count; i++) {
+            if (_taxonomyPaths[i].Equals(oldPath, StringComparison.OrdinalIgnoreCase))
+                _taxonomyPaths[i] = newPath;
+            else if (_taxonomyPaths[i].StartsWith(oldPath + "|", StringComparison.OrdinalIgnoreCase))
+                _taxonomyPaths[i] = newPath + _taxonomyPaths[i].Substring(oldPath.Length);
+        }
 
-        foreach (var pic in allPictures) {
+        // Rename in all loaded pictures
+        var curationQueue = App.Services?.GetService<ICurationQueue>();
+        foreach (var pic in GetLoadedPictures()) {
             bool changed = false;
             for (int i = 0; i < pic.Keywords.Count; i++) {
                 var kw = pic.Keywords[i];
                 if (kw.Equals(oldPath, StringComparison.OrdinalIgnoreCase)) {
-                    pic.Keywords[i] = newPath;
-                    changed = true;
+                    pic.Keywords[i] = newPath; changed = true;
                 } else if (kw.StartsWith(oldPath + "|", StringComparison.OrdinalIgnoreCase)) {
-                    pic.Keywords[i] = newPath + kw.Substring(oldPath.Length);
-                    changed = true;
+                    pic.Keywords[i] = newPath + kw.Substring(oldPath.Length); changed = true;
                 }
             }
-
             if (changed) {
                 pic.Picture.Keywords = pic.Keywords.ToList();
                 pic.NotifyKeywordsChanged();
@@ -475,72 +622,27 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         LoadGlobalKeywords();
         RenameText = string.Empty;
         SelectedKeywordNode = null;
+        await PersistTaxonomy();
     }
 
     [RelayCommand]
-    private void MergeKeywords() {
-        if (SelectedKeywordNode == null || string.IsNullOrWhiteSpace(MergeTargetText)) return;
-        var sourcePath = SelectedKeywordNode.FullPath;
-        var targetPath = MergeTargetText.Trim().Replace('/', '|');
-
-        var allPictures = GetLoadedPictures();
-        var curationQueue = App.Services?.GetService<ICurationQueue>();
-
-        foreach (var pic in allPictures) {
-            bool changed = false;
-            var newKeywords = new List<string>();
-
-            foreach (var kw in pic.Keywords) {
-                if (kw.Equals(sourcePath, StringComparison.OrdinalIgnoreCase)) {
-                    if (!newKeywords.Contains(targetPath, StringComparer.OrdinalIgnoreCase)) {
-                        newKeywords.Add(targetPath);
-                    }
-                    changed = true;
-                } else if (kw.StartsWith(sourcePath + "|", StringComparison.OrdinalIgnoreCase)) {
-                    var childTargetPath = targetPath + kw.Substring(sourcePath.Length);
-                    if (!newKeywords.Contains(childTargetPath, StringComparer.OrdinalIgnoreCase)) {
-                        newKeywords.Add(childTargetPath);
-                    }
-                    changed = true;
-                } else {
-                    newKeywords.Add(kw);
-                }
-            }
-
-            if (changed) {
-                pic.Keywords.Clear();
-                foreach (var kw in newKeywords) {
-                    pic.Keywords.Add(kw);
-                }
-                pic.Picture.Keywords = pic.Keywords.ToList();
-                pic.NotifyKeywordsChanged();
-                curationQueue?.Enqueue(pic.Picture);
-            }
-        }
-
-        LoadGlobalKeywords();
-        MergeTargetText = string.Empty;
-        SelectedKeywordNode = null;
-    }
-
-    [RelayCommand]
-    private void DeleteKeyword() {
+    private async Task DeleteKeyword() {
         if (SelectedKeywordNode == null) return;
         var pathToDelete = SelectedKeywordNode.FullPath;
 
-        var allPictures = GetLoadedPictures();
+        // Remove path and all child paths from the taxonomy
+        _taxonomyPaths.RemoveAll(p =>
+            p.Equals(pathToDelete, StringComparison.OrdinalIgnoreCase) ||
+            p.StartsWith(pathToDelete + "|", StringComparison.OrdinalIgnoreCase));
+
+        // Remove from all loaded pictures
         var curationQueue = App.Services?.GetService<ICurationQueue>();
-
-        foreach (var pic in allPictures) {
-            var toRemove = pic.Keywords.Where(kw => 
-                kw.Equals(pathToDelete, StringComparison.OrdinalIgnoreCase) || 
-                kw.StartsWith(pathToDelete + "|", StringComparison.OrdinalIgnoreCase)
-            ).ToList();
-
+        foreach (var pic in GetLoadedPictures()) {
+            var toRemove = pic.Keywords.Where(kw =>
+                kw.Equals(pathToDelete, StringComparison.OrdinalIgnoreCase) ||
+                kw.StartsWith(pathToDelete + "|", StringComparison.OrdinalIgnoreCase)).ToList();
             if (toRemove.Any()) {
-                foreach (var kw in toRemove) {
-                    pic.Keywords.Remove(kw);
-                }
+                foreach (var kw in toRemove) pic.Keywords.Remove(kw);
                 pic.Picture.Keywords = pic.Keywords.ToList();
                 pic.NotifyKeywordsChanged();
                 curationQueue?.Enqueue(pic.Picture);
@@ -549,5 +651,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
         LoadGlobalKeywords();
         SelectedKeywordNode = null;
+        await PersistTaxonomy();
     }
 }

@@ -234,36 +234,22 @@
                                Foreground="{DynamicResource SukiLowText}"
                                Margin="0,4,0,0" />
                     <WrapPanel HorizontalAlignment="Left">
-                        <!-- Toggle Button for Selected -->
-                        <ToggleButton Content="Selected"
-                                      IsChecked="{Binding IsQuickTag1Active}"
-                                      Command="{Binding ToggleQuickTagCommand}"
-                                      CommandParameter="Selected"
-                                      Margin="0,0,6,6" />
-                        <!-- Toggle Button for Review -->
-                        <ToggleButton Content="Review"
-                                      IsChecked="{Binding IsQuickTag2Active}"
-                                      Command="{Binding ToggleQuickTagCommand}"
-                                      CommandParameter="Review"
-                                      Margin="0,0,6,6" />
-                        <!-- Toggle Button for Highlight -->
-                        <ToggleButton Content="Highlight"
-                                      IsChecked="{Binding IsQuickTag3Active}"
-                                      Command="{Binding ToggleQuickTagCommand}"
-                                      CommandParameter="Highlight"
-                                      Margin="0,0,6,6" />
-                        <!-- Toggle Button for Portrait -->
-                        <ToggleButton Content="Portrait"
-                                      IsChecked="{Binding IsQuickTag4Active}"
-                                      Command="{Binding ToggleQuickTagCommand}"
-                                      CommandParameter="Portrait"
-                                      Margin="0,0,6,6" />
-                        <!-- Toggle Button for Landscape -->
-                        <ToggleButton Content="Landscape"
-                                      IsChecked="{Binding IsQuickTag5Active}"
-                                      Command="{Binding ToggleQuickTagCommand}"
-                                      CommandParameter="Landscape"
-                                      Margin="0,0,6,6" />
+                        <ItemsControl ItemsSource="{Binding QuickTagButtons}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:QuickTagButtonViewModel">
+                                    <ToggleButton Content="{Binding Name}"
+                                                  IsChecked="{Binding IsActive}"
+                                                  Command="{Binding $parent[ItemsControl].((vm:DetailsInspectorViewModel)DataContext).ToggleQuickTagCommand}"
+                                                  CommandParameter="{Binding Name}"
+                                                  Margin="0,0,6,6" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </WrapPanel>
                 </StackPanel>
             </StackPanel>

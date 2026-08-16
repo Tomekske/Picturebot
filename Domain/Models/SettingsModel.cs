@@ -59,4 +59,12 @@ public class SettingsModel {
 
     public string? EditFolderPath { get; set; }
     public string? PrintFolderPath { get; set; }
+
+    public string QuickTagPresets { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The semicolon-separated list of all globally defined keyword taxonomy paths
+    ///     (e.g. "Animal|Dog|Labrador;Animal|Cat;Architecture").
+    /// </summary>
+    public string GlobalKeywordTaxonomy { get; set; } = string.Empty;
 }
