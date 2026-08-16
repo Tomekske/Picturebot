@@ -474,14 +474,37 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private Tag? _selectedSubNodeTag;
 
-    partial void OnSelectedHierarchyNodeChanged(HierarchyNode? value) {
-        OnPropertyChanged(nameof(SelectedNodeXmpPath));
+    partial void OnSelectedSubNodeTagChanged(Tag? value) {
+        if (value != null) {
+            _newChildNodeName = value.Name;
+            OnPropertyChanged(nameof(NewChildNodeName));
+        }
+        OnPropertyChanged(nameof(CalculatedPreviewPath));
     }
 
-    public string SelectedNodeXmpPath {
+    partial void OnNewChildNodeNameChanged(string value) {
+        OnPropertyChanged(nameof(CalculatedPreviewPath));
+    }
+
+    partial void OnSelectedHierarchyNodeChanged(HierarchyNode? value) {
+        OnPropertyChanged(nameof(SelectedNodeXmpPath));
+        OnPropertyChanged(nameof(CalculatedPreviewPath));
+    }
+
+    public string SelectedNodeXmpPath => CalculatedPreviewPath;
+
+    public string CalculatedPreviewPath {
         get {
-            if (SelectedHierarchyNode == null) return string.Empty;
-            return FindNodePath(HierarchyNodes, SelectedHierarchyNode, "") ?? SelectedHierarchyNode.Name;
+            var parentPath = SelectedHierarchyNode != null
+                ? (FindNodePath(HierarchyNodes, SelectedHierarchyNode, "") ?? SelectedHierarchyNode.Name)
+                : string.Empty;
+
+            var subName = SelectedSubNodeTag?.Name ?? NewChildNodeName.Trim();
+            if (string.IsNullOrEmpty(subName)) {
+                return parentPath;
+            }
+
+            return string.IsNullOrEmpty(parentPath) ? subName : $"{parentPath}|{subName}";
         }
     }
 
@@ -519,10 +542,12 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             HierarchyNodes.Add(newNode);
         }
 
-        NewChildNodeName = string.Empty;
         SelectedSubNodeTag = null;
+        NewChildNodeName = string.Empty;
+
         SelectedHierarchyNode = newNode;
         OnPropertyChanged(nameof(SelectedNodeXmpPath));
+        OnPropertyChanged(nameof(CalculatedPreviewPath));
     }
 
     [RelayCommand]
