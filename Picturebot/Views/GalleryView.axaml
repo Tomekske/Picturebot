@@ -141,6 +141,48 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
+
+                    <!-- Bulk Delete Tag Action -->
+                    <Button Classes="Basic" ToolTip.Tip="Bulk Delete Tag from Album" IsVisible="{Binding IsShowingAlbum}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <icons:MaterialIcon Kind="TagMinus" Width="20" Height="20" Foreground="#FF5555" />
+                            <icons:MaterialIcon Kind="ChevronDown" Width="14" Height="14" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft" Opened="BulkDeleteFlyout_Opened">
+                                <Border Width="260" Padding="12" Background="{DynamicResource SukiCardBackground}" CornerRadius="8">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Bulk Delete Tag" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource SukiText}" />
+                                        <TextBlock Text="Select tag(s) to remove from all XMP files in this album:" FontSize="11" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap" />
+
+                                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding AlbumTagsForBulkDelete}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:BulkDeleteTagItemViewModel">
+                                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <TextBlock Text="{Binding TagName}" FontWeight="SemiBold" Foreground="{DynamicResource SukiText}" />
+                                                                <TextBlock Text="{Binding Count, StringFormat='({0})'}" Foreground="{DynamicResource SukiLowText}" FontSize="11" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </CheckBox>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                        <TextBlock Text="No tags found in this album" IsVisible="{Binding !AlbumTagsForBulkDelete.Count}" Foreground="{DynamicResource SukiLowText}" FontStyle="Italic" FontSize="12" />
+
+                                        <Button Classes="Accent" Command="{Binding ExecuteBulkDeleteTagsCommand}" IsEnabled="{Binding AlbumTagsForBulkDelete.Count}" HorizontalAlignment="Stretch" Height="34" Background="#CC3333">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                                <icons:MaterialIcon Kind="Delete" Width="16" Height="16" />
+                                                <TextBlock Text="Delete Selected Tags" FontWeight="SemiBold" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding !IsLibraryRoot}">
@@ -317,8 +359,8 @@
                                                Foreground="{DynamicResource SukiText}" />
                                 </StackPanel>
 
-                                <ListBox ItemsSource="{Binding Pictures}"
-                                         SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture, Mode=OneWay}"
+                                <ListBox x:Name="GroupListBox"
+                                         ItemsSource="{Binding Pictures}"
                                          SelectionChanged="OnSelectionChanged"
                                          SelectionMode="Multiple"
                                          Background="Transparent"

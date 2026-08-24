@@ -79,6 +79,10 @@ internal sealed class Program {
             services.AddScoped<ICopyService, CopyService>();
             services.AddSingleton<IPictureAnalyzer, PictureAnalyzerService>();
             services.AddSingleton<IPictureProcessor, PictureProcessorService>();
+            services.AddSingleton<IImageEmbeddingService, ImageEmbeddingService>();
+            services.AddScoped<ITaxonomyService, TaxonomyService>();
+            services.AddSingleton<IGlobalExemplarCentroidService, GlobalExemplarCentroidService>();
+            services.AddScoped<IFewShotTagDiscoveryService, FewShotTagDiscoveryService>();
             services.AddSingleton<IPickedService, PickedService>();
             services.AddSingleton<CurationQueue>();
             services.AddSingleton<ICurationQueue>(sp => sp.GetRequiredService<CurationQueue>());

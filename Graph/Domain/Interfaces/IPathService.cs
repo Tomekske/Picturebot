@@ -7,4 +7,5 @@ public interface IPathService {
     void PopulatePaths(IEnumerable<Picture> pictures);
     string? GetAlbumPickedPath(Album album);
     string? GetAlbumHighlightsPath(Album album);
+    string? GetAlbumDeletedPath(Album album);
 }

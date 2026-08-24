@@ -18,6 +18,13 @@ public interface IAlbumService {
     Task DeleteAsync(Album album);
 
     /// <summary>
+    ///     Deletes a single picture from an album by moving its JPG, RAW, and XMP files to the 'Deleted' folder and removing its database record.
+    /// </summary>
+    /// <param name="picture">The picture to delete.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    Task DeletePictureAsync(Picture picture);
+
+    /// <summary>
     ///     Synchronizes the database curation status of pictures within the album based on the presence of files in the physical 'Picked' subfolder.
     /// </summary>
     /// <param name="album">The album to synchronize.</param>

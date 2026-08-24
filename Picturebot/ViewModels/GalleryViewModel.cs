@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Avalonia.Controls;
@@ -48,6 +49,9 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly ISettingsService _settingsService;
     private readonly IXmpService _xmpService;
     private readonly IPickedService _pickedService;
+    private readonly IFewShotTagDiscoveryService? _tagDiscoveryService;
+    private readonly IGlobalExemplarCentroidService? _centroidService;
+    private CancellationTokenSource? _albumLoadCts;
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
@@ -131,7 +135,9 @@ public partial class GalleryViewModel : ViewModelBase,
         IPictureGroupingService groupingService, INavigationService navigationService,
         ISettingsService settingsService, ICurationQueue curationQueue,
         IAlbumService albumService, IFolderService folderService, ICopyService copyService,
-        IXmpService xmpService, IPickedService pickedService) {
+        IXmpService xmpService, IPickedService pickedService,
+        IFewShotTagDiscoveryService? tagDiscoveryService = null,
+        IGlobalExemplarCentroidService? centroidService = null) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
@@ -143,6 +149,8 @@ public partial class GalleryViewModel : ViewModelBase,
         _copyService = copyService;
         _xmpService = xmpService;
         _pickedService = pickedService;
+        _tagDiscoveryService = tagDiscoveryService;
+        _centroidService = centroidService;
 
         _filterToolbar = new FilterToolbarViewModel(ApplyFilters);
 
@@ -198,7 +206,7 @@ public partial class GalleryViewModel : ViewModelBase,
     public void Receive(NodeDeletedMessage message) {
         var deletedNode = message.Value;
 
-        // If we are in the parent folder, remove the deleted node
+        // If we are in the parent folder or album, remove the deleted node
         if (_currentNode?.Id == deletedNode.ParentId || (_currentNode == null && deletedNode.ParentId == null)) {
             var itemToRemove = Items.FirstOrDefault(i => i.Id == deletedNode.Id);
             if (itemToRemove != null) {
@@ -208,6 +216,17 @@ public partial class GalleryViewModel : ViewModelBase,
                 } else if (deletedNode is Album) {
                     AlbumItems.Remove(itemToRemove);
                 }
+            }
+
+            var picToRemove = _allPictures.FirstOrDefault(p => p.Picture.Id == deletedNode.Id);
+            if (picToRemove != null) {
+                picToRemove.PropertyChanged -= OnPictureItemPropertyChanged;
+                _allPictures.Remove(picToRemove);
+                SelectedPictures.Remove(picToRemove);
+                if (SelectedPicture?.Picture.Id == deletedNode.Id) {
+                    SelectedPicture = SelectedPictures.FirstOrDefault();
+                }
+                ApplyFilters();
             }
         }
     }
@@ -1141,6 +1160,10 @@ public partial class GalleryViewModel : ViewModelBase,
     private FileSystemWatcher? _xmpWatcher;
 
     private Task LoadAlbumAsync(Album album) {
+        _albumLoadCts?.Cancel();
+        _albumLoadCts = new CancellationTokenSource();
+        var cancellationToken = _albumLoadCts.Token;
+
         SetupXmpWatcher(album);
 
         _currentNode = album;
@@ -1447,9 +1470,122 @@ public partial class GalleryViewModel : ViewModelBase,
                     NotifyFilterStates();
                 }
             });
+
+            // --- STAGE 3: Run Few-Shot Tag Discovery & Auto-Save Pipeline in background ---
+            if (_tagDiscoveryService != null && _currentNode?.Id == album.Id) {
+                try {
+                    await _tagDiscoveryService.ScanPicturesAsync(pics, (pic, newKeywords) => {
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                            var vm = _allPictures.FirstOrDefault(p => p.Picture.Id == pic.Id);
+                            if (vm != null) {
+                                vm.Picture.Keywords = newKeywords;
+                                vm.Keywords.Clear();
+                                foreach (var kw in newKeywords) {
+                                    vm.Keywords.Add(kw);
+                                }
+                                ApplyFilters();
+                            }
+                        });
+                    }, cancellationToken);
+                } catch (OperationCanceledException) {
+                    // Album load or navigation was cancelled
+                } catch (Exception ex) {
+                    Log.Error(ex, "Error during automated few-shot tag discovery for album {AlbumId}", album.Id);
+                }
+            }
         });
 
         return Task.CompletedTask;
+    }
+
+    public ObservableCollection<BulkDeleteTagItemViewModel> AlbumTagsForBulkDelete { get; } = new();
+
+    [RelayCommand]
+    public void PopulateAlbumTagsForBulkDelete() {
+        AlbumTagsForBulkDelete.Clear();
+        if (_currentNode is not Album) return;
+
+        var tagCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var picVm in _allPictures) {
+            if (picVm.Keywords != null) {
+                foreach (var kw in picVm.Keywords) {
+                    if (string.IsNullOrWhiteSpace(kw)) continue;
+                    tagCounts[kw] = tagCounts.GetValueOrDefault(kw, 0) + 1;
+                }
+            }
+        }
+
+        foreach (var kvp in tagCounts.OrderBy(k => k.Key)) {
+            AlbumTagsForBulkDelete.Add(new BulkDeleteTagItemViewModel {
+                TagName = kvp.Key,
+                Count = kvp.Value,
+                IsSelected = false
+            });
+        }
+    }
+
+    [RelayCommand]
+    public async Task ExecuteBulkDeleteTagsAsync() {
+        if (_currentNode is not Album album) return;
+
+        var selectedTags = AlbumTagsForBulkDelete
+            .Where(t => t.IsSelected && !string.IsNullOrWhiteSpace(t.TagName))
+            .Select(t => t.TagName.Trim())
+            .ToList();
+
+        if (selectedTags.Count == 0) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("No Tag Selected")
+                .WithContent("Please check at least one tag to delete from the album.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        int affectedFiles = 0;
+        var affectedVms = new List<PictureItemViewModel>();
+
+        foreach (var tag in selectedTags) {
+            foreach (var picVm in _allPictures) {
+                var existingTag = picVm.Keywords.FirstOrDefault(k => k.Equals(tag, StringComparison.OrdinalIgnoreCase));
+                if (existingTag != null) {
+                    picVm.RemoveKeyword(existingTag);
+                    _curationQueue.Enqueue(picVm.Picture);
+
+                    if (!affectedVms.Contains(picVm)) {
+                        affectedVms.Add(picVm);
+                    }
+
+                    if (_centroidService != null) {
+                        var vec = picVm.Picture.Metrics?.GetEmbeddingVector();
+                        if (vec != null) {
+                            _centroidService.OnTagRemoved(picVm.Picture.Id, existingTag, vec);
+                        }
+                    }
+                }
+            }
+        }
+
+        affectedFiles = affectedVms.Count;
+
+        if (FilterToolbar != null) {
+            FilterToolbar.UpdateAvailableTags(_allPictures);
+        }
+        ApplyFilters();
+        WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(affectedVms));
+
+        PopulateAlbumTagsForBulkDelete();
+
+        var tagSummary = string.Join(", ", selectedTags);
+        Log.Information("Bulk deleted tags [{Tags}] from {Count} files in album '{AlbumName}'", tagSummary, affectedFiles, album.Name);
+
+        MainWindow.ToastManager.CreateToast()
+            .WithTitle("Tags Deleted")
+            .WithContent($"Successfully deleted tag(s) [{tagSummary}] from {affectedFiles} files in album '{album.Name}'.")
+            .Dismiss().After(TimeSpan.FromSeconds(4))
+            .Queue();
+
+        await Task.CompletedTask;
     }
 
     private void NotifyFilterStates() {
@@ -1500,6 +1636,8 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private void TearDownXmpWatcher() {
+        _albumLoadCts?.Cancel();
+        _albumLoadCts = null;
         if (_xmpWatcher != null) {
             _xmpWatcher.EnableRaisingEvents = false;
             _xmpWatcher.Changed -= OnXmpFileChanged;

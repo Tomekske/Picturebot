@@ -75,6 +75,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
             if (!Keywords.Contains(trimmed, StringComparer.OrdinalIgnoreCase)) {
                 Keywords.Add(trimmed);
                 Picture.Keywords = Keywords.ToList();
+                Picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(Picture.Keywords);
                 OnPropertyChanged(nameof(Keywords));
             }
         }
@@ -87,6 +88,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
             if (existing != null) {
                 Keywords.Remove(existing);
                 Picture.Keywords = Keywords.ToList();
+                Picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(Picture.Keywords);
                 OnPropertyChanged(nameof(Keywords));
             }
         }

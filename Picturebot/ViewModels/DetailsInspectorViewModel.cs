@@ -13,9 +13,14 @@ using Domain.Enums;
 using Domain.Interfaces;
 using Domain.Models;
 using Graph.Domain.Interfaces;
+using PictureWorker.Domain.Interfaces;
 using Picturebot.Messages;
 using Picturebot.Utilities;
 using Serilog;
+
+using Picturebot.Views;
+using SukiUI.Dialogs;
+using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
@@ -33,6 +38,9 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     private readonly INodeService _nodeService;
     private readonly ICurationQueue _curationQueue;
     private readonly ISettingsService _settingsService;
+    private readonly IAlbumService _albumService;
+    private readonly IGlobalExemplarCentroidService? _centroidService;
+    private readonly IImageEmbeddingService? _embeddingService;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -62,10 +70,19 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     public ObservableCollection<QuickTagButtonViewModel> QuickTagButtons { get; } = new();
 
-    public DetailsInspectorViewModel(INodeService nodeService, ICurationQueue curationQueue, ISettingsService settingsService) {
+    public DetailsInspectorViewModel(
+        INodeService nodeService,
+        ICurationQueue curationQueue,
+        ISettingsService settingsService,
+        IAlbumService albumService,
+        IGlobalExemplarCentroidService? centroidService = null,
+        IImageEmbeddingService? embeddingService = null) {
         _nodeService = nodeService;
         _curationQueue = curationQueue;
         _settingsService = settingsService;
+        _albumService = albumService;
+        _centroidService = centroidService;
+        _embeddingService = embeddingService;
         _settingsService.PropertyChanged += OnSettingsChanged;
         WeakReferenceMessenger.Default.RegisterAll(this);
         RefreshTagGroups();
@@ -110,6 +127,13 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         SelectedPictures.Clear();
         foreach (var pic in message.Value) {
             SelectedPictures.Add(pic);
+        }
+        if (message.Value.Count > 0) {
+            if (SelectedPicture == null || !message.Value.Contains(SelectedPicture)) {
+                SelectedPicture = message.Value.FirstOrDefault();
+            }
+        } else {
+            SelectedPicture = null;
         }
         UpdateActiveKeywords();
         UpdateQuickTagStates();
@@ -270,14 +294,23 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         var previewPath = picVm.Picture.SubFolder?.Preview;
         if (string.IsNullOrEmpty(previewPath) || !File.Exists(previewPath)) {
             Log.Warning("No preview available for {Name}", picVm.Name);
+            PreviewImage?.Dispose();
+            PreviewImage = null;
             return;
         }
 
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         try {
-            PreviewImage = await ImageHelper.LoadAndOrientAsync(previewPath, 600);
+            var loadedBitmap = await ImageHelper.LoadAndOrientAsync(previewPath, 600);
+            if (token.IsCancellationRequested || SelectedPicture != picVm) {
+                loadedBitmap?.Dispose();
+                return;
+            }
+            PreviewImage?.Dispose();
+            PreviewImage = loadedBitmap;
         } catch (OperationCanceledException) {
             // Loading was cancelled
         } catch (Exception ex) {
@@ -340,7 +373,42 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     [RelayCommand]
     private void DeleteAsset() {
-        Log.Information("Delete asset {Name}", SelectedPicture?.Name);
+        if (SelectedPicture == null || SelectedPicture.Picture == null) return;
+
+        var pictureToDelete = SelectedPicture.Picture;
+        var pictureName = SelectedPicture.Name;
+        var title = "Delete Picture";
+        var message = $"Are you sure you want to delete picture '{pictureName}'? This will move its JPG and RAW files to the 'Deleted' folder and remove it from the library.";
+
+        var vm = new ConfirmDeleteDialogViewModel(title, message, async result => {
+            if (result) {
+                try {
+                    await _albumService.DeletePictureAsync(pictureToDelete);
+                    Log.Information("Picture deleted: {Name}", pictureName);
+
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"Picture '{pictureName}' has been deleted.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+
+                    SelectedPicture = null;
+                    WeakReferenceMessenger.Default.Send(new NodeDeletedMessage(pictureToDelete));
+                } catch (Exception ex) {
+                    Log.Error(ex, "Failed to delete picture {Name}", pictureName);
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Error")
+                        .WithContent(ex.Message)
+                        .Dismiss().ByClicking()
+                        .Queue();
+                }
+            }
+        });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new ConfirmDeleteDialog { DataContext = vm })
+            .TryShow();
     }
 
     [RelayCommand]
@@ -359,6 +427,13 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
                 picVm.AddKeyword(trimmed);
                 _curationQueue.Enqueue(picVm.Picture);
                 changed = true;
+
+                if (_centroidService != null && _embeddingService != null) {
+                    _ = Task.Run(async () => {
+                        var vec = await _embeddingService.GetOrComputeEmbeddingAsync(picVm.Picture);
+                        _centroidService.OnTagAdded(picVm.Picture.Id, trimmed, vec);
+                    });
+                }
             }
         }
 
@@ -386,6 +461,13 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
                 picVm.RemoveKeyword(existing);
                 _curationQueue.Enqueue(picVm.Picture);
                 changed = true;
+
+                if (_centroidService != null && _embeddingService != null) {
+                    _ = Task.Run(async () => {
+                        var vec = await _embeddingService.GetOrComputeEmbeddingAsync(picVm.Picture);
+                        _centroidService.OnTagRemoved(picVm.Picture.Id, trimmed, vec);
+                    });
+                }
             }
         }
 

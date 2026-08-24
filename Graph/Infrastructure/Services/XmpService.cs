@@ -172,6 +172,7 @@ public class XmpService(
                 }
             }
             picture.Keywords = keywords;
+            picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(keywords);
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load XMP metadata for picture {Name} from {Path}", picture.Name, xmpPath);
         }
@@ -278,6 +279,7 @@ public class XmpService(
                         flatKeywords.Add(seg.Trim());
                     }
                 }
+                picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(picture.Keywords);
             }
 
             // Remove existing elements to prevent duplicates

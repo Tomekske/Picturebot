@@ -22,6 +22,9 @@ namespace Database.Migrations
                     b.Property<int>("PictureId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<byte[]>("Embedding")
+                        .HasColumnType("BLOB");
+
                     b.Property<long?>("PHash")
                         .HasColumnType("INTEGER");
 
@@ -314,6 +317,9 @@ namespace Database.Migrations
 
                     b.Property<int>("Height")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("KeywordsJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LastErrorMessage")
                         .HasColumnType("TEXT");

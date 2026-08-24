@@ -39,9 +39,28 @@ public partial class GalleryView : UserControl {
         base.OnKeyDown(e);
     }
 
+    private bool _isUpdatingSelection;
+
     private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {
-        if (sender is ListBox listBox) {
-            if (DataContext is GalleryViewModel vm) {
+        if (_isUpdatingSelection) return;
+        if (sender is not ListBox listBox) return;
+        if (DataContext is not GalleryViewModel vm) return;
+
+        try {
+            _isUpdatingSelection = true;
+
+            if (e.AddedItems.Count > 0) {
+                // Clear selection in other listboxes so only one group has active selection
+                var container = this.FindControl<ItemsControl>("GroupedPicturesItemsControl");
+                if (container != null) {
+                    foreach (var child in container.GetRealizedContainers()) {
+                        var otherListBox = child.FindControl<ListBox>("GroupListBox");
+                        if (otherListBox != null && otherListBox != listBox && otherListBox.SelectedItems.Count > 0) {
+                            otherListBox.SelectedItems.Clear();
+                        }
+                    }
+                }
+
                 vm.SelectedPictures.Clear();
                 foreach (var item in listBox.SelectedItems) {
                     if (item is PictureItemViewModel pic) {
@@ -49,9 +68,17 @@ public partial class GalleryView : UserControl {
                     }
                 }
                 vm.SelectedPicture = listBox.SelectedItem as PictureItemViewModel;
-                
                 WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(vm.SelectedPictures.ToList()));
+            } else if (e.RemovedItems.Count > 0 && listBox.SelectedItems.Count == 0) {
+                var activePic = vm.SelectedPicture;
+                if (activePic != null && listBox.Items.Cast<object>().Contains(activePic)) {
+                    vm.SelectedPictures.Clear();
+                    vm.SelectedPicture = null;
+                    WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+                }
             }
+        } finally {
+            _isUpdatingSelection = false;
         }
     }
 
@@ -76,6 +103,12 @@ public partial class GalleryView : UserControl {
                 oldVm.Thumbnail = null;
             }
             control.Tag = control.DataContext as PictureItemViewModel;
+        }
+    }
+
+    private void BulkDeleteFlyout_Opened(object? sender, EventArgs e) {
+        if (DataContext is GalleryViewModel vm) {
+            vm.PopulateAlbumTagsForBulkDeleteCommand.Execute(null);
         }
     }
 }

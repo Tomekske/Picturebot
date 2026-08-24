@@ -37,6 +37,7 @@ public class AlbumService(
         fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "JPGs"));
         fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "Thumbnails"));
         fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "Picked"));
+        fileSystem.Directory.CreateDirectory(fileSystem.Path.Combine(albumPath, "Deleted"));
 
         return album;
     }
@@ -67,6 +68,85 @@ public class AlbumService(
         }
 
         await nodeService.DeleteNodeAsync(album);
+    }
+
+    public async Task DeletePictureAsync(Picture picture) {
+        ArgumentNullException.ThrowIfNull(picture);
+
+        var settings = settingsService.Current;
+        var libraryPath = settings.LibraryPath;
+
+        if (string.IsNullOrEmpty(libraryPath)) {
+            throw new InvalidOperationException("Library path is not configured.");
+        }
+
+        Album? album = picture.Parent as Album;
+        if (album == null && picture.ParentId.HasValue) {
+            var allNodes = await nodeService.GetAllNodesAsync();
+            album = allNodes.FirstOrDefault(n => n.Id == picture.ParentId.Value) as Album;
+        }
+
+        if (album == null || string.IsNullOrEmpty(album.Uuid)) {
+            throw new InvalidOperationException("Picture does not belong to a valid album.");
+        }
+
+        picture.Parent = album;
+        if (picture.SubFolder == null) {
+            pathService.PopulatePaths(picture);
+        }
+
+        var deletedFolder = pathService.GetAlbumDeletedPath(album);
+        if (string.IsNullOrEmpty(deletedFolder)) {
+            throw new InvalidOperationException("Deleted path could not be determined.");
+        }
+
+        if (!fileSystem.Directory.Exists(deletedFolder)) {
+            fileSystem.Directory.CreateDirectory(deletedFolder);
+        }
+
+        void MoveFileToDeleted(string? sourceFilePath) {
+            if (string.IsNullOrEmpty(sourceFilePath) || !fileSystem.File.Exists(sourceFilePath)) {
+                return;
+            }
+
+            var fileName = fileSystem.Path.GetFileName(sourceFilePath);
+            var destPath = fileSystem.Path.Combine(deletedFolder, fileName);
+
+            if (fileSystem.File.Exists(destPath)) {
+                fileSystem.File.Delete(destPath);
+            }
+
+            fileSystem.File.Move(sourceFilePath, destPath);
+        }
+
+        if (picture.SubFolder != null && !string.IsNullOrEmpty(picture.SubFolder.Raw)) {
+            MoveFileToDeleted(picture.SubFolder.Raw);
+
+            var xmpPath = fileSystem.Path.ChangeExtension(picture.SubFolder.Raw, ".xmp");
+            MoveFileToDeleted(xmpPath);
+        }
+
+        if (picture.SubFolder != null && !string.IsNullOrEmpty(picture.SubFolder.Preview)) {
+            MoveFileToDeleted(picture.SubFolder.Preview);
+        }
+
+        if (picture.SubFolder != null && !string.IsNullOrEmpty(picture.SubFolder.Thumbnail) && fileSystem.File.Exists(picture.SubFolder.Thumbnail)) {
+            fileSystem.File.Delete(picture.SubFolder.Thumbnail);
+        }
+
+        if (picture.SubFolder != null && !string.IsNullOrEmpty(picture.SubFolder.Picked) && fileSystem.File.Exists(picture.SubFolder.Picked)) {
+            fileSystem.File.Delete(picture.SubFolder.Picked);
+        }
+
+        var highlightsFolder = pathService.GetAlbumHighlightsPath(album);
+        if (!string.IsNullOrEmpty(highlightsFolder)) {
+            var highlightsFile = fileSystem.Path.Combine(highlightsFolder, picture.Name + ".jpg");
+            if (fileSystem.File.Exists(highlightsFile)) {
+                fileSystem.File.Delete(highlightsFile);
+            }
+        }
+
+        await nodeService.DeleteNodeAsync(picture);
     }
 
     public async Task SyncPickedStatusAsync(Album album) {
