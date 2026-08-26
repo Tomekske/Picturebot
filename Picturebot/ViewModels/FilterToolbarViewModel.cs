@@ -56,6 +56,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isMatchAny = true;
 
+    [ObservableProperty]
+    private bool _isMatchNot;
+
     public FilterToolbarViewModel(Action? onFilterChanged = null)
     {
         _onFilterChanged = onFilterChanged;
@@ -261,13 +264,37 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
     partial void OnIsMatchAllChanged(bool value)
     {
-        if (value) IsMatchAny = false;
+        if (value && !_isUpdating)
+        {
+            _isUpdating = true;
+            IsMatchAny = false;
+            IsMatchNot = false;
+            _isUpdating = false;
+        }
         UpdateCollectionsAndNotify();
     }
 
     partial void OnIsMatchAnyChanged(bool value)
     {
-        if (value) IsMatchAll = false;
+        if (value && !_isUpdating)
+        {
+            _isUpdating = true;
+            IsMatchAll = false;
+            IsMatchNot = false;
+            _isUpdating = false;
+        }
+        UpdateCollectionsAndNotify();
+    }
+
+    partial void OnIsMatchNotChanged(bool value)
+    {
+        if (value && !_isUpdating)
+        {
+            _isUpdating = true;
+            IsMatchAll = false;
+            IsMatchAny = false;
+            _isUpdating = false;
+        }
         UpdateCollectionsAndNotify();
     }
 

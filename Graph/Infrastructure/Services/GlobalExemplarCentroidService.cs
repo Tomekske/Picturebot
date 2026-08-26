@@ -29,27 +29,52 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
 
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var xmpService = scope.ServiceProvider.GetService<IXmpService>();
+        var embeddingService = scope.ServiceProvider.GetService<PictureWorker.Domain.Interfaces.IImageEmbeddingService>();
+        var pathService = scope.ServiceProvider.GetService<Domain.Interfaces.IPathService>();
 
-        // Query pictures and their metrics having embeddings
         var picturesData = await context.Pictures
             .Include(p => p.Metrics)
-            .Where(p => p.Metrics != null && p.Metrics.Embedding != null)
-            .Select(p => new {
-                p.Id,
-                p.KeywordsJson,
-                EmbeddingBytes = p.Metrics!.Embedding
-            })
+            .Include(p => p.Parent)
             .ToListAsync(cancellationToken);
 
         foreach (var p in picturesData) {
-            if (p.EmbeddingBytes == null || p.EmbeddingBytes.Length != 512 * sizeof(float)) {
-                continue;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (p.Parent != null && pathService != null) {
+                pathService.PopulatePaths(p);
             }
 
-            var vector = new float[512];
-            Buffer.BlockCopy(p.EmbeddingBytes, 0, vector, 0, p.EmbeddingBytes.Length);
+            // Fallback: If KeywordsJson is null/empty, load XMP sidecar if present
+            if (string.IsNullOrWhiteSpace(p.KeywordsJson) && xmpService != null && p.SubFolder?.Raw != null) {
+                try {
+                    await xmpService.LoadMetadataAsync(p);
+                    if (p.Keywords != null && p.Keywords.Count > 0) {
+                        p.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(p.Keywords);
+                        var picDb = await context.Pictures.FindAsync(new object[] { p.Id }, cancellationToken);
+                        if (picDb != null) {
+                            picDb.KeywordsJson = p.KeywordsJson;
+                            await context.SaveChangesAsync(cancellationToken);
+                        }
+                    }
+                } catch { }
+            }
 
             var keywords = ParseKeywords(p.KeywordsJson);
+            if (keywords.Count == 0) continue;
+
+            // Ensure embedding vector is computed and loaded
+            float[]? vector = null;
+            if (p.Metrics?.Embedding != null && p.Metrics.Embedding.Length == 512 * sizeof(float)) {
+                vector = p.Metrics.GetEmbeddingVector();
+            } else if (embeddingService != null) {
+                try {
+                    vector = await embeddingService.GetOrComputeEmbeddingAsync(p, cancellationToken);
+                } catch { }
+            }
+
+            if (vector == null || vector.Length != 512) continue;
+
             foreach (var kw in keywords) {
                 if (string.IsNullOrWhiteSpace(kw)) continue;
                 var leafTag = ExtractLeafTag(kw);

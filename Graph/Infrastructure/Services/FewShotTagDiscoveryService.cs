@@ -21,7 +21,7 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
     private readonly IXmpService _xmpService;
     private readonly IServiceScopeFactory _scopeFactory;
 
-    public float SimilarityThreshold { get; set; } = 0.85f;
+    public float SimilarityThreshold { get; set; } = 0.55f;
 
     public FewShotTagDiscoveryService(
         IImageEmbeddingService embeddingService,
@@ -73,6 +73,7 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
             var newHierarchicalPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // 3. Match against active leaf centroids
+            var candidateScores = new List<(string LeafTag, float Similarity)>();
             foreach (var (leafTag, centroid) in centroids) {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -85,23 +86,34 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
                 float sim = ComputeCosineSimilarity(embedding, centroid);
 
                 if (sim >= SimilarityThreshold) {
-                    discoveredLeafs.Add(leafTag);
-
-                    // 4. Resolve Taxonomy Expansion
-                    var flatChain = _taxonomyService.ResolveTaxonomySubjectChain(leafTag);
-                    var fullHierarchy = _taxonomyService.GetFullHierarchicalPath(leafTag);
-
-                    foreach (var ft in flatChain) {
-                        newFlatTags.Add(ft);
-                    }
-                    if (!string.IsNullOrEmpty(fullHierarchy)) {
-                        newHierarchicalPaths.Add(fullHierarchy);
-                    }
+                    candidateScores.Add((leafTag, sim));
                 }
             }
 
-            if (discoveredLeafs.Count == 0) {
+            if (candidateScores.Count == 0) {
                 continue;
+            }
+
+            // Select top-ranked candidate(s) within competitive margin
+            float maxScore = candidateScores.Max(c => c.Similarity);
+            var winningCandidates = candidateScores
+                .Where(c => c.Similarity >= maxScore - 0.05f)
+                .Select(c => c.LeafTag)
+                .ToList();
+
+            foreach (var leafTag in winningCandidates) {
+                discoveredLeafs.Add(leafTag);
+
+                // 4. Resolve Taxonomy Expansion
+                var flatChain = _taxonomyService.ResolveTaxonomySubjectChain(leafTag);
+                var fullHierarchy = _taxonomyService.GetFullHierarchicalPath(leafTag);
+
+                foreach (var ft in flatChain) {
+                    newFlatTags.Add(ft);
+                }
+                if (!string.IsNullOrEmpty(fullHierarchy)) {
+                    newHierarchicalPaths.Add(fullHierarchy);
+                }
             }
 
             // 5. Non-Destructive Tag Merging (Additive Set Union)

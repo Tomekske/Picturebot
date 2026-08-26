@@ -346,15 +346,16 @@
             </StackPanel>
             <Button.Flyout>
                 <Flyout Placement="BottomEdgeAlignedLeft">
-                    <Border x:DataType="vm:FilterToolbarViewModel" Width="250" Background="#1E1E22" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Border x:DataType="vm:FilterToolbarViewModel" Width="290" Background="#1E1E22" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
                         <StackPanel Spacing="10">
                             <!-- Search query TextBox -->
                             <TextBox Text="{Binding TagSearchText, Mode=TwoWay}" Watermark="Search tags..." Height="32" VerticalContentAlignment="Center"/>
 
                             <!-- Matching Logic Operator -->
-                            <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
-                                <RadioButton Content="ANY (OR)" IsChecked="{Binding IsMatchAny, Mode=TwoWay}" GroupName="MatchOperator" FontSize="11" Foreground="White"/>
-                                <RadioButton Content="ALL (AND)" IsChecked="{Binding IsMatchAll, Mode=TwoWay}" GroupName="MatchOperator" FontSize="11" Foreground="White"/>
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <RadioButton Content="ANY (OR)" IsChecked="{Binding IsMatchAny, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
+                                <RadioButton Content="ALL (AND)" IsChecked="{Binding IsMatchAll, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
+                                <RadioButton Content="NOT (EXCLUDE)" IsChecked="{Binding IsMatchNot, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
                             </StackPanel>
 
                             <!-- Checklist of tags -->

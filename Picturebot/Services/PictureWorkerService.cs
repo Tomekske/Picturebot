@@ -281,6 +281,27 @@ public class PictureWorkerService(
 
         // Persist updates
         using var scope = scopeFactory.CreateScope();
+
+        // 7. Load XMP Sidecar Metadata
+        var xmpService = scope.ServiceProvider.GetService<IXmpService>();
+        if (xmpService != null) {
+            try {
+                await xmpService.LoadMetadataAsync(picture);
+            } catch (Exception ex) {
+                Log.Warning(ex, "Failed to load XMP metadata for picture {Name}", picture.Name);
+            }
+        }
+
+        // 8. Compute Feature Embedding Vector
+        var embeddingService = scope.ServiceProvider.GetService<IImageEmbeddingService>();
+        if (embeddingService != null) {
+            try {
+                await embeddingService.GetOrComputeEmbeddingAsync(picture, ct);
+            } catch (Exception ex) {
+                Log.Warning(ex, "Failed to compute embedding vector for picture {Name}", picture.Name);
+            }
+        }
+
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var dbPic = await context.Pictures.FindAsync(new object[] { picture.Id }, ct);
         if (dbPic != null) {
@@ -288,6 +309,7 @@ public class PictureWorkerService(
             dbPic.Height = picture.Height;
             dbPic.Hash = picture.Hash;
             dbPic.Sharpness = picture.Sharpness;
+            dbPic.KeywordsJson = picture.KeywordsJson;
             dbPic.ProcessingState = ProcessingState.Completed;
             dbPic.LastErrorMessage = null;
             await context.SaveChangesAsync(ct);

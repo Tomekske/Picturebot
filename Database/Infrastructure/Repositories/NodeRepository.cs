@@ -69,8 +69,14 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         
         var parent = node.Parent;
         var children = node.Children;
+        var picture = node as Picture;
+        var metrics = picture?.Metrics;
+
         node.Parent = null;
         node.Children = null;
+        if (picture != null) {
+            picture.Metrics = null;
+        }
 
         try {
             if (trackedEntity != null) {
@@ -81,11 +87,28 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
                 _context.Nodes.Attach(node);
                 _context.Entry(node).State = EntityState.Modified;
             }
+
+            if (metrics != null && node.Id > 0) {
+                var existingMetrics = await _context.Metrics.FirstOrDefaultAsync(m => m.PictureId == node.Id);
+                if (existingMetrics != null) {
+                    _context.Entry(existingMetrics).CurrentValues.SetValues(metrics);
+                } else {
+                    _context.Metrics.Add(new Metrics {
+                        PictureId = node.Id,
+                        Sharpness = metrics.Sharpness,
+                        PHash = metrics.PHash,
+                        Embedding = metrics.Embedding
+                    });
+                }
+            }
             
             await _context.SaveChangesAsync();
         } finally {
             node.Parent = parent;
             node.Children = children;
+            if (picture != null) {
+                picture.Metrics = metrics;
+            }
         }
     }
 
@@ -93,22 +116,39 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         var trackedEntity = _context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
 
         if (node is Album) {
-            var children = await _context.Nodes
+            var albumChildren = await _context.Nodes
                 .Where(n => n.ParentId == node.Id)
                 .ToListAsync();
-            _context.Nodes.RemoveRange(children);
+            _context.Nodes.RemoveRange(albumChildren);
         }
 
-        if (trackedEntity != null) {
-            _context.Nodes.Remove(trackedEntity);
-        } else {
-            // Detach navigation properties to prevent EF from trying to track the entire graph,
-            // which causes identity conflicts if the parent or children are already tracked.
-            node.Parent = null;
-            node.Children = null;
-            _context.Nodes.Remove(node);
+        var parent = node.Parent;
+        var children = node.Children;
+        var picture = node as Picture;
+        var metrics = picture?.Metrics;
+
+        node.Parent = null;
+        node.Children = null;
+        if (picture != null) {
+            picture.Metrics = null;
         }
 
-        await _context.SaveChangesAsync();
+        try {
+            if (trackedEntity != null) {
+                _context.Nodes.Remove(trackedEntity);
+            } else {
+                // Detach navigation properties to prevent EF from trying to track the entire graph,
+                // which causes identity conflicts if the parent or children are already tracked.
+                _context.Nodes.Remove(node);
+            }
+
+            await _context.SaveChangesAsync();
+        } finally {
+            node.Parent = parent;
+            node.Children = children;
+            if (picture != null) {
+                picture.Metrics = metrics;
+            }
+        }
     }
 }
