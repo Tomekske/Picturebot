@@ -359,212 +359,178 @@
                                                Foreground="{DynamicResource SukiText}" />
                                 </StackPanel>
 
-                                <ListBox x:Name="GroupListBox"
-                                         ItemsSource="{Binding Pictures}"
-                                         SelectionChanged="OnSelectionChanged"
-                                         SelectionMode="Multiple"
-                                         Background="Transparent"
-                                         BorderThickness="0"
-                                         Padding="0"
-                                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                     <ListBox.ItemsPanel>
-                                         <ItemsPanelTemplate>
-                                             <WrapPanel />
-                                         </ItemsPanelTemplate>
-                                     </ListBox.ItemsPanel>
-                                     <ListBox.Styles>
-                                           <Style Selector="ScrollViewer">
-                                               <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
-                                               <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
-                                           </Style>
+                                <ItemsControl x:Name="GroupPicturesItemsControl"
+                                              ItemsSource="{Binding Pictures}"
+                                              Background="Transparent">
+                                    <ItemsControl.Styles>
+                                        <Style Selector="Border.selected">
+                                            <Setter Property="BorderBrush" Value="#0078FF" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                        </Style>
+                                    </ItemsControl.Styles>
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PictureItemViewModel">
+                                            <controls:AspectRatioPanel Width="320" Ratio="0.85" Margin="8">
+                                                <!-- The 'Matted Print' Border -->
+                                                <Border Name="PART_AspectBorder"
+                                                        Classes.selected="{Binding IsSelected}"
+                                                        Background="#1C232E"
+                                                        BorderBrush="#3A4454"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        ClipToBounds="True">
+                                                    <Grid RowDefinitions="*,Auto">
+                                                        <!-- Color Label Background Overlay -->
+                                                        <Border Grid.RowSpan="2"
+                                                                Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
+                                                                Opacity="0.18" />
 
-                                           <Style Selector="ScrollViewer /template/ ScrollBar">
-                                               <Setter Property="IsVisible" Value="False" />
-                                               <Setter Property="Width" Value="0" />
-                                               <Setter Property="Height" Value="0" />
-                                               <Setter Property="Opacity" Value="0" />
-                                           </Style>
+                                                        <Panel Grid.Row="0" Margin="8">
+                                                            <!-- Placeholder Fallback Border/Icon -->
+                                                            <Border Background="#1A222D"
+                                                                    BorderBrush="#2C3545"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}">
+                                                                <icons:MaterialIcon Kind="ImageOutline"
+                                                                                    Width="48"
+                                                                                    Height="48"
+                                                                                    Foreground="#3E4B5E"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center" />
+                                                            </Border>
 
-                                           <Style Selector="ScrollViewer /template/ Grid">
-                                               <Setter Property="ShowGridLines" Value="False" />
-                                           </Style>
+                                                            <Image Source="{Binding Thumbnail}"
+                                                                   Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                   Stretch="Uniform"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   EffectiveViewportChanged="OnImageEffectiveViewportChanged"
+                                                                   DataContextChanged="OnImageDataContextChanged">
+                                                                <Image.Transitions>
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
+                                                                    </Transitions>
+                                                                </Image.Transitions>
+                                                                <Image.Styles>
+                                                                    <Style Selector="Image">
+                                                                        <Setter Property="Opacity" Value="0" />
+                                                                    </Style>
+                                                                    <Style Selector="Image.loaded">
+                                                                        <Setter Property="Opacity" Value="1" />
+                                                                    </Style>
+                                                                </Image.Styles>
+                                                            </Image>
 
-                                           <Style Selector="ScrollViewer /template/ Border">
-                                               <Setter Property="BorderThickness" Value="0" />
-                                               <Setter Property="Background" Value="Transparent" />
-                                           </Style>
-                                          <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
-                                              <Setter Property="Padding" Value="0" />
-                                              <Setter Property="Margin" Value="0" />
-                                              <Setter Property="BorderThickness" Value="0" />
-                                              <Setter Property="BorderBrush" Value="Transparent" />
-                                              <Setter Property="Background" Value="Transparent" />
-                                              <Setter Property="Width" Value="320" />
-                                              <Setter Property="HorizontalAlignment" Value="Left" />
-                                              <Setter Property="VerticalAlignment" Value="Top" />
-                                             <Style.Animations>
-                                                 <Animation Duration="0:0:0.4" Easing="CubicEaseOut">
-                                                     <KeyFrame KeyTime="0:0:0">
-                                                         <Setter Property="Opacity" Value="0" />
-                                                     </KeyFrame>
-                                                     <KeyFrame KeyTime="0:0:0.4">
-                                                         <Setter Property="Opacity" Value="1" />
-                                                     </KeyFrame>
-                                                 </Animation>
-                                             </Style.Animations>
-                                             <Setter Property="Template">
-                                                 <ControlTemplate>
-                                                     <controls:AspectRatioPanel Ratio="0.85" Margin="8">
-                                                         <!-- The 'Matted Print' Border -->
-                                                         <Border Name="PART_AspectBorder"
-                                                                 Background="#1C232E"
-                                                                 BorderBrush="#3A4454"
-                                                                 BorderThickness="1"
-                                                                 CornerRadius="4"
-                                                                 ClipToBounds="True">
-                                                             <Grid RowDefinitions="*,Auto">
-                                                                 <!-- Color Label Background Overlay -->
-                                                                 <Border Grid.RowSpan="2"
-                                                                         Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
-                                                                         Opacity="0.18" />
+                                                            <!-- Top Left: Flagged Indicator -->
+                                                            <Border VerticalAlignment="Top"
+                                                                    HorizontalAlignment="Left"
+                                                                    Margin="4"
+                                                                    Padding="4"
+                                                                    CornerRadius="4"
+                                                                    Background="#80000000"
+                                                                    IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}">
+                                                                <icons:MaterialIcon Kind="Flag"
+                                                                        Width="16" Height="16"
+                                                                        Foreground="#4CAF50" />
+                                                            </Border>
+                                                        </Panel>
 
-                                                                 <Panel Grid.Row="0" Margin="8">
-                                                                     <!-- Placeholder Fallback Border/Icon -->
-                                                                     <Border Background="#1A222D"
-                                                                             BorderBrush="#2C3545"
-                                                                             BorderThickness="1"
-                                                                             CornerRadius="4"
-                                                                             IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}">
-                                                                         <icons:MaterialIcon Kind="ImageOutline"
-                                                                                             Width="48"
-                                                                                             Height="48"
-                                                                                             Foreground="#3E4B5E"
-                                                                                             HorizontalAlignment="Center"
-                                                                                             VerticalAlignment="Center" />
-                                                                     </Border>
+                                                        <!-- Metadata Section with CheckBox -->
+                                                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="8,4,8,8" VerticalAlignment="Center">
+                                                            <!-- Bottom-Left CheckBox -->
+                                                            <CheckBox Grid.Column="0"
+                                                                      VerticalAlignment="Center"
+                                                                      HorizontalAlignment="Left"
+                                                                      Margin="0,0,6,0"
+                                                                      Padding="0"
+                                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                      IsHitTestVisible="True"
+                                                                      Focusable="False"
+                                                                      Cursor="Hand" />
 
-                                                                     <Image Source="{Binding Thumbnail}"
-                                                                            Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                                                            Stretch="Uniform"
-                                                                            HorizontalAlignment="Center"
-                                                                            VerticalAlignment="Center"
-                                                                            EffectiveViewportChanged="OnImageEffectiveViewportChanged"
-                                                                            DataContextChanged="OnImageDataContextChanged">
-                                                                         <Image.Transitions>
-                                                                             <Transitions>
-                                                                                 <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
-                                                                             </Transitions>
-                                                                         </Image.Transitions>
-                                                                         <Image.Styles>
-                                                                             <Style Selector="Image">
-                                                                                 <Setter Property="Opacity" Value="0" />
-                                                                             </Style>
-                                                                             <Style Selector="Image.loaded">
-                                                                                 <Setter Property="Opacity" Value="1" />
-                                                                             </Style>
-                                                                         </Image.Styles>
-                                                                     </Image>
-
-                                                                    <!-- Top Left: Flagged Indicator -->
-                                                                    <Border VerticalAlignment="Top"
-                                                                            HorizontalAlignment="Left"
-                                                                            Margin="4"
-                                                                            Padding="4"
-                                                                            CornerRadius="4"
-                                                                            Background="#80000000"
-                                                                            IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}">
-                                                                        <icons:MaterialIcon Kind="Flag"
-                                                                                Width="16" Height="16"
-                                                                                Foreground="#4CAF50" />
-                                                                    </Border>
-                                                                </Panel>
-
-                                                                <!-- Metadata Section -->
-                                                                <StackPanel Grid.Row="1" Spacing="4" Margin="8,0,8,8">
-                                                                    <!-- Rating Indicator -->
-                                                                    <StackPanel HorizontalAlignment="Center"
-                                                                            Orientation="Horizontal"
-                                                                            Spacing="1">
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!1}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!2}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=2}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!3}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=3}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!4}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=4}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!5}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=5}" />
-                                                                        </Panel>
-                                                                    </StackPanel>
-
-                                                                    <TextBlock Text="{Binding Name}"
-                                                                               FontSize="11"
-                                                                               FontWeight="SemiBold"
-                                                                               Foreground="White"
-                                                                               TextAlignment="Center"
-                                                                               TextWrapping="NoWrap"
-                                                                               TextTrimming="CharacterEllipsis" />
+                                                            <!-- Centered Stars + Filename -->
+                                                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                                                <!-- Rating Indicator -->
+                                                                <StackPanel HorizontalAlignment="Center"
+                                                                        Orientation="Horizontal"
+                                                                        Spacing="1">
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!1}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!2}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=2}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!3}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=3}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!4}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=4}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!5}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=5}" />
+                                                                    </Panel>
                                                                 </StackPanel>
-                                                            </Grid>
-                                                        </Border>
 
-                                                        <!-- Selection Indicator overlay (Blue) -->
-                                                        <Border Name="SelectionIndicator"
-                                                                BorderBrush="#0078FF"
-                                                                BorderThickness="2"
-                                                                CornerRadius="4"
-                                                                IsHitTestVisible="False"
-                                                                IsVisible="False" />
-                                                    </controls:AspectRatioPanel>
-                                                </ControlTemplate>
-                                            </Setter>
-                                        </Style>
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           FontSize="11"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="White"
+                                                                           TextAlignment="Center"
+                                                                           TextWrapping="NoWrap"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
 
-                                        <Style Selector="ListBoxItem:pointerover /template/ Border#PART_AspectBorder">
-                                            <Setter Property="Background" Value="#252E3B" />
-                                        </Style>
-
-                                        <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
-                                            <Setter Property="IsVisible" Value="True" />
-                                        </Style>
-                                    </ListBox.Styles>
-                                </ListBox>
+                                                <!-- Selection Indicator overlay (Blue) -->
+                                                <Border Name="SelectionIndicator"
+                                                        BorderBrush="#0078FF"
+                                                        BorderThickness="2"
+                                                        CornerRadius="4"
+                                                        IsHitTestVisible="False"
+                                                        IsVisible="{Binding IsSelected}"
+                                                        ZIndex="10" />
+                                            </controls:AspectRatioPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

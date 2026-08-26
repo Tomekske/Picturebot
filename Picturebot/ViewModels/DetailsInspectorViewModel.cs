@@ -119,24 +119,31 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         new(ColorLabel.Purple, PurpleLabelName, "#CC33CC")
     };
 
+    public ActiveMode ActiveMode => SelectedPictures.Count >= 2 ? ActiveMode.MultiMode : ActiveMode.SingleMode;
+    public bool IsMultiMode => SelectedPictures.Count >= 2;
+    public bool IsSingleMode => SelectedPictures.Count <= 1;
+
     public void Receive(PictureSelectedMessage message) {
         SelectedPicture = message.Value;
     }
 
+    private bool _isUpdatingFromSelectionChanged;
+
     public void Receive(PictureSelectionChangedMessage message) {
-        SelectedPictures.Clear();
-        foreach (var pic in message.Value) {
-            SelectedPictures.Add(pic);
-        }
-        if (message.Value.Count > 0) {
-            if (SelectedPicture == null || !message.Value.Contains(SelectedPicture)) {
-                SelectedPicture = message.Value.FirstOrDefault();
+        _isUpdatingFromSelectionChanged = true;
+        try {
+            SelectedPictures.Clear();
+            foreach (var pic in message.Value) {
+                SelectedPictures.Add(pic);
             }
-        } else {
-            SelectedPicture = null;
+            UpdateActiveKeywords();
+            UpdateQuickTagStates();
+            OnPropertyChanged(nameof(ActiveMode));
+            OnPropertyChanged(nameof(IsMultiMode));
+            OnPropertyChanged(nameof(IsSingleMode));
+        } finally {
+            _isUpdatingFromSelectionChanged = false;
         }
-        UpdateActiveKeywords();
-        UpdateQuickTagStates();
     }
 
     private PictureItemViewModel? _activePicture;
@@ -153,7 +160,6 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         if (value == null) {
             SelectedColorLabelOption = null;
-            SelectedPictures.Clear();
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             return;
@@ -162,8 +168,6 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         value.PropertyChanged += OnPicturePropertyChanged;
 
         SelectedColorLabelOption = ColorLabelOptions.FirstOrDefault(o => o.Label == value.ColorLabel);
-        SelectedPictures.Clear();
-        SelectedPictures.Add(value);
         UpdateActiveKeywords();
         UpdateQuickTagStates();
         await LoadPreviewAsync(value);
@@ -184,9 +188,15 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     private void UpdateActiveKeywords() {
         ActiveKeywords.Clear();
-        var uniqueKeywords = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!SelectedPictures.Any() && SelectedPicture != null) {
+        HashSet<string> uniqueKeywords;
+        if (SelectedPictures.Count >= 2) {
+            uniqueKeywords = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        } else if (SelectedPictures.Count == 1) {
+            uniqueKeywords = SelectedPictures[0].Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        } else if (SelectedPicture != null) {
             uniqueKeywords = SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        } else {
+            uniqueKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         foreach (var kw in uniqueKeywords.OrderBy(k => k)) {

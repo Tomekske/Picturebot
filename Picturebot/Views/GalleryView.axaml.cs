@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Messaging;
 using Picturebot.Messages;
 using Picturebot.ViewModels;
@@ -11,6 +13,8 @@ using Picturebot.ViewModels;
 namespace Picturebot.Views;
 
 public partial class GalleryView : UserControl {
+    private PictureItemViewModel? _lastAnchorPic;
+
     public GalleryView() {
         InitializeComponent();
         SetupScrollInterception();
@@ -24,9 +28,13 @@ public partial class GalleryView : UserControl {
 
     private void SetupScrollInterception() {
         var groupedPicturesItemsControl = this.FindControl<ItemsControl>("GroupedPicturesItemsControl");
-        groupedPicturesItemsControl?.AddHandler(InputElement.PointerWheelChangedEvent, (sender, e) => {
-            e.Handled = false;
-        }, RoutingStrategies.Bubble, true);
+        if (groupedPicturesItemsControl != null) {
+            groupedPicturesItemsControl.AddHandler(InputElement.PointerWheelChangedEvent, (sender, e) => {
+                e.Handled = false;
+            }, RoutingStrategies.Bubble, true);
+
+            groupedPicturesItemsControl.AddHandler(InputElement.PointerPressedEvent, OnGlobalPointerPressed, RoutingStrategies.Tunnel);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
@@ -36,50 +44,150 @@ public partial class GalleryView : UserControl {
             return;
         }
 
+        if (DataContext is GalleryViewModel vm) {
+            // Select All (Ctrl+A)
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A) {
+                vm.SelectAllOrNoneCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+
+            // Deselect All (Escape)
+            if (e.Key == Key.Escape) {
+                var allPics = GetAllPictures(vm);
+                foreach (var pic in allPics) {
+                    pic.IsSelected = false;
+                }
+                vm.SelectedPictures.Clear();
+                vm.UpdateActiveMode();
+                WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+                e.Handled = true;
+                return;
+            }
+        }
+
         base.OnKeyDown(e);
     }
 
-    private bool _isUpdatingSelection;
+    private static List<PictureItemViewModel> GetAllPictures(GalleryViewModel vm) {
+        var visible = vm.GroupedPictures.SelectMany(g => g.Pictures);
+        return vm.AllPictures
+            .Union(visible)
+            .Union(vm.PicturesList)
+            .Distinct()
+            .ToList();
+    }
 
-    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {
-        if (_isUpdatingSelection) return;
-        if (sender is not ListBox listBox) return;
+    private void OnGlobalPointerPressed(object? sender, PointerPressedEventArgs e) {
         if (DataContext is not GalleryViewModel vm) return;
 
-        try {
-            _isUpdatingSelection = true;
+        var pointerProps = e.GetCurrentPoint(this).Properties;
 
-            if (e.AddedItems.Count > 0) {
-                // Clear selection in other listboxes so only one group has active selection
-                var container = this.FindControl<ItemsControl>("GroupedPicturesItemsControl");
-                if (container != null) {
-                    foreach (var child in container.GetRealizedContainers()) {
-                        var otherListBox = child.FindControl<ListBox>("GroupListBox");
-                        if (otherListBox != null && otherListBox != listBox && otherListBox.SelectedItems.Count > 0) {
-                            otherListBox.SelectedItems.Clear();
-                        }
-                    }
-                }
+        // CRITICAL: Do NOT intercept mouse navigation buttons (Back/Forward) or right-clicks
+        if (pointerProps.IsXButton1Pressed || pointerProps.IsXButton2Pressed || pointerProps.IsRightButtonPressed) {
+            return;
+        }
 
-                vm.SelectedPictures.Clear();
-                foreach (var item in listBox.SelectedItems) {
-                    if (item is PictureItemViewModel pic) {
-                        vm.SelectedPictures.Add(pic);
-                    }
-                }
-                vm.SelectedPicture = listBox.SelectedItem as PictureItemViewModel;
-                WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(vm.SelectedPictures.ToList()));
-            } else if (e.RemovedItems.Count > 0 && listBox.SelectedItems.Count == 0) {
-                var activePic = vm.SelectedPicture;
-                if (activePic != null && listBox.Items.Cast<object>().Contains(activePic)) {
-                    vm.SelectedPictures.Clear();
-                    vm.SelectedPicture = null;
-                    WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+        Visual? current = e.Source as Visual;
+        PictureItemViewModel? clickedPic = null;
+        bool isCheckBoxClick = false;
+
+        while (current != null) {
+            if (current is CheckBox) {
+                isCheckBoxClick = true;
+            }
+            if (clickedPic == null && current is Control control && control.DataContext is PictureItemViewModel pic) {
+                clickedPic = pic;
+            }
+            current = current.GetVisualParent();
+        }
+
+        if (clickedPic == null) return;
+
+        bool isCtrl = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        bool isShift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+
+        var allPics = GetAllPictures(vm);
+        var visiblePictures = vm.GroupedPictures
+            .SelectMany(g => g.Pictures)
+            .Distinct()
+            .ToList();
+
+        if (!visiblePictures.Any()) {
+            visiblePictures = allPics;
+        }
+
+        if (isCheckBoxClick) {
+            // Rule 2: OnClick(Checkbox)
+            clickedPic.IsSelected = !clickedPic.IsSelected;
+            _lastAnchorPic = clickedPic;
+            e.Handled = true;
+            SyncSelectionState(vm, clickedPic, updateFocus: false);
+            return;
+        }
+
+        e.Handled = true;
+
+        if (isShift) {
+            // Rule 4: OnShiftClick(ImageCard)
+            // If AnchorItem is null, set AnchorItem = FirstItemInGallery
+            if (_lastAnchorPic == null || !visiblePictures.Contains(_lastAnchorPic)) {
+                _lastAnchorPic = visiblePictures.FirstOrDefault() ?? clickedPic;
+            }
+
+            int startIndex = visiblePictures.IndexOf(_lastAnchorPic);
+            int endIndex = visiblePictures.IndexOf(clickedPic);
+
+            if (startIndex >= 0 && endIndex >= 0) {
+                int min = Math.Min(startIndex, endIndex);
+                int max = Math.Max(startIndex, endIndex);
+
+                // Add all items in the resolved range to SelectedItems
+                for (int i = min; i <= max; i++) {
+                    visiblePictures[i].IsSelected = true;
                 }
             }
-        } finally {
-            _isUpdatingSelection = false;
+
+            SyncSelectionState(vm, clickedPic, updateFocus: true);
+        } else if (isCtrl) {
+            // Rule 3: OnCtrlClick(ImageCard) / OnCmdClick(ImageCard)
+            // Toggle TargetItem inside SelectedItems
+            clickedPic.IsSelected = !clickedPic.IsSelected;
+            _lastAnchorPic = clickedPic;
+            SyncSelectionState(vm, clickedPic, updateFocus: true);
+        } else {
+            // Normal Left Click: Select ONLY clicked picture (displays checkbox and contours in Single Mode)
+            foreach (var pic in allPics) {
+                pic.IsSelected = (pic == clickedPic);
+            }
+            _lastAnchorPic = clickedPic;
+            SyncSelectionState(vm, clickedPic, updateFocus: true);
         }
+    }
+
+    private void SyncSelectionState(GalleryViewModel vm, PictureItemViewModel activePic, bool updateFocus) {
+        var allPics = GetAllPictures(vm);
+        var selectedList = allPics.Where(p => p.IsSelected).ToList();
+
+        vm.SelectedPictures.Clear();
+        foreach (var pic in selectedList) {
+            vm.SelectedPictures.Add(pic);
+        }
+
+        if (updateFocus) {
+            vm.SelectedPicture = activePic;
+            WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(activePic));
+        } else if (vm.SelectedPicture == null || !allPics.Contains(vm.SelectedPicture)) {
+            vm.SelectedPicture = activePic;
+            WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(activePic));
+        }
+
+        vm.UpdateActiveMode();
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(selectedList));
+    }
+
+    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        // Selection is handled via OnGlobalPointerPressed and TwoWay IsSelected bindings
     }
 
     private void OnImageEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e) {

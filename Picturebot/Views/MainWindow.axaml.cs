@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using CommunityToolkit.Mvvm.Messaging;
 using Domain.Enums;
 using Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Picturebot.Messages;
 using Picturebot.Services;
 using Picturebot.ViewModels;
 using SukiUI.Controls;
@@ -21,6 +25,22 @@ public partial class MainWindow : SukiWindow {
         InitializeComponent();
         DialogHost.Manager = DialogManager;
         ToastHost.Manager = ToastManager;
+
+        // Tunneling handler to capture mouse Back (XButton1) and Forward (XButton2)
+        // across any child control in the window even if child controls mark pointer events handled.
+        AddHandler(InputElement.PointerPressedEvent, (sender, e) => {
+            var properties = e.GetCurrentPoint(this).Properties;
+            var navigationService = App.Services?.GetService<INavigationService>();
+            if (navigationService == null) return;
+
+            if (properties.IsXButton1Pressed) {
+                navigationService.GoBack();
+                e.Handled = true;
+            } else if (properties.IsXButton2Pressed) {
+                navigationService.GoForward();
+                e.Handled = true;
+            }
+        }, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     public static MainWindow? Instance { get; private set; }
@@ -65,6 +85,50 @@ public partial class MainWindow : SukiWindow {
         var focusedElement = FocusManager?.GetFocusedElement();
         if (focusedElement is TextBox || focusedElement is NumericUpDown || focusedElement is ComboBox) {
             return;
+        }
+
+        // Global Navigation Shortcuts: Alt+Left / BrowserBack / Backspace (when not in text)
+        if (e.Key == Key.BrowserBack ||
+            (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Key == Key.Left) ||
+            (e.Key == Key.Back && e.KeyModifiers == KeyModifiers.None)) {
+            var navigationService = App.Services?.GetService<INavigationService>();
+            if (navigationService != null && navigationService.CanGoBack) {
+                navigationService.GoBack();
+                e.Handled = true;
+                return;
+            }
+        }
+
+        // Global Navigation Shortcuts: Alt+Right / BrowserForward
+        if (e.Key == Key.BrowserForward ||
+            (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Key == Key.Right)) {
+            var navigationService = App.Services?.GetService<INavigationService>();
+            if (navigationService != null && navigationService.CanGoForward) {
+                navigationService.GoForward();
+                e.Handled = true;
+                return;
+            }
+        }
+
+        // Global Selection Shortcuts: Escape (Deselect All) / Ctrl+A (Select All)
+        if (DataContext is MainWindowViewModel mainVm && mainVm.GalleryVM != null) {
+            if (e.Key == Key.Escape) {
+                var galleryVm = mainVm.GalleryVM;
+                foreach (var pic in galleryVm.AllPictures) {
+                    pic.IsSelected = false;
+                }
+                galleryVm.SelectedPictures.Clear();
+                galleryVm.UpdateActiveMode();
+                WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+                e.Handled = true;
+                return;
+            }
+
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A) {
+                mainVm.GalleryVM.SelectAllOrNoneCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
         }
 
         var settingsService = App.Services?.GetService<ISettingsService>();
@@ -195,22 +259,5 @@ public partial class MainWindow : SukiWindow {
         }
         
         base.OnKeyDown(e);
-    }
-
-    protected override void OnPointerPressed(PointerPressedEventArgs e) {
-        base.OnPointerPressed(e);
-
-        var properties = e.GetCurrentPoint(this).Properties;
-        var navigationService = App.Services?.GetService<INavigationService>();
-
-        if (navigationService == null) return;
-
-        if (properties.IsXButton1Pressed) {
-            navigationService.GoBack();
-            e.Handled = true;
-        } else if (properties.IsXButton2Pressed) {
-            navigationService.GoForward();
-            e.Handled = true;
-        }
     }
 }

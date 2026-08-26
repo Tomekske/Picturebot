@@ -129,7 +129,22 @@ public partial class GalleryViewModel : ViewModelBase,
     [ObservableProperty]
     private PictureItemViewModel? _selectedPicture;
 
+    [ObservableProperty]
+    private ActiveMode _activeMode = ActiveMode.SingleMode;
+
+    public bool IsMultiMode => ActiveMode == ActiveMode.MultiMode;
+    public bool IsSingleMode => ActiveMode == ActiveMode.SingleMode;
+
     public ObservableCollection<PictureItemViewModel> SelectedPictures { get; } = new();
+
+    public void UpdateActiveMode() {
+        var newMode = SelectedPictures.Count >= 2 ? ActiveMode.MultiMode : ActiveMode.SingleMode;
+        if (ActiveMode != newMode) {
+            ActiveMode = newMode;
+        }
+        OnPropertyChanged(nameof(IsMultiMode));
+        OnPropertyChanged(nameof(IsSingleMode));
+    }
 
     public GalleryViewModel(INodeService nodeService, IPathService pathService,
         IPictureGroupingService groupingService, INavigationService navigationService,
@@ -636,58 +651,66 @@ public partial class GalleryViewModel : ViewModelBase,
 
     [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
     private async Task CopyToEdit() {
-        if (SelectedPicture == null) return;
+        var targetVms = GetSelectedPicturesOrActive();
+        if (!targetVms.Any()) return;
 
-        try {
-            var result = await _copyService.CopyToEditAsync(SelectedPicture.Picture);
-            if (!result) {
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Copy skipped")
-                    .WithContent("File already exists in the destination folder.")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
-            } else {
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Success")
-                    .WithContent($"Copied {SelectedPicture.Name} RAW to edit folder.")
-                    .Dismiss().After(TimeSpan.FromSeconds(2))
-                    .Queue();
+        int copiedCount = 0;
+        int skippedCount = 0;
+
+        foreach (var picVm in targetVms) {
+            try {
+                var result = await _copyService.CopyToEditAsync(picVm.Picture);
+                if (result) copiedCount++;
+                else skippedCount++;
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to copy {Name} to edit folder", picVm.Name);
             }
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to copy to edit folder");
+        }
+
+        if (copiedCount > 0) {
             MainWindow.ToastManager.CreateToast()
-                .WithTitle("Error")
-                .WithContent("Failed to copy file to edit folder.")
-                .Dismiss().ByClicking()
+                .WithTitle("Success")
+                .WithContent($"Copied {copiedCount} picture(s) RAW to edit folder.")
+                .Dismiss().After(TimeSpan.FromSeconds(2))
+                .Queue();
+        } else if (skippedCount > 0) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Copy skipped")
+                .WithContent("Selected file(s) already exist in the destination folder.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
                 .Queue();
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecutePlayCarousel))]
     private async Task CopyToPrint() {
-        if (SelectedPicture == null) return;
+        var targetVms = GetSelectedPicturesOrActive();
+        if (!targetVms.Any()) return;
 
-        try {
-            var result = await _copyService.CopyToPrintAsync(SelectedPicture.Picture);
-            if (!result) {
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Copy skipped")
-                    .WithContent("File already exists in the destination folder.")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
-            } else {
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Success")
-                    .WithContent($"Copied {SelectedPicture.Name} JPG to print folder.")
-                    .Dismiss().After(TimeSpan.FromSeconds(2))
-                    .Queue();
+        int copiedCount = 0;
+        int skippedCount = 0;
+
+        foreach (var picVm in targetVms) {
+            try {
+                var result = await _copyService.CopyToPrintAsync(picVm.Picture);
+                if (result) copiedCount++;
+                else skippedCount++;
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to copy {Name} to print folder", picVm.Name);
             }
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to copy to print folder");
+        }
+
+        if (copiedCount > 0) {
             MainWindow.ToastManager.CreateToast()
-                .WithTitle("Error")
-                .WithContent("Failed to copy file to print folder.")
-                .Dismiss().ByClicking()
+                .WithTitle("Success")
+                .WithContent($"Copied {copiedCount} picture(s) JPG to print folder.")
+                .Dismiss().After(TimeSpan.FromSeconds(2))
+                .Queue();
+        } else if (skippedCount > 0) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Copy skipped")
+                .WithContent("Selected file(s) already exist in the destination folder.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
                 .Queue();
         }
     }
@@ -695,10 +718,6 @@ public partial class GalleryViewModel : ViewModelBase,
     private bool CanExecutePlayCarousel() => CanPlayCarousel && CanExecuteShortcuts();
 
     partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
-        foreach (var pic in PicturesList) {
-            pic.IsSelected = pic == value;
-        }
-
         WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(value));
     }
 
@@ -1031,45 +1050,90 @@ public partial class GalleryViewModel : ViewModelBase,
         _navigationService.NavigateTo(node);
     }
 
-    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
-    private void SetCurationStatus(CurationStatus status) {
-        if (SelectedPicture == null) {
-            return;
+    public List<PictureItemViewModel> GetSelectedPicturesOrActive() {
+        var targetVms = _allPictures.Where(p => p.IsSelected).ToList();
+        if (!targetVms.Any()) {
+            targetVms = SelectedPictures.Where(p => p != null).ToList();
+        }
+        if (!targetVms.Any() && SelectedPicture != null) {
+            targetVms.Add(SelectedPicture);
+        }
+        return targetVms;
+    }
+
+    [RelayCommand]
+    public void SelectAllOrNone() {
+        bool allSelected = _allPictures.Count > 0 && _allPictures.All(p => p.IsSelected);
+        bool targetState = !allSelected;
+
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = targetState;
         }
 
-        try {
-            SelectedPicture.CurationStatus = status;
-            _curationQueue.Enqueue(SelectedPicture.Picture);
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to update curation status in gallery for {Name}", SelectedPicture.Name);
+        SelectedPictures.Clear();
+        if (targetState) {
+            foreach (var pic in _allPictures) {
+                SelectedPictures.Add(pic);
+            }
+            if (SelectedPicture == null || !SelectedPictures.Contains(SelectedPicture)) {
+                SelectedPicture = SelectedPictures.FirstOrDefault();
+            }
+        }
+
+        UpdateActiveMode();
+
+        if (SelectedPicture != null) {
+            WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(SelectedPicture));
+        }
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(SelectedPictures.ToList()));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
+    private void SetCurationStatus(CurationStatus status) {
+        var targetVms = GetSelectedPicturesOrActive();
+        if (!targetVms.Any()) return;
+
+        foreach (var picVm in targetVms) {
+            try {
+                picVm.CurationStatus = status;
+                _curationQueue.Enqueue(picVm.Picture);
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to update curation status in gallery for {Name}", picVm.Name);
+            }
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void SetColorLabel(ColorLabel label) {
-        if (SelectedPicture == null) {
-            return;
-        }
+        var targetVms = GetSelectedPicturesOrActive();
+        if (!targetVms.Any()) return;
 
-        try {
-            SelectedPicture.ColorLabel = label;
-            _curationQueue.Enqueue(SelectedPicture.Picture);
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to update color label in gallery for {Name}", SelectedPicture.Name);
+        foreach (var picVm in targetVms) {
+            try {
+                picVm.ColorLabel = label;
+                _curationQueue.Enqueue(picVm.Picture);
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to update color label in gallery for {Name}", picVm.Name);
+            }
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void SetRating(string ratingStr) {
-        if (SelectedPicture == null || !int.TryParse(ratingStr, out var rating)) {
+        if (!int.TryParse(ratingStr, out var rating)) {
             return;
         }
 
-        try {
-            SelectedPicture.Rating = rating;
-            _curationQueue.Enqueue(SelectedPicture.Picture);
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to update rating in gallery for {Name}", SelectedPicture.Name);
+        var targetVms = GetSelectedPicturesOrActive();
+        if (!targetVms.Any()) return;
+
+        foreach (var picVm in targetVms) {
+            try {
+                picVm.Rating = rating;
+                _curationQueue.Enqueue(picVm.Picture);
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to update rating in gallery for {Name}", picVm.Name);
+            }
         }
     }
 
