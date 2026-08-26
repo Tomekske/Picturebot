@@ -180,10 +180,23 @@
 
                 <!-- Keywords Section -->
                 <StackPanel Spacing="12" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Text="Keywords"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SukiText}" />
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0"
+                                   Text="Keywords"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SukiText}" />
+
+                        <Button Grid.Column="2"
+                                Classes="Basic"
+                                Command="{Binding AutoTagPictureCommand}"
+                                ToolTip.Tip="AI Auto-Tag picture (Overrides existing tags)"
+                                Padding="4"
+                                VerticalAlignment="Center">
+                            <icons:MaterialIcon Kind="AutoFix" Width="20" Height="20" Foreground="{DynamicResource SukiPrimaryColor}" />
+                        </Button>
+                    </Grid>
 
                     <!-- Keywords List Chips -->
                     <ItemsControl ItemsSource="{Binding ActiveKeywords}">

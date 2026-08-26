@@ -27,72 +27,72 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
     public async Task<Dictionary<string, float[]>> GetActiveLeafCentroidsAsync(CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var xmpService = scope.ServiceProvider.GetService<IXmpService>();
-        var embeddingService = scope.ServiceProvider.GetService<PictureWorker.Domain.Interfaces.IImageEmbeddingService>();
-        var pathService = scope.ServiceProvider.GetService<Domain.Interfaces.IPathService>();
+        Serilog.Log.Information("Few-Shot Tag Discovery: Querying tagged pictures from database...");
+        List<Picture> picturesData;
+        using (var scope = _scopeFactory.CreateScope()) {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            picturesData = await context.Pictures
+                .AsNoTracking()
+                .Include(p => p.Metrics)
+                .Include(p => p.Parent)
+                .Where(p => p.KeywordsJson != null && p.KeywordsJson != "" && p.KeywordsJson != "[]")
+                .ToListAsync(cancellationToken);
+        }
 
-        var picturesData = await context.Pictures
-            .Include(p => p.Metrics)
-            .Include(p => p.Parent)
-            .ToListAsync(cancellationToken);
+        Serilog.Log.Information("Few-Shot Tag Discovery: Loaded {Count} tagged picture records from database.", picturesData.Count);
 
-        foreach (var p in picturesData) {
-            cancellationToken.ThrowIfCancellationRequested();
+        using (var scope = _scopeFactory.CreateScope()) {
+            var embeddingService = scope.ServiceProvider.GetService<PictureWorker.Domain.Interfaces.IImageEmbeddingService>();
+            var pathService = scope.ServiceProvider.GetService<Domain.Interfaces.IPathService>();
 
-            if (p.Parent != null && pathService != null) {
-                pathService.PopulatePaths(p);
-            }
+            int exemplarIndex = 0;
+            int totalExemplars = picturesData.Count;
 
-            // Fallback: If KeywordsJson is null/empty, load XMP sidecar if present
-            if (string.IsNullOrWhiteSpace(p.KeywordsJson) && xmpService != null && p.SubFolder?.Raw != null) {
-                try {
-                    await xmpService.LoadMetadataAsync(p);
-                    if (p.Keywords != null && p.Keywords.Count > 0) {
-                        p.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(p.Keywords);
-                        var picDb = await context.Pictures.FindAsync(new object[] { p.Id }, cancellationToken);
-                        if (picDb != null) {
-                            picDb.KeywordsJson = p.KeywordsJson;
-                            await context.SaveChangesAsync(cancellationToken);
-                        }
-                    }
-                } catch { }
-            }
+            foreach (var p in picturesData) {
+                cancellationToken.ThrowIfCancellationRequested();
+                exemplarIndex++;
+                if (exemplarIndex % 10 == 0 || exemplarIndex == totalExemplars || exemplarIndex == 1) {
+                    Serilog.Log.Information("CentroidService: Ingested exemplar {Index}/{Total} ({Name})...", exemplarIndex, totalExemplars, p.Name);
+                }
 
-            var keywords = ParseKeywords(p.KeywordsJson);
-            if (keywords.Count == 0) continue;
+                if (p.Parent != null && pathService != null) {
+                    pathService.PopulatePaths(p);
+                }
 
-            // Ensure embedding vector is computed and loaded
-            float[]? vector = null;
-            if (p.Metrics?.Embedding != null && p.Metrics.Embedding.Length == 512 * sizeof(float)) {
-                vector = p.Metrics.GetEmbeddingVector();
-            } else if (embeddingService != null) {
-                try {
-                    vector = await embeddingService.GetOrComputeEmbeddingAsync(p, cancellationToken);
-                } catch { }
-            }
+                var keywords = ParseKeywords(p.KeywordsJson);
+                if (keywords.Count == 0) continue;
 
-            if (vector == null || vector.Length != 512) continue;
+                // Ensure embedding vector is computed and loaded
+                float[]? vector = null;
+                if (p.Metrics?.Embedding != null && p.Metrics.Embedding.Length == 512 * sizeof(float)) {
+                    vector = p.Metrics.GetEmbeddingVector();
+                } else if (embeddingService != null) {
+                    try {
+                        vector = await embeddingService.GetOrComputeEmbeddingAsync(p, cancellationToken);
+                    } catch { }
+                }
 
-            foreach (var kw in keywords) {
-                if (string.IsNullOrWhiteSpace(kw)) continue;
-                var leafTag = ExtractLeafTag(kw);
-                if (string.IsNullOrEmpty(leafTag)) continue;
+                if (vector == null || vector.Length != 512) continue;
 
-                var pictureMap = _exemplarCache.GetOrAdd(leafTag, _ => new ConcurrentDictionary<int, float[]>());
-                pictureMap[p.Id] = vector;
+                foreach (var kw in keywords) {
+                    if (string.IsNullOrWhiteSpace(kw)) continue;
+                    var leafTag = ExtractLeafTag(kw);
+                    if (string.IsNullOrEmpty(leafTag)) continue;
+
+                    var pictureMap = _exemplarCache.GetOrAdd(leafTag, _ => new ConcurrentDictionary<int, float[]>());
+                    pictureMap[p.Id] = vector;
+                }
             }
         }
 
         RecomputeAllCentroids();
 
         var result = new Dictionary<string, float[]>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in _centroidCache) {
-            if (_exemplarCache.TryGetValue(kvp.Key, out var map) && map.Count >= MinimumExemplarThreshold) {
-                result[kvp.Key] = kvp.Value;
+            foreach (var kvp in _centroidCache) {
+                if (_exemplarCache.TryGetValue(kvp.Key, out var map) && map.Count >= MinimumExemplarThreshold) {
+                    result[kvp.Key] = kvp.Value;
+                }
             }
-        }
 
         Serilog.Log.Information("Few-Shot Tag Discovery: Found {Count} active leaf centroids (threshold N={Threshold}): [{Tags}]",
             result.Count, MinimumExemplarThreshold, string.Join(", ", result.Keys));

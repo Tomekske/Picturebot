@@ -21,7 +21,7 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
     private readonly IXmpService _xmpService;
     private readonly IServiceScopeFactory _scopeFactory;
 
-    public float SimilarityThreshold { get; set; } = 0.55f;
+    public float SimilarityThreshold { get; set; } = 0.70f;
 
     public FewShotTagDiscoveryService(
         IImageEmbeddingService embeddingService,
@@ -50,22 +50,35 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
         // 1. Fetch active leaf centroids from global database
         var centroids = await _centroidService.GetActiveLeafCentroidsAsync(cancellationToken);
         if (centroids == null || centroids.Count == 0) {
+            Log.Information("Few-Shot Tag Discovery: No active leaf centroids found (minimum threshold not reached for any tag). Skipping scan.");
             return new List<TagDiscoveryResult>();
         }
 
-        var results = new List<TagDiscoveryResult>();
+        Log.Information("Few-Shot Tag Discovery: Starting scan of {Count} picture(s) against {CentroidCount} active centroid(s): [{CentroidTags}]",
+            pictures.Count, centroids.Count, string.Join(", ", centroids.Keys));
 
-        // 2. Process each picture
-        foreach (var picture in pictures) {
-            cancellationToken.ThrowIfCancellationRequested();
+        var results = new System.Collections.Concurrent.ConcurrentBag<TagDiscoveryResult>();
+        int maxParallelism = Math.Max(2, Math.Min(8, Environment.ProcessorCount));
+        int processedCount = 0;
+        int totalCount = pictures.Count;
+
+        // 2. Process pictures in parallel
+        await Parallel.ForEachAsync(pictures, new ParallelOptions {
+            MaxDegreeOfParallelism = maxParallelism,
+            CancellationToken = cancellationToken
+        }, async (picture, ct) => {
+            ct.ThrowIfCancellationRequested();
+
+            int current = Interlocked.Increment(ref processedCount);
+            Log.Information("Few-Shot Tag Discovery: Scanning picture {Current}/{Total} ({Name})...", current, totalCount, picture.Name);
 
             // Lock baseline committed tags (existing tags loaded from XMP sidecar)
             var committedTags = new HashSet<string>(picture.Keywords ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
 
             // Ingest / load image embedding vector
-            var embedding = await _embeddingService.GetOrComputeEmbeddingAsync(picture, cancellationToken);
+            var embedding = await _embeddingService.GetOrComputeEmbeddingAsync(picture, ct);
             if (embedding == null || embedding.Length != 512) {
-                continue;
+                return;
             }
 
             var discoveredLeafs = new List<string>();
@@ -75,7 +88,7 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
             // 3. Match against active leaf centroids
             var candidateScores = new List<(string LeafTag, float Similarity)>();
             foreach (var (leafTag, centroid) in centroids) {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 // Check if leaf tag is already committed
                 if (committedTags.Contains(leafTag) || IsLeafPresentInKeywords(committedTags, leafTag)) {
@@ -91,7 +104,7 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
             }
 
             if (candidateScores.Count == 0) {
-                continue;
+                return;
             }
 
             // Select top-ranked candidate(s) within competitive margin
@@ -129,6 +142,9 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
             picture.Keywords = updatedKeywords.ToList();
             picture.KeywordsJson = JsonSerializer.Serialize(picture.Keywords);
 
+            Log.Information("Few-Shot Tag Discovery: Auto-tagged picture '{PictureName}' (Id={PictureId}) with tags [{Tags}]",
+                picture.Name, picture.Id, string.Join(", ", newFlatTags.Concat(newHierarchicalPaths)));
+
             // Trigger live UI thread callback if provided
             onTagsDiscoveredOnUIThread?.Invoke(picture, picture.Keywords);
 
@@ -139,30 +155,42 @@ public class FewShotTagDiscoveryService : IFewShotTagDiscoveryService {
                 Log.Error(ex, "Failed auto-saving XMP sidecar after tag discovery for picture {Name}", picture.Name);
             }
 
-            // Update SQLite database KeywordsJson
-            if (picture.Id > 0) {
-                try {
-                    using var scope = _scopeFactory.CreateScope();
-                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    var dbPic = await dbContext.Pictures.FirstOrDefaultAsync(p => p.Id == picture.Id, cancellationToken);
-                    if (dbPic != null) {
-                        dbPic.KeywordsJson = picture.KeywordsJson;
-                        await dbContext.SaveChangesAsync(cancellationToken);
-                    }
-                } catch (Exception ex) {
-                    Log.Warning(ex, "Failed persisting updated KeywordsJson to SQLite for picture {PictureId}", picture.Id);
-                }
-            }
-
             results.Add(new TagDiscoveryResult(
                 picture,
                 discoveredLeafs,
                 newFlatTags.ToList(),
                 newHierarchicalPaths.ToList()
             ));
+        });
+
+        var resultList = results.ToList();
+
+        // 7. Single Batch SQLite Update for all discovered pictures
+        if (resultList.Count > 0) {
+            try {
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var changedPictureIds = resultList.Where(r => r.Picture.Id > 0).Select(r => r.Picture.Id).ToList();
+                var dbPictures = await dbContext.Pictures
+                    .Where(p => changedPictureIds.Contains(p.Id))
+                    .ToListAsync(cancellationToken);
+
+                var resultMap = resultList.ToDictionary(r => r.Picture.Id, r => r.Picture.KeywordsJson);
+                foreach (var dbPic in dbPictures) {
+                    if (resultMap.TryGetValue(dbPic.Id, out var kwJson)) {
+                        dbPic.KeywordsJson = kwJson;
+                    }
+                }
+                await dbContext.SaveChangesAsync(cancellationToken);
+            } catch (Exception ex) {
+                Log.Warning(ex, "Failed batch persisting updated KeywordsJson to SQLite");
+            }
         }
 
-        return results;
+        Log.Information("Few-Shot Tag Discovery: Completed scan of {PictureCount} pictures. Found {ResultCount} pictures with newly discovered tags.",
+            pictures.Count, resultList.Count);
+
+        return resultList;
     }
 
     private static float ComputeCosineSimilarity(float[] a, float[] b) {

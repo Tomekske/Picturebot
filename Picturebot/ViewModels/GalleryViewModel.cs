@@ -1262,6 +1262,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _ = Task.Run(async () => {
             var children = await _nodeService.FindChildrenAsync(album.Id);
             var pics = children.OfType<Picture>().ToList();
+            Log.Information("Loading album '{AlbumName}' (Id={AlbumId}) with {Count} pictures...", album.Name, album.Id, pics.Count);
 
             if (pics.Count == 0) {
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => {
@@ -1385,159 +1386,158 @@ public partial class GalleryViewModel : ViewModelBase,
                 NotifyFilterStates();
             });
 
-            if (pics.Count <= initialBatchSize) {
-                return;
-            }
+            if (pics.Count > initialBatchSize) {
+                // Introduce breathing room delay so the user sees the first batch fade in smoothly
+                await Task.Delay(250);
 
-            // Introduce breathing room delay so the user sees the first batch fade in smoothly
-            await Task.Delay(250);
+                // --- STAGE 2: Load the remaining images in the background in chunks ---
+                var remainingPics = pics.Skip(initialBatchSize).ToList();
+                int chunkSize = 32; // Process 32 pictures at a time with metadata and thumbnails pre-loaded
 
-            // --- STAGE 2: Load the remaining images in the background in chunks ---
-            var remainingPics = pics.Skip(initialBatchSize).ToList();
-            int chunkSize = 32; // Process 32 pictures at a time with metadata and thumbnails pre-loaded
-
-            for (int i = 0; i < remainingPics.Count; i += chunkSize) {
-                // Check if current node changed during processing
-                bool shouldCancel = false;
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
-                    if (_currentNode?.Id != album.Id) {
-                        shouldCancel = true;
+                for (int i = 0; i < remainingPics.Count; i += chunkSize) {
+                    // Check if current node changed during processing
+                    bool shouldCancel = false;
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                        if (_currentNode?.Id != album.Id) {
+                            shouldCancel = true;
+                        }
+                    });
+                    if (shouldCancel) {
+                        break;
                     }
-                });
-                if (shouldCancel) {
-                    break;
-                }
 
-                var chunk = remainingPics.Skip(i).Take(chunkSize).ToList();
+                    var chunk = remainingPics.Skip(i).Take(chunkSize).ToList();
 
-                // Populate paths
-                foreach (var pic in chunk) {
-                    if (pic.Parent == null) {
-                        pic.Parent = album;
-                    }
-                }
-                _pathService.PopulatePaths(chunk);
-
-                // Load XMP metadata in parallel background threads with capped concurrency
-                await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
-                    await _xmpService.LoadMetadataAsync(pic);
-                });
-
-                // Sync picked and highlight files if they are missing
-                foreach (var pic in chunk) {
-                    if (pic.CurationStatus == CurationStatus.Flagged) {
-                        var pickedPath = pic.SubFolder?.Picked;
-                        if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
-                            await _pickedService.SyncToPickedAsync(pic);
+                    // Populate paths
+                    foreach (var pic in chunk) {
+                        if (pic.Parent == null) {
+                            pic.Parent = album;
                         }
                     }
-                    if (pic.ColorLabel == ColorLabel.Blue) {
-                        var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
-                        if (!string.IsNullOrEmpty(highlightsPath)) {
-                            var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
-                            if (!System.IO.File.Exists(highlightFile)) {
-                                var previewPath = pic.SubFolder?.Preview;
-                                if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath)) {
-                                    var directory = System.IO.Path.GetDirectoryName(highlightFile);
-                                    if (directory != null && !System.IO.Directory.Exists(directory)) {
-                                        System.IO.Directory.CreateDirectory(directory);
+                    _pathService.PopulatePaths(chunk);
+
+                    // Load XMP metadata in parallel background threads with capped concurrency
+                    await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
+                        await _xmpService.LoadMetadataAsync(pic);
+                    });
+
+                    // Sync picked and highlight files if they are missing
+                    foreach (var pic in chunk) {
+                        if (pic.CurationStatus == CurationStatus.Flagged) {
+                            var pickedPath = pic.SubFolder?.Picked;
+                            if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
+                                await _pickedService.SyncToPickedAsync(pic);
+                            }
+                        }
+                        if (pic.ColorLabel == ColorLabel.Blue) {
+                            var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
+                            if (!string.IsNullOrEmpty(highlightsPath)) {
+                                var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
+                                if (!System.IO.File.Exists(highlightFile)) {
+                                    var previewPath = pic.SubFolder?.Preview;
+                                    if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath)) {
+                                        var directory = System.IO.Path.GetDirectoryName(highlightFile);
+                                        if (directory != null && !System.IO.Directory.Exists(directory)) {
+                                            System.IO.Directory.CreateDirectory(directory);
+                                        }
+                                        await Task.Run(() => System.IO.File.Copy(previewPath, highlightFile, true));
                                     }
-                                    await Task.Run(() => System.IO.File.Copy(previewPath, highlightFile, true));
                                 }
                             }
                         }
                     }
-                }
 
-                // Create ViewModels
-                var chunkVms = new List<PictureItemViewModel>();
-                foreach (var pic in chunk) {
-                    var picVm = new PictureItemViewModel(pic);
-                    picVm.ResolveThumbnailPath();
-                    picVm.PropertyChanged += OnPictureItemPropertyChanged;
-                    chunkVms.Add(picVm);
-                }
+                    // Create ViewModels
+                    var chunkVms = new List<PictureItemViewModel>();
+                    foreach (var pic in chunk) {
+                        var picVm = new PictureItemViewModel(pic);
+                        picVm.ResolveThumbnailPath();
+                        picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                        chunkVms.Add(picVm);
+                    }
 
-                // Post chunk to UI thread and merge into existing collections
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
-                    if (_currentNode?.Id != album.Id) {
-                        // Switch occurred, discard chunk ViewModels
-                        foreach (var picVm in chunkVms) {
-                            picVm.PropertyChanged -= OnPictureItemPropertyChanged;
-                            picVm.Dispose();
+                    // Post chunk to UI thread and merge into existing collections
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                        if (_currentNode?.Id != album.Id) {
+                            // Switch occurred, discard chunk ViewModels
+                            foreach (var picVm in chunkVms) {
+                                picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                                picVm.Dispose();
+                            }
+                            return;
                         }
-                        return;
-                    }
 
-                    _allPictures.AddRange(chunkVms);
-                    if (FilterToolbar != null) {
-                        FilterToolbar.UpdateAvailableTags(_allPictures);
-                    }
+                        _allPictures.AddRange(chunkVms);
+                        if (FilterToolbar != null) {
+                            FilterToolbar.UpdateAvailableTags(_allPictures);
+                        }
 
-                    // Re-apply filters on chunk
-                    var filteredChunkList = ApplyFilterPredicate(chunkVms).ToList();
+                        // Re-apply filters on chunk
+                        var filteredChunkList = ApplyFilterPredicate(chunkVms).ToList();
 
-                    // Add to flat PicturesList
-                    foreach (var picVm in filteredChunkList) {
-                        PicturesList.Add(picVm);
-                    }
+                        // Add to flat PicturesList
+                        foreach (var picVm in filteredChunkList) {
+                            PicturesList.Add(picVm);
+                        }
 
-                    // Add to GroupedPictures
-                    var groups = filteredChunkList.GroupBy(p => p.Picture.CapturedAt.Date);
-                    foreach (var group in groups) {
-                        var dateStr = group.Key.ToString("yyyy-MM-dd");
-                        
-                        // Find existing group
-                        var existingGroup = GroupedPictures.FirstOrDefault(g => g.Date == dateStr);
-                        if (existingGroup != null) {
-                            // Merge into existing group by appending (since pics are already sorted chronologically)
-                            foreach (var pic in group) {
-                                pic.GroupName = null;
-                                pic.BurstIndex = 0;
-                                pic.BurstPosition = 0;
-                                pic.BurstTotal = 0;
-                                existingGroup.Pictures.Add(pic);
-                            }
-                            existingGroup.Header = $"{dateStr} ({existingGroup.Pictures.Count})";
-                        } else {
-                            // Create new group
-                            var header = $"{dateStr} ({group.Count()})";
-                            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
-                            foreach (var pic in sortedGroup) {
-                                pic.GroupName = null;
-                                pic.BurstIndex = 0;
-                                pic.BurstPosition = 0;
-                                pic.BurstTotal = 0;
-                            }
-                            var groupVm = new PictureGroupViewModel(dateStr, header,
-                                new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                        // Add to GroupedPictures
+                        var groups = filteredChunkList.GroupBy(p => p.Picture.CapturedAt.Date);
+                        foreach (var group in groups) {
+                            var dateStr = group.Key.ToString("yyyy-MM-dd");
                             
-                            // Insert group in sorted order
-                            int insertIdx = 0;
-                            while (insertIdx < GroupedPictures.Count && 
-                                   string.Compare(GroupedPictures[insertIdx].Date, dateStr, StringComparison.Ordinal) < 0) {
-                                insertIdx++;
+                            // Find existing group
+                            var existingGroup = GroupedPictures.FirstOrDefault(g => g.Date == dateStr);
+                            if (existingGroup != null) {
+                                // Merge into existing group by appending (since pics are already sorted chronologically)
+                                foreach (var pic in group) {
+                                    pic.GroupName = null;
+                                    pic.BurstIndex = 0;
+                                    pic.BurstPosition = 0;
+                                    pic.BurstTotal = 0;
+                                    existingGroup.Pictures.Add(pic);
+                                }
+                                existingGroup.Header = $"{dateStr} ({existingGroup.Pictures.Count})";
+                            } else {
+                                // Create new group
+                                var header = $"{dateStr} ({group.Count()})";
+                                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                                foreach (var pic in sortedGroup) {
+                                    pic.GroupName = null;
+                                    pic.BurstIndex = 0;
+                                    pic.BurstPosition = 0;
+                                    pic.BurstTotal = 0;
+                                }
+                                var groupVm = new PictureGroupViewModel(dateStr, header,
+                                    new ObservableCollection<PictureItemViewModel>(sortedGroup));
+                                
+                                // Insert group in sorted order
+                                int insertIdx = 0;
+                                while (insertIdx < GroupedPictures.Count && 
+                                       string.Compare(GroupedPictures[insertIdx].Date, dateStr, StringComparison.Ordinal) < 0) {
+                                    insertIdx++;
+                                }
+                                GroupedPictures.Insert(insertIdx, groupVm);
                             }
-                            GroupedPictures.Insert(insertIdx, groupVm);
                         }
+                    });
+
+                    // Yield control to UI thread to process renders/events
+                    await Task.Delay(35);
+                }
+
+                // Set IsLoading to false after all chunks are processed
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+                    if (_currentNode?.Id == album.Id) {
+                        IsLoading = false;
+                        NotifyFilterStates();
                     }
                 });
-
-                // Yield control to UI thread to process renders/events
-                await Task.Delay(35);
             }
-
-            // Set IsLoading to false after all chunks are processed
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
-                if (_currentNode?.Id == album.Id) {
-                    IsLoading = false;
-                    NotifyFilterStates();
-                }
-            });
 
             // --- STAGE 3: Run Few-Shot Tag Discovery & Auto-Save Pipeline in background ---
             if (_tagDiscoveryService != null && _currentNode?.Id == album.Id) {
                 try {
+                    Log.Information("Starting Few-Shot Tag Discovery scan for {Count} picture(s) in album '{AlbumName}' (Id={AlbumId})...", pics.Count, album.Name, album.Id);
                     await _tagDiscoveryService.ScanPicturesAsync(pics, (pic, newKeywords) => {
                         Avalonia.Threading.Dispatcher.UIThread.Post(() => {
                             var vm = _allPictures.FirstOrDefault(p => p.Picture.Id == pic.Id);

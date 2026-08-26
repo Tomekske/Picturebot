@@ -24,6 +24,10 @@ public class ImageEmbeddingService : IImageEmbeddingService {
         _scopeFactory = scopeFactory;
     }
 
+    private static readonly HashSet<string> _rawCameraExtensions = new(StringComparer.OrdinalIgnoreCase) {
+        ".arw", ".cr2", ".cr3", ".nef", ".nrw", ".dng", ".raf", ".orf", ".rw2", ".pef", ".srw", ".raw"
+    };
+
     public async Task<float[]> GetOrComputeEmbeddingAsync(Picture picture, CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -34,9 +38,17 @@ public class ImageEmbeddingService : IImageEmbeddingService {
             }
         }
 
-        string? imagePath = !string.IsNullOrEmpty(picture.SubFolder?.Preview)
-            ? picture.SubFolder.Preview
-            : picture.SubFolder?.Raw;
+        string? imagePath = null;
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Thumbnail) && _fileSystem.File.Exists(picture.SubFolder.Thumbnail)) {
+            imagePath = picture.SubFolder.Thumbnail;
+        } else if (!string.IsNullOrEmpty(picture.SubFolder?.Preview) && _fileSystem.File.Exists(picture.SubFolder.Preview)) {
+            imagePath = picture.SubFolder.Preview;
+        } else if (!string.IsNullOrEmpty(picture.SubFolder?.Raw) && _fileSystem.File.Exists(picture.SubFolder.Raw)) {
+            var ext = _fileSystem.Path.GetExtension(picture.SubFolder.Raw);
+            if (!_rawCameraExtensions.Contains(ext)) {
+                imagePath = picture.SubFolder.Raw;
+            }
+        }
 
         if (string.IsNullOrEmpty(imagePath) || !_fileSystem.File.Exists(imagePath)) {
             // Fallback deterministic feature vector based on picture identity / name if file is not found
@@ -50,32 +62,6 @@ public class ImageEmbeddingService : IImageEmbeddingService {
             picture.Metrics = new Metrics { PictureId = picture.Id };
         }
         picture.Metrics.SetEmbeddingVector(vector);
-
-        if (_scopeFactory != null && picture.Id > 0) {
-            try {
-                using var scope = _scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var metricsEntity = await dbContext.Metrics.FirstOrDefaultAsync(m => m.PictureId == picture.Id, cancellationToken);
-                if (metricsEntity == null) {
-                    metricsEntity = new Metrics { PictureId = picture.Id };
-                    dbContext.Metrics.Add(metricsEntity);
-                }
-                metricsEntity.Embedding = picture.Metrics.Embedding;
-                await dbContext.SaveChangesAsync(cancellationToken);
-            } catch (DbUpdateException) {
-                try {
-                    using var retryScope = _scopeFactory.CreateScope();
-                    var retryDb = retryScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    var existing = await retryDb.Metrics.FirstOrDefaultAsync(m => m.PictureId == picture.Id, cancellationToken);
-                    if (existing != null) {
-                        existing.Embedding = picture.Metrics.Embedding;
-                        await retryDb.SaveChangesAsync(cancellationToken);
-                    }
-                } catch { }
-            } catch (Exception ex) {
-                Log.Warning(ex, "Failed to persist computed embedding vector to SQLite for Picture {PictureId}", picture.Id);
-            }
-        }
 
         return vector;
     }
@@ -185,7 +171,7 @@ public class ImageEmbeddingService : IImageEmbeddingService {
         using var output = new OpenCvSharp.Mat();
         lock (_dnnLock) {
             _net.SetInput(blob);
-            var prob = _net.Forward();
+            using var prob = _net.Forward();
             prob.CopyTo(output);
         }
 

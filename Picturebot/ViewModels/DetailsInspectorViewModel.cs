@@ -41,6 +41,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     private readonly IAlbumService _albumService;
     private readonly IGlobalExemplarCentroidService? _centroidService;
     private readonly IImageEmbeddingService? _embeddingService;
+    private readonly ITaxonomyService? _taxonomyService;
+    private readonly IFewShotTagDiscoveryService? _tagDiscoveryService;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -76,13 +78,17 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         ISettingsService settingsService,
         IAlbumService albumService,
         IGlobalExemplarCentroidService? centroidService = null,
-        IImageEmbeddingService? embeddingService = null) {
+        IImageEmbeddingService? embeddingService = null,
+        ITaxonomyService? taxonomyService = null,
+        IFewShotTagDiscoveryService? tagDiscoveryService = null) {
         _nodeService = nodeService;
         _curationQueue = curationQueue;
         _settingsService = settingsService;
         _albumService = albumService;
         _centroidService = centroidService;
         _embeddingService = embeddingService;
+        _taxonomyService = taxonomyService;
+        _tagDiscoveryService = tagDiscoveryService;
         _settingsService.PropertyChanged += OnSettingsChanged;
         WeakReferenceMessenger.Default.RegisterAll(this);
         RefreshTagGroups();
@@ -448,6 +454,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
 
         if (changed) {
+            Log.Information("Manually added tag '{Keyword}' to {Count} picture(s): [{PictureNames}]",
+                trimmed, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
@@ -482,6 +490,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
 
         if (changed) {
+            Log.Information("Manually removed tag '{Keyword}' from {Count} picture(s): [{PictureNames}]",
+                trimmed, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
@@ -526,9 +536,110 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
 
         if (changed) {
+            Log.Information("Toggled quick tag '{TagName}' on {Count} picture(s): [{PictureNames}]",
+                tag.Name, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
+        }
+    }
+
+    [RelayCommand]
+    private async Task AutoTagPictureAsync() {
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
+        if (!targetVms.Any() && SelectedPicture != null) {
+            targetVms.Add(SelectedPicture);
+        }
+
+        if (!targetVms.Any()) {
+            Log.Warning("AI Auto-Tag: No picture selected.");
+            return;
+        }
+
+        if (_centroidService == null || _embeddingService == null) {
+            Log.Warning("AI Auto-Tag: AI Centroid or Embedding services not available.");
+            return;
+        }
+
+        IsBusy = true;
+        try {
+            Log.Information("AI Auto-Tag: Checking tags for {Count} picture(s)...", targetVms.Count);
+            var centroids = await _centroidService.GetActiveLeafCentroidsAsync();
+
+            if (centroids == null || centroids.Count == 0) {
+                Log.Warning("AI Auto-Tag: No active leaf centroids found in library (ensure tags have exemplars).");
+                return;
+            }
+
+            int changedCount = 0;
+            foreach (var picVm in targetVms) {
+                var pic = picVm.Picture;
+                var embedding = await _embeddingService.GetOrComputeEmbeddingAsync(pic);
+                if (embedding == null || embedding.Length != 512) {
+                    Log.Warning("AI Auto-Tag: Could not extract visual embedding for picture '{Name}'", pic.Name);
+                    continue;
+                }
+
+                // Match against active centroids
+                var candidateScores = new List<(string LeafTag, float Similarity)>();
+                foreach (var (leafTag, centroid) in centroids) {
+                    float dot = 0.0f;
+                    for (int i = 0; i < 512; i++) {
+                        dot += embedding[i] * centroid[i];
+                    }
+                    candidateScores.Add((leafTag, dot));
+                }
+
+                if (candidateScores.Count == 0) continue;
+
+                const float threshold = 0.70f;
+                float maxScore = candidateScores.Max(c => c.Similarity);
+                var winningTags = candidateScores
+                    .Where(c => c.Similarity >= maxScore - 0.05f && c.Similarity >= threshold)
+                    .Select(c => c.LeafTag)
+                    .ToList();
+
+                if (winningTags.Count == 0) {
+                    Log.Information("AI Auto-Tag: No confident match for picture '{Name}' above {Threshold:P0} threshold (Best score: {Score:P1})", pic.Name, threshold, maxScore);
+                    continue;
+                }
+
+                var newKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var leaf in winningTags) {
+                    if (_taxonomyService != null) {
+                        var flatChain = _taxonomyService.ResolveTaxonomySubjectChain(leaf);
+                        var fullHierarchy = _taxonomyService.GetFullHierarchicalPath(leaf);
+                        foreach (var f in flatChain) newKeywords.Add(f);
+                        if (!string.IsNullOrEmpty(fullHierarchy)) newKeywords.Add(fullHierarchy);
+                    } else {
+                        newKeywords.Add(leaf);
+                    }
+                }
+
+                // OVERRIDE existing keywords
+                picVm.Keywords.Clear();
+                foreach (var kw in newKeywords) {
+                    picVm.Keywords.Add(kw);
+                }
+                pic.Keywords = newKeywords.ToList();
+                pic.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(pic.Keywords);
+
+                _curationQueue.Enqueue(pic);
+                changedCount++;
+
+                Log.Information("AI Auto-Tag: Successfully overrode tags on '{Name}' with [{Tags}] (Score: {Score:P1})",
+                    pic.Name, string.Join(", ", newKeywords), maxScore);
+            }
+
+            if (changedCount > 0) {
+                UpdateActiveKeywords();
+                UpdateQuickTagStates();
+                WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Error executing AI Auto-Tag");
+        } finally {
+            IsBusy = false;
         }
     }
 }
