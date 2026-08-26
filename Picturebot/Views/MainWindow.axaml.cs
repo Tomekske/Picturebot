@@ -40,7 +40,7 @@ public partial class MainWindow : SukiWindow {
                 navigationService.GoForward();
                 e.Handled = true;
             }
-        }, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+        }, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     public static MainWindow? Instance { get; private set; }
