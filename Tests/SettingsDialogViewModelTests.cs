@@ -177,46 +177,132 @@ public class SettingsDialogViewModelTests {
     }
 
     [Test]
-    public void Taxonomy_AddSubNode_EnforcesLowercaseAndRegistersInTagCatalogSorted() {
+    public void Taxonomy_SelectedTaxonomyPath_VisibilityAndValue() {
         var vm = new SettingsDialogViewModel(_fakeService);
         var root = vm.HierarchyNodes.First();
+
+        // Initially on General tab (SelectedTabIndex = 0)
         vm.SelectedHierarchyNode = root;
+        Assert.That(vm.HasSelectedTaxonomyNode, Is.False);
 
-        vm.OpenAddChildNodePromptCommand.Execute(null);
-        Assert.That(vm.IsNodeActionPromptOpen, Is.True);
+        // Switch to Keywords tab (Index 5), Tags subtab (Index 0)
+        vm.SelectedTabIndex = 5;
+        vm.KeywordsSubTabIndex = 0;
+        Assert.That(vm.HasSelectedTaxonomyNode, Is.False);
 
-        vm.NodeActionInputName = " Dark Forest ";
-        vm.ConfirmNodeActionCommand.Execute(null);
+        // Switch to Taxonomy subtab (Index 1)
+        vm.KeywordsSubTabIndex = 1;
+        Assert.That(vm.HasSelectedTaxonomyNode, Is.True);
+        Assert.That(vm.SelectedTaxonomyPath, Is.EqualTo("nature"));
 
-        Assert.That(vm.IsNodeActionPromptOpen, Is.False);
-        Assert.That(root.Children.Any(c => c.Name == "dark forest"), Is.True);
-        Assert.That(vm.Tags.Any(t => t.Name == "dark forest"), Is.True);
-        // Check sorting
-        Assert.That(vm.Tags.Select(t => t.Name).ToList(), Is.Ordered);
+        // Deselect node
+        vm.SelectedHierarchyNode = null;
+        Assert.That(vm.HasSelectedTaxonomyNode, Is.False);
     }
 
     [Test]
-    public void Groups_CreateFromTaxonomyBranch_CollectsAllBranchTags() {
+    public void Taxonomy_AddSubNode_ViaTargetNode_ExpandsParentAndInsertsChild() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var root = vm.HierarchyNodes.First();
+        root.IsExpanded = false;
+
+        // Trigger AddSubNode directly passing the target node (e.g. from row hover button)
+        vm.AddSubNode(root);
+
+        Assert.That(root.IsExpanded, Is.True);
+        var newSubNode = vm.SelectedHierarchyNode;
+        Assert.That(newSubNode, Is.Not.Null);
+        Assert.That(newSubNode!.IsEditing, Is.True);
+        Assert.That(newSubNode.IsNewUncommitted, Is.True);
+        Assert.That(root.Children.Contains(newSubNode), Is.True);
+
+        // Commit name
+        newSubNode.EditingName = " Forest ";
+        newSubNode.CommitEditCommand.Execute(null);
+
+        Assert.That(newSubNode.IsEditing, Is.False);
+        Assert.That(newSubNode.IsNewUncommitted, Is.False);
+        Assert.That(newSubNode.Name, Is.EqualTo("forest"));
+        Assert.That(vm.Tags.Any(t => t.Name == "forest"), Is.True);
+    }
+
+    [Test]
+    public void Taxonomy_AddRootNode_DirectInlineTreeEditing_CancelRemovesNode() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var initialCount = vm.HierarchyNodes.Count;
+
+        vm.AddRootNodeCommand.Execute(null);
+        var newRoot = vm.SelectedHierarchyNode;
+        Assert.That(newRoot, Is.Not.Null);
+        Assert.That(vm.HierarchyNodes.Count, Is.EqualTo(initialCount + 1));
+
+        // User presses Escape
+        newRoot!.CancelEditCommand.Execute(null);
+
+        Assert.That(vm.HierarchyNodes.Count, Is.EqualTo(initialCount));
+        Assert.That(vm.HierarchyNodes.Contains(newRoot), Is.False);
+    }
+
+    [Test]
+    public void Taxonomy_DeleteNode_ViaTargetNode_RemovesFromParent() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var root = vm.HierarchyNodes.First();
+        var child = root.Children.First();
+
+        vm.DeleteNode(child);
+
+        Assert.That(root.Children.Contains(child), Is.False);
+        Assert.That(vm.SelectedHierarchyNode, Is.EqualTo(root));
+    }
+
+    [Test]
+    public void Groups_AddGroup_PlainCustomGroup_CreatesAndSelects() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+
+        vm.NewTagGroupName = " Street Photography ";
+        vm.AddTagGroupCommand.Execute(null);
+
+        var createdGroup = vm.TagGroups.FirstOrDefault(g => g.GroupName == "street photography");
+        Assert.That(createdGroup, Is.Not.Null);
+        Assert.That(createdGroup!.TagIds.Count, Is.EqualTo(0));
+        Assert.That(vm.SelectedTagGroup, Is.EqualTo(createdGroup));
+        Assert.That(string.IsNullOrEmpty(vm.NewTagGroupName), Is.True);
+    }
+
+    [Test]
+    public void Groups_AddGroup_WithTaxonomyBranchSelected_PullsInAllBranchTags() {
         var vm = new SettingsDialogViewModel(_fakeService);
         var natureRoot = vm.HierarchyNodes.First();
 
-        vm.OpenCreateGroupFromBranchPromptCommand.Execute(null);
-        Assert.That(vm.IsCreateGroupFromBranchOpen, Is.True);
-        Assert.That(vm.AvailableTaxonomyBranches.Count, Is.GreaterThanOrEqualTo(3));
+        // Select "nature" branch in the ComboBox
+        var branchItem = vm.AvailableTaxonomyBranches.First(b => b.Node == natureRoot);
+        vm.SelectedTaxonomyBranch = branchItem;
 
-        // Select "nature" branch with all sub-branches (nature, mountains, alps)
-        vm.SelectedTaxonomyBranch = vm.AvailableTaxonomyBranches.First(b => b.Node == natureRoot);
-        vm.NewBranchGroupName = " nature preset ";
-        vm.IncludeSubtreeTags = true;
-        vm.ConfirmCreateGroupFromBranchCommand.Execute(null);
+        // Verify TextBox auto-populated with branch name
+        Assert.That(vm.NewTagGroupName, Is.EqualTo("nature"));
 
-        Assert.That(vm.IsCreateGroupFromBranchOpen, Is.False);
-        var createdGroup = vm.TagGroups.FirstOrDefault(g => g.GroupName == "nature preset");
+        // User clicks Add
+        vm.AddTagGroupCommand.Execute(null);
+
+        var createdGroup = vm.TagGroups.FirstOrDefault(g => g.GroupName == "nature");
         Assert.That(createdGroup, Is.Not.Null);
-
-        // Tags should include nature, mountains, alps
+        // Pulled in nature, mountains, alps
         Assert.That(createdGroup!.TagIds.Count, Is.EqualTo(3));
         Assert.That(vm.SelectedTagGroup, Is.EqualTo(createdGroup));
+        Assert.That(vm.SelectedTaxonomyBranch, Is.Null);
+        Assert.That(string.IsNullOrEmpty(vm.NewTagGroupName), Is.True);
+    }
+
+    [Test]
+    public void Groups_AddGroup_DuplicateGroupName_SelectsExistingWithoutDuplicating() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var initialCount = vm.TagGroups.Count;
+
+        vm.NewTagGroupName = "FAVORITES";
+        vm.AddTagGroupCommand.Execute(null);
+
+        Assert.That(vm.TagGroups.Count, Is.EqualTo(initialCount));
+        Assert.That(vm.SelectedTagGroup?.GroupName, Is.EqualTo("favorites"));
     }
 
     [Test]

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Picturebot.ViewModels;
@@ -17,6 +18,21 @@ public partial class SettingsDialog : Window {
 
     private void Header_PointerPressed(object? sender, PointerPressedEventArgs e) {
         BeginMoveDrag(e);
+    }
+
+    public void OnInlineAutoCompleteGotFocus(object? sender, GotFocusEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            acb.IsDropDownOpen = true;
+        }
+    }
+
+    public void OnInlineAutoCompleteAttached(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                acb.Focus();
+                acb.IsDropDownOpen = true;
+            }, Avalonia.Threading.DispatcherPriority.Input);
+        }
     }
 
     public void OnShortcutKeyDown(object? sender, KeyEventArgs e) {

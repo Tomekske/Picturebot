@@ -1,12 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Domain.Models;
 
 namespace Picturebot.ViewModels;
 
 public partial class HierarchyNodeViewModel : ViewModelBase {
+    private readonly Action<HierarchyNodeViewModel>? _onCommit;
+    private readonly Action<HierarchyNodeViewModel>? _onCancel;
+
     public HierarchyNode Model { get; }
 
     public Guid NodeId => Model.NodeId;
@@ -23,22 +27,36 @@ public partial class HierarchyNodeViewModel : ViewModelBase {
     [ObservableProperty]
     private bool _isSelected;
 
+    [ObservableProperty]
+    private bool _isEditing;
+
+    [ObservableProperty]
+    private bool _isNewNode;
+
+    [ObservableProperty]
+    private string _editingName = string.Empty;
+
+    public bool IsNewUncommitted { get; set; }
+
     public HierarchyNodeViewModel? Parent { get; set; }
 
     public ObservableCollection<HierarchyNodeViewModel> Children { get; } = new();
 
-    public HierarchyNodeViewModel(HierarchyNode model, HierarchyNodeViewModel? parent = null) {
+    public HierarchyNodeViewModel(HierarchyNode model, HierarchyNodeViewModel? parent = null, Action<HierarchyNodeViewModel>? onCommit = null, Action<HierarchyNodeViewModel>? onCancel = null) {
         Model = model;
         _name = model.Name;
         _tagId = model.TagId;
+        _editingName = model.Name;
         Parent = parent;
+        _onCommit = onCommit;
+        _onCancel = onCancel;
 
         foreach (var child in model.Children) {
-            Children.Add(new HierarchyNodeViewModel(child, this));
+            Children.Add(new HierarchyNodeViewModel(child, this, onCommit, onCancel));
         }
     }
 
-    public HierarchyNodeViewModel(string name, Guid? tagId = null, HierarchyNodeViewModel? parent = null) {
+    public HierarchyNodeViewModel(string name, Guid? tagId = null, HierarchyNodeViewModel? parent = null, Action<HierarchyNodeViewModel>? onCommit = null, Action<HierarchyNodeViewModel>? onCancel = null) {
         Model = new HierarchyNode {
             NodeId = Guid.NewGuid(),
             Name = name,
@@ -46,7 +64,10 @@ public partial class HierarchyNodeViewModel : ViewModelBase {
         };
         _name = name;
         _tagId = tagId;
+        _editingName = name;
         Parent = parent;
+        _onCommit = onCommit;
+        _onCancel = onCancel;
     }
 
     partial void OnNameChanged(string value) {
@@ -55,6 +76,23 @@ public partial class HierarchyNodeViewModel : ViewModelBase {
 
     partial void OnTagIdChanged(Guid? value) {
         Model.TagId = value;
+    }
+
+    [RelayCommand]
+    public void StartEdit() {
+        EditingName = Name;
+        IsNewNode = false;
+        IsEditing = true;
+    }
+
+    [RelayCommand]
+    public void CommitEdit() {
+        _onCommit?.Invoke(this);
+    }
+
+    [RelayCommand]
+    public void CancelEdit() {
+        _onCancel?.Invoke(this);
     }
 
     public string GetXmpPath() {

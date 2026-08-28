@@ -140,6 +140,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _yellowLabelShortcut = "Ctrl+NumPad3";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTaxonomyNode))]
+    [NotifyPropertyChangedFor(nameof(IsTaxonomyTabActive))]
     private int _selectedTabIndex;
 
     // Sub-tab navigation in Keywords settings (0 = Tags, 1 = Taxonomy, 2 = Groups)
@@ -147,11 +150,22 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [NotifyPropertyChangedFor(nameof(IsTagsSubTabActive))]
     [NotifyPropertyChangedFor(nameof(IsTaxonomySubTabActive))]
     [NotifyPropertyChangedFor(nameof(IsGroupsSubTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTaxonomyNode))]
+    [NotifyPropertyChangedFor(nameof(IsTaxonomyTabActive))]
     private int _keywordsSubTabIndex;
 
     public bool IsTagsSubTabActive => KeywordsSubTabIndex == 0;
     public bool IsTaxonomySubTabActive => KeywordsSubTabIndex == 1;
     public bool IsGroupsSubTabActive => KeywordsSubTabIndex == 2;
+    public bool IsTaxonomyTabActive => SelectedTabIndex == 5 && KeywordsSubTabIndex == 1;
+
+    public bool HasSelectedTaxonomyNode =>
+        IsTaxonomyTabActive && SelectedHierarchyNode != null && !string.IsNullOrWhiteSpace(SelectedHierarchyNode.Name);
+
+    public bool IsTaxonomyPathVisible => HasSelectedTaxonomyNode;
+
+    public string SelectedTaxonomyPath => CalculatedBreadcrumbPath;
 
     public SettingsDialogViewModel(ISettingsService settingsService) {
         _settingsService = settingsService;
@@ -234,7 +248,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         HierarchyNodes.Clear();
         foreach (var node in settings.HierarchyNodes) {
             NormalizeNodeNames(node);
-            HierarchyNodes.Add(new HierarchyNodeViewModel(node));
+            HierarchyNodes.Add(new HierarchyNodeViewModel(node, null, OnNodeCommit, OnNodeCancel));
         }
         SelectedHierarchyNode = null;
 
@@ -545,6 +559,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         RefreshTagSuggestions();
         RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedNodeFullPath));
+        OnPropertyChanged(nameof(SelectedTaxonomyPath));
     }
 
     private void OnTagRenamed(TagItemViewModel tagItem) {
@@ -574,6 +590,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         RefreshTagSuggestions();
         RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedNodeFullPath));
+        OnPropertyChanged(nameof(SelectedTaxonomyPath));
     }
 
     private static int CountTagUsageInTree(IEnumerable<HierarchyNodeViewModel> nodes, Guid tagId, string name) {
@@ -610,129 +628,128 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CalculatedBreadcrumbPath))]
+    [NotifyPropertyChangedFor(nameof(SelectedNodeFullPath))]
+    [NotifyPropertyChangedFor(nameof(SelectedTaxonomyPath))]
     [NotifyPropertyChangedFor(nameof(CalculatedXmpPath))]
     [NotifyPropertyChangedFor(nameof(HasSelectedHierarchyNode))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTaxonomyNode))]
+    [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
     private HierarchyNodeViewModel? _selectedHierarchyNode;
 
     public bool HasSelectedHierarchyNode => SelectedHierarchyNode != null;
 
     public string CalculatedBreadcrumbPath =>
-        SelectedHierarchyNode != null
+        SelectedHierarchyNode != null && !string.IsNullOrWhiteSpace(SelectedHierarchyNode.Name)
             ? SelectedHierarchyNode.GetDisplayBreadcrumb()
-            : "No node selected";
+            : "None";
+
+    public string SelectedNodeFullPath => CalculatedBreadcrumbPath;
 
     public string CalculatedXmpPath =>
         SelectedHierarchyNode != null
             ? SelectedHierarchyNode.GetXmpPath()
             : string.Empty;
 
-    // Node action inline prompt state (Add Child / Add Root / Rename)
-    [ObservableProperty]
-    private bool _isNodeActionPromptOpen;
-
-    [ObservableProperty]
-    private string _nodeActionPromptTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _nodeActionInputName = string.Empty;
-
-    private enum NodeActionMode { AddChild, AddRoot, Rename }
-    private NodeActionMode _currentActionMode;
-
     [RelayCommand]
-    private void OpenAddChildNodePrompt() {
-        if (SelectedHierarchyNode == null) return;
-        _currentActionMode = NodeActionMode.AddChild;
-        NodeActionPromptTitle = $"Add Sub-Node to '{SelectedHierarchyNode.Name}'";
-        NodeActionInputName = string.Empty;
-        IsNodeActionPromptOpen = true;
+    public void AddRootNode() {
+        var rootNode = new HierarchyNodeViewModel(string.Empty, null, null, OnNodeCommit, OnNodeCancel) {
+            IsNewNode = true,
+            IsNewUncommitted = true,
+            IsEditing = true,
+            EditingName = string.Empty
+        };
+        HierarchyNodes.Add(rootNode);
+        SelectedHierarchyNode = rootNode;
     }
 
     [RelayCommand]
-    private void OpenAddRootNodePrompt() {
-        _currentActionMode = NodeActionMode.AddRoot;
-        NodeActionPromptTitle = "Add Root Category / Node";
-        NodeActionInputName = string.Empty;
-        IsNodeActionPromptOpen = true;
+    public void AddSubNode(HierarchyNodeViewModel? targetParent = null) {
+        var parent = targetParent ?? SelectedHierarchyNode;
+        if (parent == null) return;
+
+        parent.IsExpanded = true;
+        var childNode = new HierarchyNodeViewModel(string.Empty, null, parent, OnNodeCommit, OnNodeCancel) {
+            IsNewNode = true,
+            IsNewUncommitted = true,
+            IsEditing = true,
+            EditingName = string.Empty
+        };
+        parent.Children.Add(childNode);
+        SelectedHierarchyNode = childNode;
     }
 
     [RelayCommand]
-    private void OpenRenameNodePrompt() {
-        if (SelectedHierarchyNode == null) return;
-        _currentActionMode = NodeActionMode.Rename;
-        NodeActionPromptTitle = $"Rename Node '{SelectedHierarchyNode.Name}'";
-        NodeActionInputName = SelectedHierarchyNode.Name;
-        IsNodeActionPromptOpen = true;
+    public void StartEditSelectedNode() {
+        SelectedHierarchyNode?.StartEdit();
     }
 
     [RelayCommand]
-    private void ConfirmNodeAction() {
-        var name = NodeActionInputName.Trim().ToLowerInvariant().Replace('/', '|');
-        if (string.IsNullOrWhiteSpace(name)) {
-            IsNodeActionPromptOpen = false;
+    public void DeleteNode(HierarchyNodeViewModel? targetNode = null) {
+        var node = targetNode ?? SelectedHierarchyNode;
+        if (node == null) return;
+        RemoveNode(node);
+    }
+
+    [RelayCommand]
+    public void DeleteSelectedNode() {
+        DeleteNode(SelectedHierarchyNode);
+    }
+
+    private void OnNodeCommit(HierarchyNodeViewModel node) {
+        var trimmed = node.EditingName.Trim().ToLowerInvariant().Replace('/', '|');
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            if (node.IsNewUncommitted || node.IsNewNode) {
+                RemoveNode(node);
+            } else {
+                node.EditingName = node.Name;
+                node.IsEditing = false;
+            }
             return;
         }
 
-        switch (_currentActionMode) {
-            case NodeActionMode.AddChild when SelectedHierarchyNode != null: {
-                var tag = EnsureTagInPool(name);
-                var childNode = new HierarchyNodeViewModel(tag.Name, tag.Id, SelectedHierarchyNode);
-                SelectedHierarchyNode.Children.Add(childNode);
-                SelectedHierarchyNode.IsExpanded = true;
-                SelectedHierarchyNode = childNode;
-                break;
-            }
-            case NodeActionMode.AddRoot: {
-                var tag = EnsureTagInPool(name);
-                var rootNode = new HierarchyNodeViewModel(tag.Name, tag.Id, null);
-                HierarchyNodes.Add(rootNode);
-                SelectedHierarchyNode = rootNode;
-                break;
-            }
-            case NodeActionMode.Rename when SelectedHierarchyNode != null: {
-                SelectedHierarchyNode.Name = name;
-                // If linked to tag, update tag name too
-                if (SelectedHierarchyNode.TagId.HasValue) {
-                    var tag = Tags.FirstOrDefault(t => t.Id == SelectedHierarchyNode.TagId.Value);
-                    if (tag != null) {
-                        tag.Name = name;
-                        tag.Model.Name = name;
-                        OnTagRenamed(tag);
-                    }
-                }
-                break;
-            }
-        }
+        var tag = EnsureTagInPool(trimmed);
+        node.Name = trimmed;
+        node.TagId = tag.Id;
+        node.Model.Name = trimmed;
+        node.Model.TagId = tag.Id;
+        node.IsNewNode = false;
+        node.IsNewUncommitted = false;
+        node.IsEditing = false;
 
-        IsNodeActionPromptOpen = false;
-        NodeActionInputName = string.Empty;
         RefreshTagSuggestions();
         RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedNodeFullPath));
+        OnPropertyChanged(nameof(SelectedTaxonomyPath));
+        OnPropertyChanged(nameof(HasSelectedTaxonomyNode));
+        OnPropertyChanged(nameof(IsTaxonomyPathVisible));
         OnPropertyChanged(nameof(CalculatedXmpPath));
     }
 
-    [RelayCommand]
-    private void CancelNodeAction() {
-        IsNodeActionPromptOpen = false;
-        NodeActionInputName = string.Empty;
+    private void OnNodeCancel(HierarchyNodeViewModel node) {
+        if (node.IsNewUncommitted || node.IsNewNode) {
+            RemoveNode(node);
+        } else {
+            node.EditingName = node.Name;
+            node.IsEditing = false;
+        }
     }
 
-    [RelayCommand]
-    private void DeleteSelectedNode() {
-        if (SelectedHierarchyNode == null) return;
-        var target = SelectedHierarchyNode;
-
-        if (target.Parent != null) {
-            target.Parent.Children.Remove(target);
-            SelectedHierarchyNode = target.Parent;
+    private void RemoveNode(HierarchyNodeViewModel node) {
+        if (node.Parent != null) {
+            node.Parent.Children.Remove(node);
+            SelectedHierarchyNode = node.Parent;
         } else {
-            HierarchyNodes.Remove(target);
+            HierarchyNodes.Remove(node);
             SelectedHierarchyNode = HierarchyNodes.FirstOrDefault();
         }
 
         RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedNodeFullPath));
+        OnPropertyChanged(nameof(SelectedTaxonomyPath));
+        OnPropertyChanged(nameof(HasSelectedTaxonomyNode));
+        OnPropertyChanged(nameof(IsTaxonomyPathVisible));
         OnPropertyChanged(nameof(CalculatedXmpPath));
     }
 
@@ -768,26 +785,16 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     public ObservableCollection<string> TagSuggestions { get; } = new();
     public ObservableCollection<TaxonomyBranchItem> AvailableTaxonomyBranches { get; } = new();
 
-    // Create Group from Taxonomy Branch dialog state
-    [ObservableProperty]
-    private bool _isCreateGroupFromBranchOpen;
-
     [ObservableProperty]
     private TaxonomyBranchItem? _selectedTaxonomyBranch;
-
-    [ObservableProperty]
-    private string _newBranchGroupName = string.Empty;
-
-    [ObservableProperty]
-    private bool _includeSubtreeTags = true;
 
     partial void OnSelectedTagGroupChanged(TagGroup? value) {
         RefreshTagGroupViews();
     }
 
     partial void OnSelectedTaxonomyBranchChanged(TaxonomyBranchItem? value) {
-        if (value != null && string.IsNullOrWhiteSpace(NewBranchGroupName)) {
-            NewBranchGroupName = value.Node.Name;
+        if (value != null) {
+            NewTagGroupName = value.Node.Name.ToLowerInvariant();
         }
     }
 
@@ -796,10 +803,33 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         var name = NewTagGroupName.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        var newGroup = new TagGroup { GroupName = name };
+        // Prevent duplicate group names
+        var existing = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (existing != null) {
+            SelectedTagGroup = existing;
+            NewTagGroupName = string.Empty;
+            SelectedTaxonomyBranch = null;
+            return;
+        }
+
+        TagGroup newGroup;
+        if (SelectedTaxonomyBranch != null) {
+            var tagIds = CollectTagIdsFromNode(SelectedTaxonomyBranch.Node, true);
+            newGroup = new TagGroup {
+                GroupName = name,
+                TagIds = new ObservableCollection<Guid>(tagIds)
+            };
+        } else {
+            newGroup = new TagGroup {
+                GroupName = name,
+                TagIds = new ObservableCollection<Guid>()
+            };
+        }
+
         TagGroups.Add(newGroup);
         SelectedTagGroup = newGroup;
         NewTagGroupName = string.Empty;
+        SelectedTaxonomyBranch = null;
     }
 
     [RelayCommand]
@@ -837,28 +867,19 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         RefreshTagGroupViews();
     }
 
-    // Taxonomy Mirroring Commands
-    [RelayCommand]
-    private void OpenCreateGroupFromBranchPrompt() {
-        RefreshAvailableTaxonomyBranches();
-        if (SelectedHierarchyNode != null) {
-            SelectedTaxonomyBranch = AvailableTaxonomyBranches.FirstOrDefault(b => b.Node == SelectedHierarchyNode)
-                                     ?? AvailableTaxonomyBranches.FirstOrDefault();
-            NewBranchGroupName = SelectedHierarchyNode.Name;
-        } else {
-            SelectedTaxonomyBranch = AvailableTaxonomyBranches.FirstOrDefault();
-            NewBranchGroupName = SelectedTaxonomyBranch?.Node.Name ?? string.Empty;
-        }
-        IncludeSubtreeTags = true;
-        IsCreateGroupFromBranchOpen = true;
-    }
-
     [RelayCommand]
     public void CreateGroupFromTaxonomyNode(HierarchyNodeViewModel? node) {
         var targetNode = node ?? SelectedHierarchyNode;
         if (targetNode == null) return;
 
         var groupName = targetNode.Name.Trim().ToLowerInvariant();
+        var existing = TagGroups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+        if (existing != null) {
+            SelectedTagGroup = existing;
+            KeywordsSubTabIndex = 2;
+            return;
+        }
+
         var tagIds = CollectTagIdsFromNode(targetNode, true);
 
         var newGroup = new TagGroup {
@@ -882,37 +903,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         } catch {
             // Ignored
         }
-    }
-
-    [RelayCommand]
-    private void ConfirmCreateGroupFromBranch() {
-        if (SelectedTaxonomyBranch == null) {
-            IsCreateGroupFromBranchOpen = false;
-            return;
-        }
-
-        var groupName = (string.IsNullOrWhiteSpace(NewBranchGroupName) ? SelectedTaxonomyBranch.Node.Name : NewBranchGroupName).Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(groupName)) {
-            groupName = SelectedTaxonomyBranch.Node.Name;
-        }
-
-        var tagIds = CollectTagIdsFromNode(SelectedTaxonomyBranch.Node, IncludeSubtreeTags);
-        var newGroup = new TagGroup {
-            GroupName = groupName,
-            TagIds = new ObservableCollection<Guid>(tagIds)
-        };
-
-        TagGroups.Add(newGroup);
-        SelectedTagGroup = newGroup;
-
-        IsCreateGroupFromBranchOpen = false;
-        NewBranchGroupName = string.Empty;
-    }
-
-    [RelayCommand]
-    private void CancelCreateGroupFromBranch() {
-        IsCreateGroupFromBranchOpen = false;
-        NewBranchGroupName = string.Empty;
     }
 
     private List<Guid> CollectTagIdsFromNode(HierarchyNodeViewModel node, bool includeSubtree) {

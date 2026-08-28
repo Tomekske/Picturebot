@@ -114,6 +114,112 @@
             <Setter Property="Padding" Value="10,8" />
         </Style>
 
+        <!-- General AutoCompleteBox Dropdown Popup Dark Theme Styling (Matching ComboBox Style) -->
+        <Style Selector="AutoCompleteBox /template/ Popup#PART_Popup">
+            <Setter Property="Placement" Value="BottomEdgeAlignedLeft" />
+            <Setter Property="VerticalOffset" Value="4" />
+            <Setter Property="HorizontalOffset" Value="0" />
+        </Style>
+        <Style Selector="AutoCompleteBox /template/ Border#PART_SuggestionsContainer">
+            <Setter Property="Background" Value="#20232B" />
+            <Setter Property="BorderBrush" Value="#383C4D" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BoxShadow" Value="0 8 24 #60000000" />
+            <Setter Property="Padding" Value="4,4" />
+        </Style>
+        <Style Selector="AutoCompleteBox /template/ ListBox#PART_SelectingItemsControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MaxHeight" Value="200" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="AutoCompleteBox ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="AutoCompleteBox ListBoxItem:pointerover">
+            <Setter Property="Background" Value="#2F3648" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="AutoCompleteBox ListBoxItem:pointerover /template/ Border#PART_ItemBorder">
+            <Setter Property="Background" Value="#2F3648" />
+        </Style>
+        <Style Selector="AutoCompleteBox ListBoxItem:selected">
+            <Setter Property="Background" Value="#4C5FD5" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="AutoCompleteBox ListBoxItem:selected /template/ Border#PART_ItemBorder">
+            <Setter Property="Background" Value="#4C5FD5" />
+        </Style>
+
+        <!-- Inline Taxonomy Editor AutoCompleteBox Specific Styling -->
+        <Style Selector="AutoCompleteBox.InlineTaxonomyEditor">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+
+        <Style Selector="AutoCompleteBox.InlineTaxonomyEditor /template/ TextBox#PART_TextBox">
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="BorderBrush" Value="#4F46E5" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- TreeViewItem Two-Way IsExpanded Container Style -->
+        <Style Selector="TreeViewItem" x:DataType="vm:HierarchyNodeViewModel">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        </Style>
+
+        <!-- TreeView Row Hover Actions -->
+        <Style Selector="TreeViewItem StackPanel.tree-row-actions">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="TreeViewItem:pointerover StackPanel.tree-row-actions">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="TreeViewItem:selected StackPanel.tree-row-actions">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="#14171F" />
             <Setter Property="BorderBrush" Value="#323846" />
@@ -243,11 +349,28 @@
                 <Rectangle Height="1" Fill="#2A2A2E" VerticalAlignment="Bottom" />
             </Grid>
 
-            <!-- Footer Action Bar -->
+            <!-- Global Modal Footer Action Bar with Contextual Left Breadcrumb -->
             <Grid DockPanel.Dock="Bottom" Height="56" Background="#1E1E22">
                 <!-- Footer Top Divider -->
                 <Rectangle Height="1" Fill="#2A2A2E" VerticalAlignment="Top" />
                 
+                <!-- Left: Contextual Breadcrumb for Taxonomy -->
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Left" 
+                            VerticalAlignment="Center" 
+                            Spacing="6" 
+                            Margin="20,0,0,0"
+                            IsVisible="{Binding HasSelectedTaxonomyNode}">
+                    <TextBlock Text="Path:" FontSize="12" Foreground="#717888" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SelectedTaxonomyPath}" 
+                               FontSize="12" 
+                               Foreground="#9CA3AF" 
+                               VerticalAlignment="Center" 
+                               TextTrimming="CharacterEllipsis" 
+                               MaxWidth="450" />
+                </StackPanel>
+
+                <!-- Right: Dialog Action Buttons -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12" Margin="0,0,16,0">
                     <Button Classes="secondary" 
                             Content="Discard Changes" 
@@ -745,128 +868,126 @@
 
 
                                 <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <!-- SUB-TAB 1: TAXONOMY (HIERARCHY) -->
+                                <!-- SUB-TAB 1: TAXONOMY (HIERARCHY) - CLEAN DIRECT TREE INTERACTION -->
                                 <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,0">
-                                    <!-- Toolbar -->
-                                    <Border Grid.Row="0" Background="#14171F" CornerRadius="6" Padding="6,4" Margin="0,0,0,8" BorderBrush="#323846" BorderThickness="1">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <Button Classes="secondary" 
-                                                        Height="30" 
-                                                        Padding="10,4" 
-                                                        FontSize="12" 
-                                                        Command="{Binding OpenAddChildNodePromptCommand}"
-                                                        IsEnabled="{Binding HasSelectedHierarchyNode}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <material:MaterialIcon Kind="PlusCircleOutline" Width="14" Height="14" Foreground="#38BDF8" />
-                                                        <TextBlock Text="Add Sub-Node" VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </Button>
-
-                                                <Button Classes="secondary" 
-                                                        Height="30" 
-                                                        Padding="10,4" 
-                                                        FontSize="12" 
-                                                        Command="{Binding OpenAddRootNodePromptCommand}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <material:MaterialIcon Kind="FolderPlusOutline" Width="14" Height="14" Foreground="#A78BFA" />
-                                                        <TextBlock Text="Add Root" VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </Button>
-
-                                                <Button Classes="secondary" 
-                                                        Height="30" 
-                                                        Padding="10,4" 
-                                                        FontSize="12" 
-                                                        Command="{Binding OpenRenameNodePromptCommand}"
-                                                        IsEnabled="{Binding HasSelectedHierarchyNode}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <material:MaterialIcon Kind="PencilOutline" Width="14" Height="14" />
-                                                        <TextBlock Text="Rename" VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </Button>
+                                <Grid RowDefinitions="Auto,*" Margin="0,0,0,0">
+                                    <!-- Clean Header Bar with Single '+ Add Root' Action Button -->
+                                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="2,0,0,8">
+                                        <TextBlock Grid.Column="0" Text="TAXONOMY HIERARCHY" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
+                                        
+                                        <Button Grid.Column="1" 
+                                                Classes="secondary" 
+                                                Height="28" 
+                                                Padding="10,2" 
+                                                FontSize="11" 
+                                                Command="{Binding AddRootNodeCommand}"
+                                                ToolTip.Tip="Add root category (Press Enter to commit)">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <material:MaterialIcon Kind="FolderPlusOutline" Width="13" Height="13" Foreground="#A78BFA" />
+                                                <TextBlock Text="+ Add Root" VerticalAlignment="Center" />
                                             </StackPanel>
+                                        </Button>
+                                    </Grid>
 
-                                            <Button Grid.Column="1" 
-                                                    Classes="action-icon-btn danger-icon" 
-                                                    Height="30" 
-                                                    Padding="8,4" 
-                                                    FontSize="12" 
-                                                    Command="{Binding DeleteSelectedNodeCommand}"
-                                                    IsEnabled="{Binding HasSelectedHierarchyNode}"
-                                                    ToolTip.Tip="Delete Selected Node &amp; Branch">
-                                                <StackPanel Orientation="Horizontal" Spacing="5">
-                                                    <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" Foreground="#EF4444" />
-                                                    <TextBlock Text="Delete" Foreground="#EF4444" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Node Action Inline Prompt (Add Child / Root / Rename) with Tag Catalog Autocomplete -->
-                                    <Border Grid.Row="1" Background="#1E293B" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,8" IsVisible="{Binding IsNodeActionPromptOpen}">
-                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
-                                            <TextBlock Grid.Column="0" Text="{Binding NodeActionPromptTitle}" FontWeight="SemiBold" FontSize="12" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,12,0" />
-                                            <AutoCompleteBox Grid.Column="1"
-                                                             ItemsSource="{Binding TagSuggestions}"
-                                                             Text="{Binding NodeActionInputName, Mode=TwoWay}"
-                                                             Watermark="Select or type tag name..."
-                                                             FilterMode="ContainsOrdinal"
-                                                             Height="32"
-                                                             Padding="8,4"
-                                                             FontSize="12">
-                                                <AutoCompleteBox.KeyBindings>
-                                                    <KeyBinding Gesture="Return" Command="{Binding ConfirmNodeActionCommand}" />
-                                                    <KeyBinding Gesture="Escape" Command="{Binding CancelNodeActionCommand}" />
-                                                </AutoCompleteBox.KeyBindings>
-                                            </AutoCompleteBox>
-                                            <Button Grid.Column="2" Classes="primary" Height="32" Padding="12,4" Margin="8,0,0,0" Command="{Binding ConfirmNodeActionCommand}" Content="OK" />
-                                            <Button Grid.Column="3" Classes="secondary" Height="32" Padding="10,4" Margin="6,0,0,0" Command="{Binding CancelNodeActionCommand}" Content="Cancel" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- TreeView -->
-                                    <Border Grid.Row="2" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="210" MaxHeight="250">
+                                    <!-- Clean TreeView Container (No inside footer) -->
+                                    <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="260" MaxHeight="330">
                                         <TreeView ItemsSource="{Binding HierarchyNodes}" 
                                                   SelectedItem="{Binding SelectedHierarchyNode, Mode=TwoWay}" 
                                                   Background="Transparent" 
                                                   ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <TreeView.Styles>
+                                                <Style Selector="TreeViewItem" x:DataType="vm:HierarchyNodeViewModel">
+                                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                                </Style>
+                                            </TreeView.Styles>
+                                            <TreeView.KeyBindings>
+                                                <KeyBinding Gesture="F2" Command="{Binding StartEditSelectedNodeCommand}" />
+                                                <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedNodeCommand}" />
+                                            </TreeView.KeyBindings>
                                             <TreeView.ItemTemplate>
                                                 <TreeDataTemplate DataType="vm:HierarchyNodeViewModel" ItemsSource="{Binding Children}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                        <material:MaterialIcon Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" />
-                                                        <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#E2E8F0" VerticalAlignment="Center" />
-                                                    </StackPanel>
+                                                    <Panel Margin="0,2">
+                                                        <!-- Normal Display Mode -->
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
+                                                            <!-- Folder / Node Icon -->
+                                                            <material:MaterialIcon Grid.Column="0" Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                                                            <!-- Normal View: TextBlock -->
+                                                            <TextBlock Grid.Column="1" 
+                                                                       Text="{Binding Name}" 
+                                                                       FontSize="13" 
+                                                                       Foreground="#E2E8F0" 
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.ContextMenu>
+                                                                    <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
+                                                                        <MenuItem Header="Add Sub-Node" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddSubNodeCommand}" CommandParameter="{Binding}" />
+                                                                        <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
+                                                                        <MenuItem Header="Create Group from Branch" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).CreateGroupFromTaxonomyNodeCommand}" CommandParameter="{Binding}" />
+                                                                        <Separator />
+                                                                        <MenuItem Header="Delete" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
+                                                                    </ContextMenu>
+                                                                </TextBlock.ContextMenu>
+                                                            </TextBlock>
+
+                                                            <!-- Row Hover Action Buttons (Visible on PointerOver / Selected) -->
+                                                            <StackPanel Grid.Column="2" 
+                                                                        Classes="tree-row-actions" 
+                                                                        Orientation="Horizontal" 
+                                                                        Spacing="4" 
+                                                                        HorizontalAlignment="Right" 
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="8,0,4,0">
+                                                                <Button Classes="action-icon-btn" 
+                                                                        Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddSubNodeCommand}" 
+                                                                        CommandParameter="{Binding}" 
+                                                                        ToolTip.Tip="Add Sub-Node">
+                                                                    <material:MaterialIcon Kind="Plus" Width="14" Height="14" Foreground="#38BDF8" />
+                                                                </Button>
+                                                                <Button Classes="action-icon-btn danger-icon" 
+                                                                        Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteNodeCommand}" 
+                                                                        CommandParameter="{Binding}" 
+                                                                        ToolTip.Tip="Delete Node (Delete)">
+                                                                    <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" Foreground="#EF4444" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </Grid>
+
+                                                        <!-- Inline Edit Mode -->
+                                                        <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" IsVisible="{Binding IsEditing}">
+                                                            <!-- Folder / Node Icon -->
+                                                            <material:MaterialIcon Grid.Column="0" Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                                                            <!-- AutoCompleteBox for typing/selecting tag name -->
+                                                            <AutoCompleteBox Grid.Column="1" 
+                                                                             Classes="InlineTaxonomyEditor"
+                                                                             ItemsSource="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).TagSuggestions}"
+                                                                             Text="{Binding EditingName, Mode=TwoWay}"
+                                                                             FilterMode="ContainsOrdinal"
+                                                                             MinimumPrefixLength="0"
+                                                                             MinimumPopulateDelay="00:00:00"
+                                                                             GotFocus="OnInlineAutoCompleteGotFocus"
+                                                                             AttachedToVisualTree="OnInlineAutoCompleteAttached"
+                                                                             Watermark="Select or type tag..."
+                                                                             Margin="2,0,0,0"
+                                                                             VerticalAlignment="Center">
+                                                                <AutoCompleteBox.ItemTemplate>
+                                                                    <DataTemplate DataType="x:String">
+                                                                        <TextBlock Text="{Binding}" 
+                                                                                   FontSize="13" 
+                                                                                   Foreground="#FFFFFF" 
+                                                                                   VerticalAlignment="Center" />
+                                                                    </DataTemplate>
+                                                                </AutoCompleteBox.ItemTemplate>
+                                                                <AutoCompleteBox.KeyBindings>
+                                                                    <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
+                                                                    <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
+                                                                </AutoCompleteBox.KeyBindings>
+                                                            </AutoCompleteBox>
+                                                        </Grid>
+                                                    </Panel>
                                                 </TreeDataTemplate>
                                             </TreeView.ItemTemplate>
-                                            <TreeView.ContextMenu>
-                                                <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
-                                                    <MenuItem Header="Add Sub-Node..." Command="{Binding OpenAddChildNodePromptCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
-                                                    <MenuItem Header="Rename Node..." Command="{Binding OpenRenameNodePromptCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
-                                                    <MenuItem Header="Create Group from Branch" Command="{Binding CreateGroupFromTaxonomyNodeCommand}" CommandParameter="{Binding SelectedHierarchyNode}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
-                                                    <Separator />
-                                                    <MenuItem Header="Delete Node" Command="{Binding DeleteSelectedNodeCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" Foreground="#EF4444" />
-                                                </ContextMenu>
-                                            </TreeView.ContextMenu>
                                         </TreeView>
-                                    </Border>
-
-                                    <!-- Calculated Breadcrumb Bar -->
-                                    <Border Grid.Row="3" Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,8,0,0">
-                                        <Grid ColumnDefinitions="Auto,*">
-                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="0,0,10,0">
-                                                <material:MaterialIcon Kind="SignDirection" Width="14" Height="14" Foreground="#38BDF8" VerticalAlignment="Center" />
-                                                <TextBlock Text="PATH:" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="1" 
-                                                       Text="{Binding CalculatedBreadcrumbPath}" 
-                                                       Foreground="#38BDF8" 
-                                                       FontSize="12" 
-                                                       FontWeight="SemiBold" 
-                                                       VerticalAlignment="Center" 
-                                                       TextTrimming="CharacterEllipsis" />
-                                        </Grid>
                                     </Border>
                                 </Grid>
 
@@ -877,23 +998,9 @@
                                 <Grid ColumnDefinitions="240,14,*">
                                     <!-- Left Column: Master List of Groups -->
                                     <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
-                                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="2,0,0,8">
-                                            <TextBlock Grid.Column="0" Text="GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
-                                            <Button Grid.Column="1"
-                                                    Classes="secondary"
-                                                    Height="26"
-                                                    Padding="8,2"
-                                                    FontSize="11"
-                                                    Command="{Binding OpenCreateGroupFromBranchPromptCommand}"
-                                                    ToolTip.Tip="Create new group populated from a taxonomy branch">
-                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <material:MaterialIcon Kind="FileTreeOutline" Width="12" Height="12" Foreground="#38BDF8" />
-                                                    <TextBlock Text="From Branch" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
+                                        <TextBlock Grid.Row="0" Text="GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" Margin="2,0,0,8" />
 
-                                        <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="270">
+                                        <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="250">
                                             <ListBox ItemsSource="{Binding TagGroups}"
                                                      SelectedItem="{Binding SelectedTagGroup, Mode=TwoWay}"
                                                      Background="Transparent"
@@ -929,30 +1036,38 @@
                                             </ListBox>
                                         </Border>
 
-                                        <!-- Add Group Bottom Input -->
-                                        <Grid Grid.Row="2" ColumnDefinitions="*,6,Auto" Margin="0,8,0,0">
-                                            <TextBox Grid.Column="0" 
-                                                     Text="{Binding NewTagGroupName, Mode=TwoWay}" 
-                                                     Watermark="New group name..." 
-                                                     Height="32" 
-                                                     VerticalContentAlignment="Center" 
-                                                     Background="#14171F" 
-                                                     BorderBrush="#323846" 
-                                                     Foreground="#F8FAFC"
-                                                     Padding="8,4"
-                                                     FontSize="12">
-                                                <TextBox.KeyBindings>
-                                                    <KeyBinding Gesture="Return" Command="{Binding AddTagGroupCommand}" />
-                                                </TextBox.KeyBindings>
-                                            </TextBox>
-                                            <Button Grid.Column="2" 
-                                                    Command="{Binding AddTagGroupCommand}" 
-                                                    Height="32" 
-                                                    Padding="10,4" 
-                                                    Classes="primary" 
-                                                    Content="Add" 
-                                                    FontSize="12" />
-                                        </Grid>
+                                        <!-- Add Group Bottom Creation Bar (Branch ComboBox + Name Input + Add Button) -->
+                                        <StackPanel Grid.Row="2" Spacing="6" Margin="0,8,0,0">
+                                            <ComboBox ItemsSource="{Binding AvailableTaxonomyBranches}"
+                                                      SelectedItem="{Binding SelectedTaxonomyBranch, Mode=TwoWay}"
+                                                      HorizontalAlignment="Stretch"
+                                                      PlaceholderText="Or import branch..."
+                                                      Height="30"
+                                                      FontSize="11" />
+                                            <Grid ColumnDefinitions="*,6,Auto">
+                                                <TextBox Grid.Column="0" 
+                                                         Text="{Binding NewTagGroupName, Mode=TwoWay}" 
+                                                         Watermark="New group name..." 
+                                                         Height="32" 
+                                                         VerticalContentAlignment="Center" 
+                                                         Background="#14171F" 
+                                                         BorderBrush="#323846" 
+                                                         Foreground="#F8FAFC"
+                                                         Padding="8,4"
+                                                         FontSize="12">
+                                                    <TextBox.KeyBindings>
+                                                        <KeyBinding Gesture="Return" Command="{Binding AddTagGroupCommand}" />
+                                                    </TextBox.KeyBindings>
+                                                </TextBox>
+                                                <Button Grid.Column="2" 
+                                                        Command="{Binding AddTagGroupCommand}" 
+                                                        Height="32" 
+                                                        Padding="12,4" 
+                                                        Classes="primary" 
+                                                        Content="Add" 
+                                                        FontSize="12" />
+                                            </Grid>
+                                        </StackPanel>
                                     </Grid>
 
                                     <!-- Right Column: Detail Content of Selected Group -->
@@ -1017,49 +1132,6 @@
                                                     FontSize="12" />
                                         </Grid>
                                     </Grid>
-
-                                    <!-- Create Group from Taxonomy Branch Dialog/Card Overlay -->
-                                    <Border Grid.Column="0" Grid.ColumnSpan="3"
-                                            Background="#EE14171F" 
-                                            CornerRadius="8" 
-                                            Padding="20" 
-                                            IsVisible="{Binding IsCreateGroupFromBranchOpen}"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"
-                                            Width="460"
-                                            BorderBrush="#4F46E5"
-                                            BorderThickness="1">
-                                        <StackPanel Spacing="14">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <material:MaterialIcon Kind="FileTreeOutline" Width="20" Height="20" Foreground="#38BDF8" VerticalAlignment="Center" />
-                                                <TextBlock Text="Create Group from Taxonomy Branch" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF" VerticalAlignment="Center" />
-                                            </StackPanel>
-
-                                            <StackPanel Spacing="4">
-                                                <TextBlock Text="Select Branch" Foreground="#888888" FontSize="11" FontWeight="Bold" />
-                                                <ComboBox ItemsSource="{Binding AvailableTaxonomyBranches}"
-                                                          SelectedItem="{Binding SelectedTaxonomyBranch, Mode=TwoWay}"
-                                                          HorizontalAlignment="Stretch"
-                                                          Height="34" />
-                                            </StackPanel>
-
-                                            <StackPanel Spacing="4">
-                                                <TextBlock Text="Group Name" Foreground="#888888" FontSize="11" FontWeight="Bold" />
-                                                <TextBox Text="{Binding NewBranchGroupName, Mode=TwoWay}" 
-                                                         Watermark="Group name..." 
-                                                         Height="34" 
-                                                         VerticalContentAlignment="Center" 
-                                                         Padding="8,4" />
-                                            </StackPanel>
-
-                                            <CheckBox IsChecked="{Binding IncludeSubtreeTags}" Content="Include tags from all sub-branches" Foreground="#CBD5E1" FontSize="12" />
-
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
-                                                <Button Classes="secondary" Content="Cancel" Command="{Binding CancelCreateGroupFromBranchCommand}" Height="34" />
-                                                <Button Classes="primary" Content="Create Group" Command="{Binding ConfirmCreateGroupFromBranchCommand}" Height="34" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
                                 </Grid>
                             </Carousel>
                         </Grid>
