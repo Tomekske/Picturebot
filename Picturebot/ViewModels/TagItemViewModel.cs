@@ -24,7 +24,8 @@ public partial class TagItemViewModel : ViewModelBase {
 
     public TagItemViewModel(Tag model, Action<TagItemViewModel>? onRequestDelete = null, Action<TagItemViewModel>? onRenamed = null) {
         Model = model;
-        _name = model.Name;
+        _name = model.Name.Trim().ToLowerInvariant();
+        Model.Name = _name;
         _onRequestDelete = onRequestDelete;
         _onRenamed = onRenamed;
     }
@@ -37,11 +38,14 @@ public partial class TagItemViewModel : ViewModelBase {
 
     [RelayCommand]
     public void CommitEdit() {
-        var trimmed = EditingName.Trim();
+        var trimmed = EditingName.Trim().ToLowerInvariant();
         if (!string.IsNullOrWhiteSpace(trimmed) && !string.Equals(trimmed, Name, StringComparison.Ordinal)) {
+            EditingName = trimmed;
             Name = trimmed;
             Model.Name = trimmed;
             _onRenamed?.Invoke(this);
+        } else {
+            EditingName = Name;
         }
         IsEditing = false;
     }

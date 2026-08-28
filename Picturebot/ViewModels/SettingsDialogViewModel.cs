@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -18,6 +18,12 @@ using Serilog;
 using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
+
+public class TaxonomyBranchItem {
+    public HierarchyNodeViewModel Node { get; set; } = null!;
+    public string DisplayPath { get; set; } = string.Empty;
+    public override string ToString() => DisplayPath;
+}
 
 public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
@@ -136,16 +142,16 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private int _selectedTabIndex;
 
-    // Sub-tab navigation in Keywords settings (0 = Tags, 1 = Taxonomy, 2 = Tag Groups)
+    // Sub-tab navigation in Keywords settings (0 = Tags, 1 = Taxonomy, 2 = Groups)
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTagsSubTabActive))]
     [NotifyPropertyChangedFor(nameof(IsTaxonomySubTabActive))]
-    [NotifyPropertyChangedFor(nameof(IsTagGroupsSubTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsGroupsSubTabActive))]
     private int _keywordsSubTabIndex;
 
     public bool IsTagsSubTabActive => KeywordsSubTabIndex == 0;
     public bool IsTaxonomySubTabActive => KeywordsSubTabIndex == 1;
-    public bool IsTagGroupsSubTabActive => KeywordsSubTabIndex == 2;
+    public bool IsGroupsSubTabActive => KeywordsSubTabIndex == 2;
 
     public SettingsDialogViewModel(ISettingsService settingsService) {
         _settingsService = settingsService;
@@ -205,10 +211,21 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         EditFolderPath = settings.EditFolderPath ?? string.Empty;
         PrintFolderPath = settings.PrintFolderPath ?? string.Empty;
 
-        // Tags (Catalog)
+        // Tags (Catalog) - Alphabetical order & lowercase normalization
         Tags.Clear();
         MasterTags.Clear();
-        foreach (var tag in settings.MasterTags) {
+        var sortedTags = settings.MasterTags
+            .Select(t => {
+                t.Name = t.Name.Trim().ToLowerInvariant();
+                return t;
+            })
+            .Where(t => !string.IsNullOrWhiteSpace(t.Name))
+            .GroupBy(t => t.Name, StringComparer.Ordinal)
+            .Select(g => g.First())
+            .OrderBy(t => t.Name, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var tag in sortedTags) {
             MasterTags.Add(tag);
             Tags.Add(new TagItemViewModel(tag, RequestDeleteTag, OnTagRenamed));
         }
@@ -216,11 +233,12 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         // Taxonomy Nodes
         HierarchyNodes.Clear();
         foreach (var node in settings.HierarchyNodes) {
+            NormalizeNodeNames(node);
             HierarchyNodes.Add(new HierarchyNodeViewModel(node));
         }
         SelectedHierarchyNode = null;
 
-        // Tag Groups
+        // Groups
         TagGroups.Clear();
         foreach (var group in settings.TagGroups) {
             TagGroups.Add(group);
@@ -228,12 +246,20 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
         SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupId == settings.ActiveTagGroupId) ?? TagGroups.FirstOrDefault();
         RefreshTagSuggestions();
+        RefreshAvailableTaxonomyBranches();
 
         ThemeIndex = settings.ThemeMode switch {
             ThemeMode.Light => 0,
             ThemeMode.Dark => 1,
             _ => 2
         };
+    }
+
+    private static void NormalizeNodeNames(HierarchyNode node) {
+        node.Name = node.Name.Trim().ToLowerInvariant();
+        foreach (var child in node.Children) {
+            NormalizeNodeNames(child);
+        }
     }
 
     [RelayCommand]
@@ -259,7 +285,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private void SelectTaxonomySubTab() => KeywordsSubTabIndex = 1;
 
     [RelayCommand]
-    private void SelectTagGroupsSubTab() => KeywordsSubTabIndex = 2;
+    private void SelectGroupsSubTab() => KeywordsSubTabIndex = 2;
 
     [RelayCommand]
     private async Task BrowseLibraryLocation() {
@@ -438,16 +464,24 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     private TagItemViewModel? _tagPendingDelete;
 
+    private void InsertTagSorted(TagItemViewModel tagItem) {
+        int index = 0;
+        while (index < Tags.Count && string.Compare(Tags[index].Name, tagItem.Name, StringComparison.Ordinal) < 0) {
+            index++;
+        }
+        Tags.Insert(index, tagItem);
+        MasterTags.Insert(index, tagItem.Model);
+    }
+
     [RelayCommand]
     private void AddTag() {
-        var name = NewTagName.Trim();
+        var name = NewTagName.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        if (!Tags.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) {
+        if (!Tags.Any(t => t.Name.Equals(name, StringComparison.Ordinal))) {
             var newTag = new Tag { Name = name };
-            MasterTags.Add(newTag);
             var tagItem = new TagItemViewModel(newTag, RequestDeleteTag, OnTagRenamed);
-            Tags.Add(tagItem);
+            InsertTagSorted(tagItem);
 
             RefreshTagGroupViews();
             RefreshTagSuggestions();
@@ -465,9 +499,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             DeleteTagConfirmTitle = $"Delete '{tagItem.Name}'";
             var usageList = new List<string>();
             if (taxCount > 0) usageList.Add($"{taxCount} taxonomy node(s)");
-            if (groupCount > 0) usageList.Add($"{groupCount} tag group(s)");
+            if (groupCount > 0) usageList.Add($"{groupCount} group(s)");
 
-            DeleteTagConfirmMessage = $"This tag is currently used in {string.Join(" and ", usageList)}. Deleting it will unlink it from taxonomy and remove it from preset groups. Are you sure you want to proceed?";
+            DeleteTagConfirmMessage = $"This tag is currently used in {string.Join(" and ", usageList)}. Deleting it will unlink it from taxonomy and remove it from groups. Are you sure you want to proceed?";
             IsDeleteTagConfirmOpen = true;
         } else {
             ExecuteDeleteTag(tagItem);
@@ -509,21 +543,36 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
         RefreshTagGroupViews();
         RefreshTagSuggestions();
+        RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
     }
 
     private void OnTagRenamed(TagItemViewModel tagItem) {
-        // Sync with MasterTags
-        var masterMatch = MasterTags.FirstOrDefault(t => t.Id == tagItem.Id);
-        if (masterMatch != null) {
-            masterMatch.Name = tagItem.Name;
+        var newName = tagItem.Name.Trim().ToLowerInvariant();
+
+        // Check if another tag already has this name
+        var duplicate = Tags.FirstOrDefault(t => t != tagItem && t.Name.Equals(newName, StringComparison.Ordinal));
+        if (duplicate != null) {
+            // Revert rename to prevent duplicate tags
+            tagItem.Name = tagItem.Model.Name;
+            return;
         }
 
+        // Re-position tag to maintain sorted order
+        Tags.Remove(tagItem);
+        var masterMatch = MasterTags.FirstOrDefault(t => t.Id == tagItem.Id);
+        if (masterMatch != null) {
+            masterMatch.Name = newName;
+            MasterTags.Remove(masterMatch);
+        }
+        InsertTagSorted(tagItem);
+
         // Update any taxonomy node linked to this tag
-        UpdateNodeNamesForTag(HierarchyNodes, tagItem.Id, tagItem.Name);
+        UpdateNodeNamesForTag(HierarchyNodes, tagItem.Id, newName);
 
         RefreshTagGroupViews();
         RefreshTagSuggestions();
+        RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
     }
 
@@ -618,7 +667,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private void ConfirmNodeAction() {
-        var name = NodeActionInputName.Trim().Replace('/', '|');
+        var name = NodeActionInputName.Trim().ToLowerInvariant().Replace('/', '|');
         if (string.IsNullOrWhiteSpace(name)) {
             IsNodeActionPromptOpen = false;
             return;
@@ -648,6 +697,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
                     if (tag != null) {
                         tag.Name = name;
                         tag.Model.Name = name;
+                        OnTagRenamed(tag);
                     }
                 }
                 break;
@@ -657,6 +707,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         IsNodeActionPromptOpen = false;
         NodeActionInputName = string.Empty;
         RefreshTagSuggestions();
+        RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
         OnPropertyChanged(nameof(CalculatedXmpPath));
     }
@@ -680,26 +731,28 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             SelectedHierarchyNode = HierarchyNodes.FirstOrDefault();
         }
 
+        RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(CalculatedBreadcrumbPath));
         OnPropertyChanged(nameof(CalculatedXmpPath));
     }
 
     private Tag EnsureTagInPool(string name) {
-        var existing = Tags.FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        name = name.Trim().ToLowerInvariant();
+        var existing = Tags.FirstOrDefault(t => t.Name.Equals(name, StringComparison.Ordinal));
         if (existing != null) {
             return existing.Model;
         }
 
         var newTag = new Tag { Name = name };
-        MasterTags.Add(newTag);
         var tagItem = new TagItemViewModel(newTag, RequestDeleteTag, OnTagRenamed);
-        Tags.Add(tagItem);
+        InsertTagSorted(tagItem);
+
         RefreshTagGroupViews();
         RefreshTagSuggestions();
         return newTag;
     }
 
-    // ── SUB-TAB 3: TAG GROUPS (PRESETS) ────────────────────────────────────
+    // ── SUB-TAB 3: GROUPS (PRESETS & TAXONOMY MIRRORING) ───────────────────
     public ObservableCollection<TagGroup> TagGroups { get; } = new();
 
     [ObservableProperty]
@@ -713,14 +766,34 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     public ObservableCollection<Tag> SelectedGroupTags { get; } = new();
     public ObservableCollection<string> TagSuggestions { get; } = new();
+    public ObservableCollection<TaxonomyBranchItem> AvailableTaxonomyBranches { get; } = new();
+
+    // Create Group from Taxonomy Branch dialog state
+    [ObservableProperty]
+    private bool _isCreateGroupFromBranchOpen;
+
+    [ObservableProperty]
+    private TaxonomyBranchItem? _selectedTaxonomyBranch;
+
+    [ObservableProperty]
+    private string _newBranchGroupName = string.Empty;
+
+    [ObservableProperty]
+    private bool _includeSubtreeTags = true;
 
     partial void OnSelectedTagGroupChanged(TagGroup? value) {
         RefreshTagGroupViews();
     }
 
+    partial void OnSelectedTaxonomyBranchChanged(TaxonomyBranchItem? value) {
+        if (value != null && string.IsNullOrWhiteSpace(NewBranchGroupName)) {
+            NewBranchGroupName = value.Node.Name;
+        }
+    }
+
     [RelayCommand]
     private void AddTagGroup() {
-        var name = NewTagGroupName.Trim();
+        var name = NewTagGroupName.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var newGroup = new TagGroup { GroupName = name };
@@ -744,7 +817,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private void AddTagToSelectedGroup(string? tagNameParam) {
         if (SelectedTagGroup == null) return;
 
-        var name = (tagNameParam ?? NewGroupTagInput).Trim();
+        var name = (tagNameParam ?? NewGroupTagInput).Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var tag = EnsureTagInPool(name);
@@ -762,6 +835,121 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         if (SelectedTagGroup == null || tag == null) return;
         SelectedTagGroup.TagIds.Remove(tag.Id);
         RefreshTagGroupViews();
+    }
+
+    // Taxonomy Mirroring Commands
+    [RelayCommand]
+    private void OpenCreateGroupFromBranchPrompt() {
+        RefreshAvailableTaxonomyBranches();
+        if (SelectedHierarchyNode != null) {
+            SelectedTaxonomyBranch = AvailableTaxonomyBranches.FirstOrDefault(b => b.Node == SelectedHierarchyNode)
+                                     ?? AvailableTaxonomyBranches.FirstOrDefault();
+            NewBranchGroupName = SelectedHierarchyNode.Name;
+        } else {
+            SelectedTaxonomyBranch = AvailableTaxonomyBranches.FirstOrDefault();
+            NewBranchGroupName = SelectedTaxonomyBranch?.Node.Name ?? string.Empty;
+        }
+        IncludeSubtreeTags = true;
+        IsCreateGroupFromBranchOpen = true;
+    }
+
+    [RelayCommand]
+    public void CreateGroupFromTaxonomyNode(HierarchyNodeViewModel? node) {
+        var targetNode = node ?? SelectedHierarchyNode;
+        if (targetNode == null) return;
+
+        var groupName = targetNode.Name.Trim().ToLowerInvariant();
+        var tagIds = CollectTagIdsFromNode(targetNode, true);
+
+        var newGroup = new TagGroup {
+            GroupName = groupName,
+            TagIds = new ObservableCollection<Guid>(tagIds)
+        };
+
+        TagGroups.Add(newGroup);
+        SelectedTagGroup = newGroup;
+        KeywordsSubTabIndex = 2; // Switch to Groups tab
+
+        try {
+            if (Application.Current != null) {
+                MainWindow.ToastManager.CreateToast()
+                    .WithTitle("Groups")
+                    .WithContent($"Group '{groupName}' created from taxonomy branch with {tagIds.Count} tag(s).")
+                    .Dismiss().ByClicking()
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Queue();
+            }
+        } catch {
+            // Ignored
+        }
+    }
+
+    [RelayCommand]
+    private void ConfirmCreateGroupFromBranch() {
+        if (SelectedTaxonomyBranch == null) {
+            IsCreateGroupFromBranchOpen = false;
+            return;
+        }
+
+        var groupName = (string.IsNullOrWhiteSpace(NewBranchGroupName) ? SelectedTaxonomyBranch.Node.Name : NewBranchGroupName).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(groupName)) {
+            groupName = SelectedTaxonomyBranch.Node.Name;
+        }
+
+        var tagIds = CollectTagIdsFromNode(SelectedTaxonomyBranch.Node, IncludeSubtreeTags);
+        var newGroup = new TagGroup {
+            GroupName = groupName,
+            TagIds = new ObservableCollection<Guid>(tagIds)
+        };
+
+        TagGroups.Add(newGroup);
+        SelectedTagGroup = newGroup;
+
+        IsCreateGroupFromBranchOpen = false;
+        NewBranchGroupName = string.Empty;
+    }
+
+    [RelayCommand]
+    private void CancelCreateGroupFromBranch() {
+        IsCreateGroupFromBranchOpen = false;
+        NewBranchGroupName = string.Empty;
+    }
+
+    private List<Guid> CollectTagIdsFromNode(HierarchyNodeViewModel node, bool includeSubtree) {
+        var result = new HashSet<Guid>();
+        CollectNodeTagsRecursive(node, result, includeSubtree);
+        return result.ToList();
+    }
+
+    private void CollectNodeTagsRecursive(HierarchyNodeViewModel node, HashSet<Guid> set, bool includeSubtree) {
+        var tag = EnsureTagInPool(node.Name);
+        set.Add(tag.Id);
+        node.TagId = tag.Id;
+
+        if (includeSubtree) {
+            foreach (var child in node.Children) {
+                CollectNodeTagsRecursive(child, set, true);
+            }
+        }
+    }
+
+    private void RefreshAvailableTaxonomyBranches() {
+        AvailableTaxonomyBranches.Clear();
+        foreach (var root in HierarchyNodes) {
+            PopulateBranchesRecursive(root, "");
+        }
+    }
+
+    private void PopulateBranchesRecursive(HierarchyNodeViewModel node, string parentPath) {
+        var path = string.IsNullOrEmpty(parentPath) ? node.Name : $"{parentPath} › {node.Name}";
+        AvailableTaxonomyBranches.Add(new TaxonomyBranchItem {
+            Node = node,
+            DisplayPath = path
+        });
+
+        foreach (var child in node.Children) {
+            PopulateBranchesRecursive(child, path);
+        }
     }
 
     private void RefreshTagGroupViews() {

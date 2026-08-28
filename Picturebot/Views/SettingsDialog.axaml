@@ -114,6 +114,15 @@
             <Setter Property="Padding" Value="10,8" />
         </Style>
 
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#14171F" />
+            <Setter Property="BorderBrush" Value="#323846" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Padding" Value="10,6" />
+        </Style>
+
         <!-- NumericUpDown Styling -->
         <Style Selector="NumericUpDown">
             <Setter Property="Background" Value="#252529" />
@@ -594,11 +603,11 @@
                                     </Button>
 
                                     <Button Classes="subtab-btn" 
-                                            Classes.active="{Binding IsTagGroupsSubTabActive}"
-                                            Command="{Binding SelectTagGroupsSubTabCommand}">
+                                            Classes.active="{Binding IsGroupsSubTabActive}"
+                                            Command="{Binding SelectGroupsSubTabCommand}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <material:MaterialIcon Kind="BookmarkMultipleOutline" Width="14" Height="14" />
-                                            <TextBlock Text="Tag Groups" VerticalAlignment="Center" />
+                                            <TextBlock Text="Groups" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
@@ -795,24 +804,23 @@
                                         </Grid>
                                     </Border>
 
-                                    <!-- Node Action Inline Prompt (Add Child / Root / Rename) -->
+                                    <!-- Node Action Inline Prompt (Add Child / Root / Rename) with Tag Catalog Autocomplete -->
                                     <Border Grid.Row="1" Background="#1E293B" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,8" IsVisible="{Binding IsNodeActionPromptOpen}">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
                                             <TextBlock Grid.Column="0" Text="{Binding NodeActionPromptTitle}" FontWeight="SemiBold" FontSize="12" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,12,0" />
-                                            <TextBox Grid.Column="1" 
-                                                     Text="{Binding NodeActionInputName, Mode=TwoWay}" 
-                                                     Height="32" 
-                                                     Watermark="Node name..." 
-                                                     Background="#0F172A" 
-                                                     BorderBrush="#334155" 
-                                                     Foreground="#FFFFFF" 
-                                                     VerticalContentAlignment="Center" 
-                                                     Padding="8,4">
-                                                <TextBox.KeyBindings>
+                                            <AutoCompleteBox Grid.Column="1"
+                                                             ItemsSource="{Binding TagSuggestions}"
+                                                             Text="{Binding NodeActionInputName, Mode=TwoWay}"
+                                                             Watermark="Select or type tag name..."
+                                                             FilterMode="ContainsOrdinal"
+                                                             Height="32"
+                                                             Padding="8,4"
+                                                             FontSize="12">
+                                                <AutoCompleteBox.KeyBindings>
                                                     <KeyBinding Gesture="Return" Command="{Binding ConfirmNodeActionCommand}" />
                                                     <KeyBinding Gesture="Escape" Command="{Binding CancelNodeActionCommand}" />
-                                                </TextBox.KeyBindings>
-                                            </TextBox>
+                                                </AutoCompleteBox.KeyBindings>
+                                            </AutoCompleteBox>
                                             <Button Grid.Column="2" Classes="primary" Height="32" Padding="12,4" Margin="8,0,0,0" Command="{Binding ConfirmNodeActionCommand}" Content="OK" />
                                             <Button Grid.Column="3" Classes="secondary" Height="32" Padding="10,4" Margin="6,0,0,0" Command="{Binding CancelNodeActionCommand}" Content="Cancel" />
                                         </Grid>
@@ -836,6 +844,7 @@
                                                 <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
                                                     <MenuItem Header="Add Sub-Node..." Command="{Binding OpenAddChildNodePromptCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
                                                     <MenuItem Header="Rename Node..." Command="{Binding OpenRenameNodePromptCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
+                                                    <MenuItem Header="Create Group from Branch" Command="{Binding CreateGroupFromTaxonomyNodeCommand}" CommandParameter="{Binding SelectedHierarchyNode}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
                                                     <Separator />
                                                     <MenuItem Header="Delete Node" Command="{Binding DeleteSelectedNodeCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" Foreground="#EF4444" />
                                                 </ContextMenu>
@@ -863,12 +872,26 @@
 
 
                                 <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <!-- SUB-TAB 2: TAG GROUPS (PRESETS) -->
+                                <!-- SUB-TAB 2: GROUPS (PRESETS & TAXONOMY MIRRORING) -->
                                 <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <Grid ColumnDefinitions="230,14,*">
+                                <Grid ColumnDefinitions="240,14,*">
                                     <!-- Left Column: Master List of Groups -->
                                     <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
-                                        <TextBlock Grid.Row="0" Text="PRESET GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" Margin="2,0,0,8" LetterSpacing="1" />
+                                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="2,0,0,8">
+                                            <TextBlock Grid.Column="0" Text="GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
+                                            <Button Grid.Column="1"
+                                                    Classes="secondary"
+                                                    Height="26"
+                                                    Padding="8,2"
+                                                    FontSize="11"
+                                                    Command="{Binding OpenCreateGroupFromBranchPromptCommand}"
+                                                    ToolTip.Tip="Create new group populated from a taxonomy branch">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <material:MaterialIcon Kind="FileTreeOutline" Width="12" Height="12" Foreground="#38BDF8" />
+                                                    <TextBlock Text="From Branch" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
 
                                         <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="270">
                                             <ListBox ItemsSource="{Binding TagGroups}"
@@ -887,7 +910,7 @@
                                                                     Classes="action-icon-btn danger-icon" 
                                                                     Command="{Binding $parent[ListBox].((vm:SettingsDialogViewModel)DataContext).DeleteTagGroupCommand}" 
                                                                     CommandParameter="{Binding}" 
-                                                                    ToolTip.Tip="Delete Preset Group">
+                                                                    ToolTip.Tip="Delete Group">
                                                                 <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" />
                                                             </Button>
                                                         </Grid>
@@ -910,7 +933,7 @@
                                         <Grid Grid.Row="2" ColumnDefinitions="*,6,Auto" Margin="0,8,0,0">
                                             <TextBox Grid.Column="0" 
                                                      Text="{Binding NewTagGroupName, Mode=TwoWay}" 
-                                                     Watermark="New group..." 
+                                                     Watermark="New group name..." 
                                                      Height="32" 
                                                      VerticalContentAlignment="Center" 
                                                      Background="#14171F" 
@@ -936,7 +959,7 @@
                                     <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" IsEnabled="{Binding SelectedTagGroup, Converter={x:Static ObjectConverters.IsNotNull}}">
                                         <!-- Group Header -->
                                         <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,8">
-                                            <TextBlock Text="TAGS IN PRESET" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
+                                            <TextBlock Text="TAGS IN GROUP" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
                                             <TextBlock Text="{Binding SelectedTagGroup.GroupName, StringFormat='Editing: {0}'}" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF" />
                                         </StackPanel>
 
@@ -994,6 +1017,49 @@
                                                     FontSize="12" />
                                         </Grid>
                                     </Grid>
+
+                                    <!-- Create Group from Taxonomy Branch Dialog/Card Overlay -->
+                                    <Border Grid.Column="0" Grid.ColumnSpan="3"
+                                            Background="#EE14171F" 
+                                            CornerRadius="8" 
+                                            Padding="20" 
+                                            IsVisible="{Binding IsCreateGroupFromBranchOpen}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Width="460"
+                                            BorderBrush="#4F46E5"
+                                            BorderThickness="1">
+                                        <StackPanel Spacing="14">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <material:MaterialIcon Kind="FileTreeOutline" Width="20" Height="20" Foreground="#38BDF8" VerticalAlignment="Center" />
+                                                <TextBlock Text="Create Group from Taxonomy Branch" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF" VerticalAlignment="Center" />
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="Select Branch" Foreground="#888888" FontSize="11" FontWeight="Bold" />
+                                                <ComboBox ItemsSource="{Binding AvailableTaxonomyBranches}"
+                                                          SelectedItem="{Binding SelectedTaxonomyBranch, Mode=TwoWay}"
+                                                          HorizontalAlignment="Stretch"
+                                                          Height="34" />
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="Group Name" Foreground="#888888" FontSize="11" FontWeight="Bold" />
+                                                <TextBox Text="{Binding NewBranchGroupName, Mode=TwoWay}" 
+                                                         Watermark="Group name..." 
+                                                         Height="34" 
+                                                         VerticalContentAlignment="Center" 
+                                                         Padding="8,4" />
+                                            </StackPanel>
+
+                                            <CheckBox IsChecked="{Binding IncludeSubtreeTags}" Content="Include tags from all sub-branches" Foreground="#CBD5E1" FontSize="12" />
+
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+                                                <Button Classes="secondary" Content="Cancel" Command="{Binding CancelCreateGroupFromBranchCommand}" Height="34" />
+                                                <Button Classes="primary" Content="Create Group" Command="{Binding ConfirmCreateGroupFromBranchCommand}" Height="34" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
                                 </Grid>
                             </Carousel>
                         </Grid>
