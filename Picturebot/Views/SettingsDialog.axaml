@@ -13,8 +13,8 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
-        Width="840"
-        Height="580"
+        Width="860"
+        Height="600"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
 
@@ -71,6 +71,26 @@
             <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
 
+        <!-- Sub-Tab Button Styling -->
+        <Style Selector="Button.subtab-btn">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#888888" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Button.subtab-btn:pointerover">
+            <Setter Property="Background" Value="#252529" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.subtab-btn.active">
+            <Setter Property="Background" Value="#38383E" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
         <!-- Form Input Styling -->
         <Style Selector="TextBox">
             <Setter Property="Background" Value="#252529" />
@@ -83,6 +103,15 @@
         <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
             <Setter Property="BorderBrush" Value="#4F46E5" />
             <Setter Property="Background" Value="#252529" />
+        </Style>
+
+        <Style Selector="AutoCompleteBox">
+            <Setter Property="Background" Value="#14171F" />
+            <Setter Property="BorderBrush" Value="#323846" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Padding" Value="10,8" />
         </Style>
 
         <!-- NumericUpDown Styling -->
@@ -140,6 +169,33 @@
         <Style Selector="Button.primary:pointerover">
             <Setter Property="Background" Value="#4338CA" />
         </Style>
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="#EF4444" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="#DC2626" />
+        </Style>
+
+        <!-- Icon Action Button Styling -->
+        <Style Selector="Button.action-icon-btn">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+        </Style>
+        <Style Selector="Button.action-icon-btn:pointerover">
+            <Setter Property="Background" Value="#334155" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.danger-icon:pointerover">
+            <Setter Property="Background" Value="#451A1A" />
+            <Setter Property="Foreground" Value="#F87171" />
+        </Style>
 
         <!-- Section Label Text -->
         <Style Selector="TextBlock.section-header">
@@ -185,8 +241,8 @@
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12" Margin="0,0,16,0">
                     <Button Classes="secondary" 
-                            Content="Revert to Default" 
-                            Command="{Binding RevertToDefaultCommand}" />
+                            Content="Discard Changes" 
+                            Command="{Binding DiscardChangesCommand}" />
                     <Button Classes="primary" 
                             Content="Save Changes" 
                             Command="{Binding SaveSettingsCommand}" 
@@ -514,232 +570,433 @@
                             </ScrollViewer>
                         </StackPanel>
 
-                        <!-- View 5: Keywords / Tags -->
-                        <ScrollViewer MaxHeight="430" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Spacing="24" Margin="0,0,12,10">
+                        <!-- View 5: Keywords / Tagging Settings (Refactored Sub-Tabbed Interface) -->
+                        <Grid RowDefinitions="Auto,*" Height="460">
+                            <!-- Keywords Sub-Tab Navigation Header -->
+                            <Border Grid.Row="0" Background="#14171F" CornerRadius="8" Padding="4" HorizontalAlignment="Left" Margin="0,0,0,16">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Button Classes="subtab-btn" 
+                                            Classes.active="{Binding IsTagsSubTabActive}"
+                                            Command="{Binding SelectTagsSubTabCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <material:MaterialIcon Kind="TagMultipleOutline" Width="14" Height="14" />
+                                            <TextBlock Text="Tags" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
 
-                                <!-- SECTION 1: MASTER TAGS -->
-                                <StackPanel Spacing="10">
-                                    <TextBlock Text="MASTER TAGS" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+                                    <Button Classes="subtab-btn" 
+                                            Classes.active="{Binding IsTaxonomySubTabActive}"
+                                            Command="{Binding SelectTaxonomySubTabCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <material:MaterialIcon Kind="FileTreeOutline" Width="14" Height="14" />
+                                            <TextBlock Text="Taxonomy" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
 
-                                    <Grid ColumnDefinitions="*, 20, 280">
-                                        <!-- Left side: List of master tags -->
-                                        <Border Grid.Column="0" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="240">
-                                            <ListBox ItemsSource="{Binding MasterTags}"
-                                                     SelectedItem="{Binding SelectedMasterTag, Mode=TwoWay}"
+                                    <Button Classes="subtab-btn" 
+                                            Classes.active="{Binding IsTagGroupsSubTabActive}"
+                                            Command="{Binding SelectTagGroupsSubTabCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <material:MaterialIcon Kind="BookmarkMultipleOutline" Width="14" Height="14" />
+                                            <TextBlock Text="Tag Groups" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Sub-Tab Content Carousel -->
+                            <Carousel Grid.Row="1" SelectedIndex="{Binding KeywordsSubTabIndex}">
+
+                                <!-- ══════════════════════════════════════════════════════════════════════ -->
+                                <!-- SUB-TAB 0: TAGS (CATALOG) -->
+                                <!-- ══════════════════════════════════════════════════════════════════════ -->
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <!-- Top Inline Entry Field -->
+                                    <Grid Grid.Row="0" ColumnDefinitions="*, 8, Auto" Margin="0,0,0,12">
+                                        <TextBox Grid.Column="0"
+                                                 Text="{Binding NewTagName, Mode=TwoWay}"
+                                                 Height="36"
+                                                 VerticalContentAlignment="Center"
+                                                 Watermark="New tag name... (Press Enter to add)"
+                                                 Background="#14171F"
+                                                 BorderBrush="#323846"
+                                                 Foreground="#F8FAFC">
+                                            <TextBox.KeyBindings>
+                                                <KeyBinding Gesture="Return" Command="{Binding AddTagCommand}" />
+                                            </TextBox.KeyBindings>
+                                        </TextBox>
+                                        <Button Grid.Column="2" 
+                                                Command="{Binding AddTagCommand}" 
+                                                Height="36" 
+                                                Classes="primary" 
+                                                Content="+ Add Tag" />
+                                    </Grid>
+
+                                    <!-- Tags Catalog ListBox -->
+                                    <Border Grid.Row="1" Background="#14171F" CornerRadius="8" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="260" MaxHeight="320">
+                                        <ListBox ItemsSource="{Binding Tags}"
+                                                 Background="Transparent"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate DataType="vm:TagItemViewModel">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="2,1">
+                                                        <!-- Tag Icon -->
+                                                        <material:MaterialIcon Grid.Column="0" Kind="TagOutline" Width="16" Height="16" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0,8,0" />
+
+                                                        <!-- Normal View: Display Name -->
+                                                        <TextBlock Grid.Column="1" 
+                                                                   Text="{Binding Name}" 
+                                                                   VerticalAlignment="Center" 
+                                                                   FontSize="13" 
+                                                                   Foreground="#E2E8F0" 
+                                                                   IsVisible="{Binding !IsEditing}" />
+
+                                                        <!-- Edit View: Inline TextBox -->
+                                                        <TextBox Grid.Column="1" 
+                                                                 Text="{Binding EditingName, Mode=TwoWay}" 
+                                                                 Height="30" 
+                                                                 Padding="6,3" 
+                                                                 FontSize="13" 
+                                                                 Background="#1E293B" 
+                                                                 BorderBrush="#4F46E5" 
+                                                                 Foreground="#FFFFFF" 
+                                                                 VerticalContentAlignment="Center" 
+                                                                 IsVisible="{Binding IsEditing}">
+                                                            <TextBox.KeyBindings>
+                                                                <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
+                                                                <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
+                                                            </TextBox.KeyBindings>
+                                                        </TextBox>
+
+                                                        <!-- Action Buttons (Normal State) -->
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsEditing}">
+                                                            <Button Classes="action-icon-btn" Command="{Binding StartEditCommand}" ToolTip.Tip="Rename Tag">
+                                                                <material:MaterialIcon Kind="PencilOutline" Width="15" Height="15" />
+                                                            </Button>
+                                                            <Button Classes="action-icon-btn danger-icon" Command="{Binding DeleteCommand}" ToolTip.Tip="Delete Tag">
+                                                                <material:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15" />
+                                                            </Button>
+                                                        </StackPanel>
+
+                                                        <!-- Action Buttons (Edit State) -->
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsEditing}">
+                                                            <Button Classes="action-icon-btn" Command="{Binding CommitEditCommand}" ToolTip.Tip="Save">
+                                                                <material:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="#22C55E" />
+                                                            </Button>
+                                                            <Button Classes="action-icon-btn" Command="{Binding CancelEditCommand}" ToolTip.Tip="Cancel">
+                                                                <material:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#EF4444" />
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                            <ListBox.Styles>
+                                                <Style Selector="ListBoxItem">
+                                                    <Setter Property="CornerRadius" Value="6" />
+                                                    <Setter Property="Padding" Value="8,4" />
+                                                    <Setter Property="Margin" Value="0,0,0,3" />
+                                                    <Setter Property="Background" Value="#1A1F2C" />
+                                                </Style>
+                                                <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                                    <Setter Property="Background" Value="#242B3D" />
+                                                </Style>
+                                                <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                                                    <Setter Property="Background" Value="#1E293B" />
+                                                </Style>
+                                            </ListBox.Styles>
+                                        </ListBox>
+                                    </Border>
+
+                                    <!-- Delete Confirmation Card Overlay (when tag in use is deleted) -->
+                                    <Border Grid.Row="0" Grid.RowSpan="2" 
+                                            Background="#EE14171F" 
+                                            CornerRadius="8" 
+                                            Padding="24" 
+                                            IsVisible="{Binding IsDeleteTagConfirmOpen}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            MaxWidth="480"
+                                            BorderBrush="#EF4444"
+                                            BorderThickness="1">
+                                        <StackPanel Spacing="14">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <material:MaterialIcon Kind="AlertCircleOutline" Width="20" Height="20" Foreground="#EF4444" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding DeleteTagConfirmTitle}" FontWeight="Bold" FontSize="15" Foreground="#FFFFFF" VerticalAlignment="Center" />
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding DeleteTagConfirmMessage}" TextWrapping="Wrap" Foreground="#CBD5E1" FontSize="13" LineHeight="18" />
+
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+                                                <Button Classes="secondary" Content="Cancel" Command="{Binding CancelDeleteTagCommand}" Height="34" />
+                                                <Button Classes="danger" Content="Delete &amp; Unlink" Command="{Binding ConfirmDeleteTagCommand}" Height="34" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+
+                                <!-- ══════════════════════════════════════════════════════════════════════ -->
+                                <!-- SUB-TAB 1: TAXONOMY (HIERARCHY) -->
+                                <!-- ══════════════════════════════════════════════════════════════════════ -->
+                                <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,0">
+                                    <!-- Toolbar -->
+                                    <Border Grid.Row="0" Background="#14171F" CornerRadius="6" Padding="6,4" Margin="0,0,0,8" BorderBrush="#323846" BorderThickness="1">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Button Classes="secondary" 
+                                                        Height="30" 
+                                                        Padding="10,4" 
+                                                        FontSize="12" 
+                                                        Command="{Binding OpenAddChildNodePromptCommand}"
+                                                        IsEnabled="{Binding HasSelectedHierarchyNode}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <material:MaterialIcon Kind="PlusCircleOutline" Width="14" Height="14" Foreground="#38BDF8" />
+                                                        <TextBlock Text="Add Sub-Node" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Classes="secondary" 
+                                                        Height="30" 
+                                                        Padding="10,4" 
+                                                        FontSize="12" 
+                                                        Command="{Binding OpenAddRootNodePromptCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <material:MaterialIcon Kind="FolderPlusOutline" Width="14" Height="14" Foreground="#A78BFA" />
+                                                        <TextBlock Text="Add Root" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Classes="secondary" 
+                                                        Height="30" 
+                                                        Padding="10,4" 
+                                                        FontSize="12" 
+                                                        Command="{Binding OpenRenameNodePromptCommand}"
+                                                        IsEnabled="{Binding HasSelectedHierarchyNode}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <material:MaterialIcon Kind="PencilOutline" Width="14" Height="14" />
+                                                        <TextBlock Text="Rename" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+
+                                            <Button Grid.Column="1" 
+                                                    Classes="action-icon-btn danger-icon" 
+                                                    Height="30" 
+                                                    Padding="8,4" 
+                                                    FontSize="12" 
+                                                    Command="{Binding DeleteSelectedNodeCommand}"
+                                                    IsEnabled="{Binding HasSelectedHierarchyNode}"
+                                                    ToolTip.Tip="Delete Selected Node &amp; Branch">
+                                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                                    <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" Foreground="#EF4444" />
+                                                    <TextBlock Text="Delete" Foreground="#EF4444" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Node Action Inline Prompt (Add Child / Root / Rename) -->
+                                    <Border Grid.Row="1" Background="#1E293B" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,8" IsVisible="{Binding IsNodeActionPromptOpen}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                                            <TextBlock Grid.Column="0" Text="{Binding NodeActionPromptTitle}" FontWeight="SemiBold" FontSize="12" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                            <TextBox Grid.Column="1" 
+                                                     Text="{Binding NodeActionInputName, Mode=TwoWay}" 
+                                                     Height="32" 
+                                                     Watermark="Node name..." 
+                                                     Background="#0F172A" 
+                                                     BorderBrush="#334155" 
+                                                     Foreground="#FFFFFF" 
+                                                     VerticalContentAlignment="Center" 
+                                                     Padding="8,4">
+                                                <TextBox.KeyBindings>
+                                                    <KeyBinding Gesture="Return" Command="{Binding ConfirmNodeActionCommand}" />
+                                                    <KeyBinding Gesture="Escape" Command="{Binding CancelNodeActionCommand}" />
+                                                </TextBox.KeyBindings>
+                                            </TextBox>
+                                            <Button Grid.Column="2" Classes="primary" Height="32" Padding="12,4" Margin="8,0,0,0" Command="{Binding ConfirmNodeActionCommand}" Content="OK" />
+                                            <Button Grid.Column="3" Classes="secondary" Height="32" Padding="10,4" Margin="6,0,0,0" Command="{Binding CancelNodeActionCommand}" Content="Cancel" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- TreeView -->
+                                    <Border Grid.Row="2" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="210" MaxHeight="250">
+                                        <TreeView ItemsSource="{Binding HierarchyNodes}" 
+                                                  SelectedItem="{Binding SelectedHierarchyNode, Mode=TwoWay}" 
+                                                  Background="Transparent" 
+                                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <TreeView.ItemTemplate>
+                                                <TreeDataTemplate DataType="vm:HierarchyNodeViewModel" ItemsSource="{Binding Children}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <material:MaterialIcon Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </TreeDataTemplate>
+                                            </TreeView.ItemTemplate>
+                                            <TreeView.ContextMenu>
+                                                <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
+                                                    <MenuItem Header="Add Sub-Node..." Command="{Binding OpenAddChildNodePromptCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
+                                                    <MenuItem Header="Rename Node..." Command="{Binding OpenRenameNodePromptCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" />
+                                                    <Separator />
+                                                    <MenuItem Header="Delete Node" Command="{Binding DeleteSelectedNodeCommand}" IsEnabled="{Binding HasSelectedHierarchyNode}" Foreground="#EF4444" />
+                                                </ContextMenu>
+                                            </TreeView.ContextMenu>
+                                        </TreeView>
+                                    </Border>
+
+                                    <!-- Calculated Breadcrumb Bar -->
+                                    <Border Grid.Row="3" Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,8,0,0">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="0,0,10,0">
+                                                <material:MaterialIcon Kind="SignDirection" Width="14" Height="14" Foreground="#38BDF8" VerticalAlignment="Center" />
+                                                <TextBlock Text="PATH:" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" 
+                                                       Text="{Binding CalculatedBreadcrumbPath}" 
+                                                       Foreground="#38BDF8" 
+                                                       FontSize="12" 
+                                                       FontWeight="SemiBold" 
+                                                       VerticalAlignment="Center" 
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+
+                                <!-- ══════════════════════════════════════════════════════════════════════ -->
+                                <!-- SUB-TAB 2: TAG GROUPS (PRESETS) -->
+                                <!-- ══════════════════════════════════════════════════════════════════════ -->
+                                <Grid ColumnDefinitions="230,14,*">
+                                    <!-- Left Column: Master List of Groups -->
+                                    <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Row="0" Text="PRESET GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" Margin="2,0,0,8" LetterSpacing="1" />
+
+                                        <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="270">
+                                            <ListBox ItemsSource="{Binding TagGroups}"
+                                                     SelectedItem="{Binding SelectedTagGroup, Mode=TwoWay}"
                                                      Background="Transparent"
                                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
                                                 <ListBox.ItemTemplate>
-                                                    <DataTemplate DataType="models:Tag">
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   VerticalAlignment="Center"
-                                                                   FontSize="13"
-                                                                   Foreground="#E2E8F0" />
+                                                    <DataTemplate DataType="models:TagGroup">
+                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                <material:MaterialIcon Kind="BookmarkOutline" Width="14" Height="14" Foreground="#818CF8" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding GroupName}" FontSize="13" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                                                            </StackPanel>
+
+                                                            <Button Grid.Column="1" 
+                                                                    Classes="action-icon-btn danger-icon" 
+                                                                    Command="{Binding $parent[ListBox].((vm:SettingsDialogViewModel)DataContext).DeleteTagGroupCommand}" 
+                                                                    CommandParameter="{Binding}" 
+                                                                    ToolTip.Tip="Delete Preset Group">
+                                                                <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" />
+                                                            </Button>
+                                                        </Grid>
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
                                                 <ListBox.Styles>
                                                     <Style Selector="ListBoxItem">
                                                         <Setter Property="CornerRadius" Value="6" />
-                                                        <Setter Property="Padding" Value="10,6" />
-                                                        <Setter Property="Margin" Value="0,0,0,4" />
+                                                        <Setter Property="Padding" Value="8,5" />
+                                                        <Setter Property="Margin" Value="0,0,0,2" />
                                                     </Style>
                                                     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-                                                        <Setter Property="Background" Value="#0256B4" />
-                                                    </Style>
-                                                    <Style Selector="ListBoxItem:selected TextBlock">
-                                                        <Setter Property="Foreground" Value="#FFFFFF" />
-                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                        <Setter Property="Background" Value="#38383E" />
                                                     </Style>
                                                 </ListBox.Styles>
                                             </ListBox>
                                         </Border>
 
-                                        <!-- Right side: Actions panel -->
-                                        <StackPanel Grid.Column="2" Spacing="14">
-
-                                            <!-- Add New Tag -->
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="ADD NEW TAG" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
-                                                <Grid ColumnDefinitions="*, 8, Auto">
-                                                    <TextBox Grid.Column="0"
-                                                             Text="{Binding NewMasterTagName, Mode=TwoWay}"
-                                                             Height="36"
-                                                             VerticalContentAlignment="Center"
-                                                             Watermark="New tag name..."
-                                                             Background="#14171F"
-                                                             BorderBrush="#323846"
-                                                             Foreground="#F8FAFC">
-                                                        <TextBox.KeyBindings>
-                                                            <KeyBinding Gesture="Return" Command="{Binding AddMasterTagCommand}" />
-                                                        </TextBox.KeyBindings>
-                                                    </TextBox>
-                                                    <Button Grid.Column="2" Command="{Binding AddMasterTagCommand}" Height="36" Classes="primary" Content="+ Add Tag" />
-                                                </Grid>
-                                            </StackPanel>
-
-                                            <!-- Selection-dependent actions -->
-                                            <StackPanel Spacing="14" IsEnabled="{Binding SelectedMasterTag, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                <!-- Selected Tag Name -->
-                                                <StackPanel Spacing="6">
-                                                    <TextBlock Text="SELECTED TAG" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
-                                                    <TextBox Text="{Binding SelectedMasterTag.Name, Mode=OneWay}"
-                                                             IsReadOnly="True"
-                                                             Height="36"
-                                                             VerticalContentAlignment="Center"
-                                                             Background="#14171F"
-                                                             BorderBrush="#323846"
-                                                             Foreground="#F8FAFC" />
-                                                </StackPanel>
-
-                                                <!-- Rename Tag -->
-                                                <StackPanel Spacing="6">
-                                                    <TextBlock Text="RENAME TAG" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
-                                                    <Grid ColumnDefinitions="*, 8, Auto">
-                                                        <TextBox Grid.Column="0"
-                                                                 Text="{Binding RenameMasterTagName, Mode=TwoWay}"
-                                                                 Height="36"
-                                                                 VerticalContentAlignment="Center"
-                                                                 Watermark="Rename tag..."
-                                                                 Background="#14171F"
-                                                                 BorderBrush="#323846"
-                                                                 Foreground="#F8FAFC">
-                                                            <TextBox.KeyBindings>
-                                                                <KeyBinding Gesture="Return" Command="{Binding RenameMasterTagCommand}" />
-                                                            </TextBox.KeyBindings>
-                                                        </TextBox>
-                                                        <Button Grid.Column="2" Content="Rename" Command="{Binding RenameMasterTagCommand}" Height="36" Classes="primary" />
-                                                    </Grid>
-                                                </StackPanel>
-
-                                                <!-- Delete Globally -->
-                                                <Button Content="Delete Globally" Command="{Binding DeleteMasterTagCommand}" Background="#EF4444" Foreground="#FFFFFF" BorderThickness="0" HorizontalAlignment="Stretch" Height="36" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontWeight="SemiBold" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Grid>
-                                </StackPanel>
-
-                                <!-- SECTION 2: TAXONOMY HIERARCHY -->
-                                <StackPanel Spacing="10">
-                                    <TextBlock Text="TAXONOMY HIERARCHY" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
-
-                                    <Grid ColumnDefinitions="*, 20, 260">
-                                        <!-- TreeView -->
-                                        <Border Grid.Column="0" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="240">
-                                            <TreeView ItemsSource="{Binding HierarchyNodes}" SelectedItem="{Binding SelectedHierarchyNode, Mode=TwoWay}" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto">
-                                                <TreeView.ItemTemplate>
-                                                    <TreeDataTemplate DataType="models:HierarchyNode" ItemsSource="{Binding Children}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#E2E8F0" />
-                                                        </StackPanel>
-                                                    </TreeDataTemplate>
-                                                </TreeView.ItemTemplate>
-                                            </TreeView>
-                                        </Border>
-
-                                        <!-- Node Actions -->
-                                        <StackPanel Grid.Column="2" Spacing="12">
-                                            <!-- Add Sub-Node -->
-                                            <StackPanel Spacing="4">
-                                                <TextBlock Text="ADD SUB-NODE (TYPE OR SELECT MASTER TAG)" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
-                                                <Grid ColumnDefinitions="*, 8, Auto" MinHeight="40" VerticalAlignment="Center">
-                                                    <ComboBox Grid.Column="0"
-                                                              ItemsSource="{Binding MasterTags}"
-                                                              SelectedItem="{Binding SelectedSubNodeTag, Mode=TwoWay}"
-                                                              Text="{Binding NewChildNodeName, Mode=TwoWay}"
-                                                              IsEditable="True"
-                                                              HorizontalAlignment="Stretch"
-                                                              Height="36"
-                                                              PlaceholderText="Select or type tag...">
-                                                        <ComboBox.ItemTemplate>
-                                                            <DataTemplate DataType="models:Tag">
-                                                                <TextBlock Text="{Binding Name}" />
-                                                            </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                    <Button Grid.Column="2" Command="{Binding AddChildNodeCommand}" Height="36" Classes="primary" Content="+ Add Node" />
-                                                </Grid>
-                                            </StackPanel>
-
-                                            <!-- Node Preview & Delete Action -->
-                                            <StackPanel Spacing="10">
-                                                <Border Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="10" MinHeight="50">
-                                                    <StackPanel Spacing="4">
-                                                        <TextBlock Text="CALCULATED XMP PATH" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
-                                                        <TextBlock Text="{Binding CalculatedPreviewPath}" Foreground="#38BDF8" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                </Border>
-
-                                                <Button Command="{Binding DeleteSelectedNodeCommand}" Content="Delete Node" Height="36" HorizontalAlignment="Stretch" Background="#EF4444" Foreground="#FFFFFF" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" IsEnabled="{Binding SelectedHierarchyNode, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Grid>
-                                </StackPanel>
-
-                                <!-- SECTION 3: TAG GROUPS -->
-                                <StackPanel Spacing="10">
-                                    <TextBlock Text="TAG GROUPS" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
-
-                                    <!-- Group Selector -->
-                                    <Grid ColumnDefinitions="*, 12, Auto, 8, Auto" MinHeight="40" VerticalAlignment="Center">
-                                        <ComboBox Grid.Column="0" ItemsSource="{Binding TagGroups}" SelectedItem="{Binding SelectedTagGroup, Mode=TwoWay}" HorizontalAlignment="Stretch" Height="36">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate DataType="models:TagGroup">
-                                                    <TextBlock Text="{Binding GroupName}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                                            <TextBox Text="{Binding NewTagGroupName, Mode=TwoWay}" Watermark="New group name..." Width="150" Height="36" VerticalContentAlignment="Center" Background="#14171F" BorderBrush="#323846" Foreground="#F8FAFC">
+                                        <!-- Add Group Bottom Input -->
+                                        <Grid Grid.Row="2" ColumnDefinitions="*,6,Auto" Margin="0,8,0,0">
+                                            <TextBox Grid.Column="0" 
+                                                     Text="{Binding NewTagGroupName, Mode=TwoWay}" 
+                                                     Watermark="New group..." 
+                                                     Height="32" 
+                                                     VerticalContentAlignment="Center" 
+                                                     Background="#14171F" 
+                                                     BorderBrush="#323846" 
+                                                     Foreground="#F8FAFC"
+                                                     Padding="8,4"
+                                                     FontSize="12">
                                                 <TextBox.KeyBindings>
                                                     <KeyBinding Gesture="Return" Command="{Binding AddTagGroupCommand}" />
                                                 </TextBox.KeyBindings>
                                             </TextBox>
-                                            <Button Command="{Binding AddTagGroupCommand}" Height="36" Classes="primary" Content="+ New Group" />
-                                        </StackPanel>
-
-                                        <Button Grid.Column="4" Command="{Binding DeleteTagGroupCommand}" Height="36" Background="#EF4444" Foreground="#FFFFFF" Content="Delete Group" IsEnabled="{Binding SelectedTagGroup, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            <Button Grid.Column="2" 
+                                                    Command="{Binding AddTagGroupCommand}" 
+                                                    Height="32" 
+                                                    Padding="10,4" 
+                                                    Classes="primary" 
+                                                    Content="Add" 
+                                                    FontSize="12" />
+                                        </Grid>
                                     </Grid>
 
-                                    <StackPanel Spacing="10" IsEnabled="{Binding SelectedTagGroup, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                        <TextBlock Text="QUICK CULLING CHIPS IN SELECTED GROUP" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
+                                    <!-- Right Column: Detail Content of Selected Group -->
+                                    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" IsEnabled="{Binding SelectedTagGroup, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                        <!-- Group Header -->
+                                        <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,8">
+                                            <TextBlock Text="TAGS IN PRESET" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
+                                            <TextBlock Text="{Binding SelectedTagGroup.GroupName, StringFormat='Editing: {0}'}" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF" />
+                                        </StackPanel>
 
-                                        <Border MinHeight="48" Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="6">
-                                            <ItemsControl ItemsSource="{Binding SelectedGroupTags}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel Orientation="Horizontal" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="models:Tag">
-                                                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="20" Padding="10,4" Margin="0,0,8,8">
-                                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding Name}" Foreground="#E2E8F0" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
-                                                                <Button Command="{Binding $parent[ItemsControl].((vm:SettingsDialogViewModel)DataContext).RemoveTagFromGroupCommand}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Padding="2" ToolTip.Tip="Remove from group">
-                                                                    <material:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="#EF4444" />
-                                                                </Button>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                        <!-- Chips / Badges Area -->
+                                        <Border Grid.Row="1" Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="8" MinHeight="190" MaxHeight="240">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding SelectedGroupTags}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="models:Tag">
+                                                            <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="16" Padding="10,4" Margin="0,0,6,6">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                    <material:MaterialIcon Kind="Tag" Width="12" Height="12" Foreground="#818CF8" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="{Binding Name}" Foreground="#E2E8F0" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+                                                                    <Button Command="{Binding $parent[ItemsControl].((vm:SettingsDialogViewModel)DataContext).RemoveTagFromGroupCommand}" 
+                                                                            CommandParameter="{Binding}" 
+                                                                            Background="Transparent" 
+                                                                            BorderThickness="0" 
+                                                                            Padding="2" 
+                                                                            ToolTip.Tip="Remove tag from group">
+                                                                        <material:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="#EF4444" />
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
                                         </Border>
 
-                                        <Grid ColumnDefinitions="240, 8, Auto" HorizontalAlignment="Left" MinHeight="40" VerticalAlignment="Center">
-                                            <ComboBox Grid.Column="0" ItemsSource="{Binding AvailableTagsForGroup}" SelectedItem="{Binding SelectedTagToAddToGroup, Mode=TwoWay}" PlaceholderText="Select tag to add..." HorizontalAlignment="Stretch" Height="36">
-                                                <ComboBox.ItemTemplate>
-                                                    <DataTemplate DataType="models:Tag">
-                                                        <TextBlock Text="{Binding Name}" />
-                                                    </DataTemplate>
-                                                </ComboBox.ItemTemplate>
-                                            </ComboBox>
-                                            <Button Grid.Column="2" Command="{Binding AddTagToGroupCommand}" Height="36" Classes="primary" Content="+ Add Tag to Group" IsEnabled="{Binding SelectedTagToAddToGroup, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <!-- Autocomplete Tag Entry -->
+                                        <Grid Grid.Row="2" ColumnDefinitions="*,8,Auto" Margin="0,8,0,0">
+                                            <AutoCompleteBox Grid.Column="0"
+                                                             ItemsSource="{Binding TagSuggestions}"
+                                                             Text="{Binding NewGroupTagInput, Mode=TwoWay}"
+                                                             Watermark="Type tag to add (Press Enter)..."
+                                                             FilterMode="ContainsOrdinal"
+                                                             Height="34"
+                                                             Padding="8,4"
+                                                             FontSize="12">
+                                                <AutoCompleteBox.KeyBindings>
+                                                    <KeyBinding Gesture="Return" Command="{Binding AddTagToSelectedGroupCommand}" />
+                                                </AutoCompleteBox.KeyBindings>
+                                            </AutoCompleteBox>
+
+                                            <Button Grid.Column="2" 
+                                                    Command="{Binding AddTagToSelectedGroupCommand}" 
+                                                    Height="34" 
+                                                    Classes="primary" 
+                                                    Content="+ Add Tag" 
+                                                    FontSize="12" />
                                         </Grid>
-                                    </StackPanel>
-                                </StackPanel>
-                            </StackPanel>
-                        </ScrollViewer>
+                                    </Grid>
+                                </Grid>
+                            </Carousel>
+                        </Grid>
                     </Carousel>
                 </ScrollViewer>
             </Grid>
