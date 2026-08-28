@@ -139,26 +139,43 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private string _yellowLabelShortcut = "Ctrl+NumPad3";
 
+    // Active Navigation Page (0=General, 1=Storage, 2=Culling, 3=ColorLabels, 4=Shortcuts, 5=TagsCatalog, 6=Taxonomy, 7=Groups)
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
-    [NotifyPropertyChangedFor(nameof(HasSelectedTaxonomyNode))]
+    [NotifyPropertyChangedFor(nameof(IsGeneralTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsStorageTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsCullingTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsColorLabelsTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsShortcutsTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsTagsCatalogTabActive))]
     [NotifyPropertyChangedFor(nameof(IsTaxonomyTabActive))]
-    private int _selectedTabIndex;
-
-    // Sub-tab navigation in Keywords settings (0 = Tags, 1 = Taxonomy, 2 = Groups)
-    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGroupsTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsTagsCategoryActive))]
     [NotifyPropertyChangedFor(nameof(IsTagsSubTabActive))]
     [NotifyPropertyChangedFor(nameof(IsTaxonomySubTabActive))]
     [NotifyPropertyChangedFor(nameof(IsGroupsSubTabActive))]
-    [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
     [NotifyPropertyChangedFor(nameof(HasSelectedTaxonomyNode))]
-    [NotifyPropertyChangedFor(nameof(IsTaxonomyTabActive))]
-    private int _keywordsSubTabIndex;
+    [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
+    [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]
+    [NotifyPropertyChangedFor(nameof(KeywordsSubTabIndex))]
+    private int _activeViewIndex;
 
-    public bool IsTagsSubTabActive => KeywordsSubTabIndex == 0;
-    public bool IsTaxonomySubTabActive => KeywordsSubTabIndex == 1;
-    public bool IsGroupsSubTabActive => KeywordsSubTabIndex == 2;
-    public bool IsTaxonomyTabActive => SelectedTabIndex == 5 && KeywordsSubTabIndex == 1;
+    // Sidebar Expandable Menu State (Default: Collapsed)
+    [ObservableProperty]
+    private bool _isTagsMenuExpanded;
+
+    public bool IsGeneralTabActive => ActiveViewIndex == 0;
+    public bool IsStorageTabActive => ActiveViewIndex == 1;
+    public bool IsCullingTabActive => ActiveViewIndex == 2;
+    public bool IsColorLabelsTabActive => ActiveViewIndex == 3;
+    public bool IsShortcutsTabActive => ActiveViewIndex == 4;
+    public bool IsTagsCatalogTabActive => ActiveViewIndex == 5;
+    public bool IsTaxonomyTabActive => ActiveViewIndex == 6;
+    public bool IsGroupsTabActive => ActiveViewIndex == 7;
+    public bool IsTagsCategoryActive => ActiveViewIndex >= 5 && ActiveViewIndex <= 7;
+
+    public bool IsTagsSubTabActive => IsTagsCatalogTabActive;
+    public bool IsTaxonomySubTabActive => IsTaxonomyTabActive;
+    public bool IsGroupsSubTabActive => IsGroupsTabActive;
 
     public bool HasSelectedTaxonomyNode =>
         IsTaxonomyTabActive && SelectedHierarchyNode != null && !string.IsNullOrWhiteSpace(SelectedHierarchyNode.Name);
@@ -166,6 +183,37 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     public bool IsTaxonomyPathVisible => HasSelectedTaxonomyNode;
 
     public string SelectedTaxonomyPath => CalculatedBreadcrumbPath;
+
+    public int SelectedTabIndex {
+        get => ActiveViewIndex switch {
+            <= 4 => ActiveViewIndex,
+            _ => 5
+        };
+        set {
+            if (value <= 4) {
+                ActiveViewIndex = value;
+                IsTagsMenuExpanded = false;
+            } else if (value == 5) {
+                ActiveViewIndex = 5 + KeywordsSubTabIndex;
+                IsTagsMenuExpanded = true;
+            }
+        }
+    }
+
+    public int KeywordsSubTabIndex {
+        get => ActiveViewIndex switch {
+            5 => 0,
+            6 => 1,
+            7 => 2,
+            _ => 0
+        };
+        set {
+            if (value is >= 0 and <= 2) {
+                ActiveViewIndex = 5 + value;
+                IsTagsMenuExpanded = true;
+            }
+        }
+    }
 
     public SettingsDialogViewModel(ISettingsService settingsService) {
         _settingsService = settingsService;
@@ -286,20 +334,81 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private void SetSystemTheme() => ThemeIndex = 2;
 
     [RelayCommand]
-    private void SelectKeywordsSubTab(string? indexStr) {
-        if (int.TryParse(indexStr, out var idx)) {
-            KeywordsSubTabIndex = idx;
+    public void SelectGeneralTab() {
+        IsTagsMenuExpanded = false;
+        ActiveViewIndex = 0;
+    }
+
+    [RelayCommand]
+    public void SelectStorageTab() {
+        IsTagsMenuExpanded = false;
+        ActiveViewIndex = 1;
+    }
+
+    [RelayCommand]
+    public void SelectCullingTab() {
+        IsTagsMenuExpanded = false;
+        ActiveViewIndex = 2;
+    }
+
+    [RelayCommand]
+    public void SelectColorLabelsTab() {
+        IsTagsMenuExpanded = false;
+        ActiveViewIndex = 3;
+    }
+
+    [RelayCommand]
+    public void SelectShortcutsTab() {
+        IsTagsMenuExpanded = false;
+        ActiveViewIndex = 4;
+    }
+
+    [RelayCommand]
+    public void SelectTagsCategory() {
+        IsTagsMenuExpanded = true;
+        if (ActiveViewIndex < 5 || ActiveViewIndex > 7) {
+            ActiveViewIndex = 5;
         }
     }
 
     [RelayCommand]
-    private void SelectTagsSubTab() => KeywordsSubTabIndex = 0;
+    public void ToggleTagsCategory() {
+        SelectTagsCategory();
+    }
 
     [RelayCommand]
-    private void SelectTaxonomySubTab() => KeywordsSubTabIndex = 1;
+    public void SelectTagsCatalogTab() {
+        IsTagsMenuExpanded = true;
+        ActiveViewIndex = 5;
+    }
 
     [RelayCommand]
-    private void SelectGroupsSubTab() => KeywordsSubTabIndex = 2;
+    public void SelectTaxonomyTab() {
+        IsTagsMenuExpanded = true;
+        ActiveViewIndex = 6;
+    }
+
+    [RelayCommand]
+    public void SelectGroupsTab() {
+        IsTagsMenuExpanded = true;
+        ActiveViewIndex = 7;
+    }
+
+    [RelayCommand]
+    public void SelectTagsSubTab() => SelectTagsCatalogTab();
+
+    [RelayCommand]
+    public void SelectTaxonomySubTab() => SelectTaxonomyTab();
+
+    [RelayCommand]
+    public void SelectGroupsSubTab() => SelectGroupsTab();
+
+    [RelayCommand]
+    public void SelectKeywordsSubTab(string? indexStr) {
+        if (int.TryParse(indexStr, out var idx)) {
+            KeywordsSubTabIndex = idx;
+        }
+    }
 
     [RelayCommand]
     private async Task BrowseLibraryLocation() {
@@ -876,7 +985,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         var existing = TagGroups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
         if (existing != null) {
             SelectedTagGroup = existing;
-            KeywordsSubTabIndex = 2;
+            SelectGroupsTab();
             return;
         }
 
@@ -889,7 +998,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
         TagGroups.Add(newGroup);
         SelectedTagGroup = newGroup;
-        KeywordsSubTabIndex = 2; // Switch to Groups tab
+        SelectGroupsTab();
 
         try {
             if (Application.Current != null) {

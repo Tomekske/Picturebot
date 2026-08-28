@@ -24,71 +24,54 @@
             <Setter Property="FontFamily" Value="Inter, Roboto, Outfit, Segoe UI, sans-serif" />
         </Style>
 
-        <!-- Sidebar ListBox Styles -->
-        <Style Selector="ListBox.sidebar-list">
+        <!-- Sidebar Navigation Button Styles -->
+        <Style Selector="Button.nav-item">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="12,16" />
-        </Style>
-        <Style Selector="ListBox.sidebar-list ListBoxItem">
-            <Setter Property="Background" Value="Transparent" />
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Padding" Value="12,8" />
-            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Margin" Value="0,0,0,2" />
             <Setter Property="Foreground" Value="#AAAAAA" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Name="PART_LayoutRoot"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Name="PART_ContentPresenter"
-                                          Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Border>
-                </ControlTemplate>
-            </Setter>
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
         </Style>
-        <Style Selector="ListBox.sidebar-list ListBoxItem:pointerover">
+        <Style Selector="Button.nav-item:pointerover">
             <Setter Property="Background" Value="#29292F" />
             <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
-        <Style Selector="ListBox.sidebar-list ListBoxItem:selected">
-            <Setter Property="Background" Value="#38383E" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
-        </Style>
-        <Style Selector="ListBox.sidebar-list ListBoxItem:selected /template/ Border#PART_LayoutRoot">
-            <Setter Property="Background" Value="#38383E" />
-        </Style>
-        <Style Selector="ListBox.sidebar-list ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
-        </Style>
-
-        <!-- Sub-Tab Button Styling -->
-        <Style Selector="Button.subtab-btn">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#888888" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Padding" Value="14,6" />
-            <Setter Property="CornerRadius" Value="6" />
-        </Style>
-        <Style Selector="Button.subtab-btn:pointerover">
-            <Setter Property="Background" Value="#252529" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
-        </Style>
-        <Style Selector="Button.subtab-btn.active">
+        <Style Selector="Button.nav-item.active">
             <Setter Property="Background" Value="#38383E" />
             <Setter Property="Foreground" Value="#FFFFFF" />
             <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- Sidebar Nested Tree Sub-Item Styles (Discord-like vertical rail) -->
+        <Style Selector="Button.nav-tree-subitem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="Foreground" Value="#949BA4" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.nav-tree-subitem:pointerover">
+            <Setter Property="Background" Value="#25252B" />
+            <Setter Property="Foreground" Value="#DBDEE1" />
+        </Style>
+        <Style Selector="Button.nav-tree-subitem.active">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.nav-tree-subitem.active:pointerover">
+            <Setter Property="Background" Value="#25252B" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
 
         <!-- Form Input Styling -->
@@ -382,25 +365,102 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Sidebar Navigation Column -->
+            <!-- Sidebar Navigation Column & Content Area -->
             <Grid ColumnDefinitions="200,1,*">
-                <ListBox Grid.Column="0" 
-                         Classes="sidebar-list" 
-                         SelectedIndex="{Binding SelectedTabIndex}">
-                    <ListBoxItem Content="General" />
-                    <ListBoxItem Content="Storage &amp; Paths" />
-                    <ListBoxItem Content="Culling" />
-                    <ListBoxItem Content="Color Labels" />
-                    <ListBoxItem Content="Keyboard Shortcuts" />
-                    <ListBoxItem Content="Keywords" />
-                </ListBox>
+                <!-- Left Sidebar Navigation Rail -->
+                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Padding="12,14">
+                    <StackPanel Spacing="2">
+                        <Button Classes="nav-item" Classes.active="{Binding IsGeneralTabActive}" Command="{Binding SelectGeneralTabCommand}">
+                            <TextBlock Text="General" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="nav-item" Classes.active="{Binding IsStorageTabActive}" Command="{Binding SelectStorageTabCommand}">
+                            <TextBlock Text="Storage &amp; Paths" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="nav-item" Classes.active="{Binding IsCullingTabActive}" Command="{Binding SelectCullingTabCommand}">
+                            <TextBlock Text="Culling" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="nav-item" Classes.active="{Binding IsColorLabelsTabActive}" Command="{Binding SelectColorLabelsTabCommand}">
+                            <TextBlock Text="Color Labels" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="nav-item" Classes.active="{Binding IsShortcutsTabActive}" Command="{Binding SelectShortcutsTabCommand}">
+                            <TextBlock Text="Keyboard Shortcuts" VerticalAlignment="Center" />
+                        </Button>
+
+                        <!-- Top-level Tags Category Button (No icon) -->
+                        <Button Classes="nav-item" Classes.active="{Binding IsTagsCategoryActive}" Command="{Binding SelectTagsCategoryCommand}">
+                            <TextBlock Text="Tags" VerticalAlignment="Center" />
+                        </Button>
+
+                        <!-- Collapsible Sub-Options with Discord-like Vertical Rail Guide Line -->
+                        <Grid IsVisible="{Binding IsTagsMenuExpanded}" Margin="12,2,0,4">
+                            <!-- Background Vertical Guide Rail -->
+                            <Rectangle Width="2" 
+                                       Fill="#363842" 
+                                       HorizontalAlignment="Left" 
+                                       VerticalAlignment="Stretch" 
+                                       Margin="3,4,0,4" />
+
+                            <!-- Sub-Option Buttons -->
+                            <StackPanel Spacing="2" Margin="12,0,0,0">
+                                <!-- Catalog Sub-Item -->
+                                <Button Classes="nav-tree-subitem" 
+                                        Classes.active="{Binding IsTagsCatalogTabActive}" 
+                                        Command="{Binding SelectTagsCatalogTabCommand}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <!-- Active White Indicator Line on the rail -->
+                                        <Rectangle Width="2" 
+                                                   Height="16" 
+                                                   Fill="#FFFFFF" 
+                                                   HorizontalAlignment="Left" 
+                                                   VerticalAlignment="Center" 
+                                                   Margin="-17,0,0,0" 
+                                                   IsVisible="{Binding IsTagsCatalogTabActive}" />
+                                        <TextBlock Grid.Column="1" Text="Catalog" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <!-- Taxonomy Sub-Item -->
+                                <Button Classes="nav-tree-subitem" 
+                                        Classes.active="{Binding IsTaxonomyTabActive}" 
+                                        Command="{Binding SelectTaxonomyTabCommand}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Rectangle Width="2" 
+                                                   Height="16" 
+                                                   Fill="#FFFFFF" 
+                                                   HorizontalAlignment="Left" 
+                                                   VerticalAlignment="Center" 
+                                                   Margin="-17,0,0,0" 
+                                                   IsVisible="{Binding IsTaxonomyTabActive}" />
+                                        <TextBlock Grid.Column="1" Text="Taxonomy" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <!-- Groups Sub-Item -->
+                                <Button Classes="nav-tree-subitem" 
+                                        Classes.active="{Binding IsGroupsTabActive}" 
+                                        Command="{Binding SelectGroupsTabCommand}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Rectangle Width="2" 
+                                                   Height="16" 
+                                                   Fill="#FFFFFF" 
+                                                   HorizontalAlignment="Left" 
+                                                   VerticalAlignment="Center" 
+                                                   Margin="-17,0,0,0" 
+                                                   IsVisible="{Binding IsGroupsTabActive}" />
+                                        <TextBlock Grid.Column="1" Text="Groups" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- Vertical Divider -->
                 <Rectangle Grid.Column="1" Width="1" Fill="#2A2A2E" />
 
                 <!-- Content Area -->
                 <ScrollViewer Grid.Column="2" Padding="24,16" VerticalScrollBarVisibility="Auto">
-                    <Carousel SelectedIndex="{Binding SelectedTabIndex}">
+                    <Carousel SelectedIndex="{Binding ActiveViewIndex}">
                         <!-- View 0: General -->
                         <StackPanel Spacing="12">
                             <TextBlock Text="GENERAL" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
@@ -702,438 +762,395 @@
                             </ScrollViewer>
                         </StackPanel>
 
-                        <!-- View 5: Keywords / Tagging Settings (Refactored Sub-Tabbed Interface) -->
-                        <Grid RowDefinitions="Auto,*" Height="460">
-                            <!-- Keywords Sub-Tab Navigation Header -->
-                            <Border Grid.Row="0" Background="#14171F" CornerRadius="8" Padding="4" HorizontalAlignment="Left" Margin="0,0,0,16">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <Button Classes="subtab-btn" 
-                                            Classes.active="{Binding IsTagsSubTabActive}"
-                                            Command="{Binding SelectTagsSubTabCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <material:MaterialIcon Kind="TagMultipleOutline" Width="14" Height="14" />
-                                            <TextBlock Text="Tags" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
+                        <!-- View 5: Tags (Catalog) -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="TAGS CATALOG" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,4,0,4" LetterSpacing="1" />
+                            
+                            <Grid RowDefinitions="Auto,*,Auto">
+                                <!-- Top Inline Entry Field -->
+                                <Grid Grid.Row="0" ColumnDefinitions="*, 8, Auto" Margin="0,0,0,12">
+                                    <TextBox Grid.Column="0"
+                                             Text="{Binding NewTagName, Mode=TwoWay}"
+                                             Height="36"
+                                             VerticalContentAlignment="Center"
+                                             Watermark="New tag name... (Press Enter to add)"
+                                             Background="#14171F"
+                                             BorderBrush="#323846"
+                                             Foreground="#F8FAFC">
+                                        <TextBox.KeyBindings>
+                                            <KeyBinding Gesture="Return" Command="{Binding AddTagCommand}" />
+                                        </TextBox.KeyBindings>
+                                    </TextBox>
+                                    <Button Grid.Column="2" 
+                                            Command="{Binding AddTagCommand}" 
+                                            Height="36" 
+                                            Classes="primary" 
+                                            Content="+ Add Tag" />
+                                </Grid>
 
-                                    <Button Classes="subtab-btn" 
-                                            Classes.active="{Binding IsTaxonomySubTabActive}"
-                                            Command="{Binding SelectTaxonomySubTabCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <material:MaterialIcon Kind="FileTreeOutline" Width="14" Height="14" />
-                                            <TextBlock Text="Taxonomy" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
+                                <!-- Tags Catalog ListBox -->
+                                <Border Grid.Row="1" Background="#14171F" CornerRadius="8" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="310" MaxHeight="370">
+                                    <ListBox ItemsSource="{Binding Tags}"
+                                             Background="Transparent"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:TagItemViewModel">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="2,1">
+                                                    <!-- Tag Icon -->
+                                                    <material:MaterialIcon Grid.Column="0" Kind="TagOutline" Width="16" Height="16" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0,8,0" />
 
-                                    <Button Classes="subtab-btn" 
-                                            Classes.active="{Binding IsGroupsSubTabActive}"
-                                            Command="{Binding SelectGroupsSubTabCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <material:MaterialIcon Kind="BookmarkMultipleOutline" Width="14" Height="14" />
-                                            <TextBlock Text="Groups" VerticalAlignment="Center" />
+                                                    <!-- Normal View: Display Name -->
+                                                    <TextBlock Grid.Column="1" 
+                                                               Text="{Binding Name}" 
+                                                               VerticalAlignment="Center" 
+                                                               FontSize="13" 
+                                                               Foreground="#E2E8F0" 
+                                                               IsVisible="{Binding !IsEditing}" />
+
+                                                    <!-- Edit View: Inline TextBox -->
+                                                    <TextBox Grid.Column="1" 
+                                                             Text="{Binding EditingName, Mode=TwoWay}" 
+                                                             Height="30" 
+                                                             Padding="6,3" 
+                                                             FontSize="13" 
+                                                             Background="#1E293B" 
+                                                             BorderBrush="#4F46E5" 
+                                                             Foreground="#FFFFFF" 
+                                                             VerticalContentAlignment="Center" 
+                                                             IsVisible="{Binding IsEditing}">
+                                                        <TextBox.KeyBindings>
+                                                            <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
+                                                            <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
+                                                        </TextBox.KeyBindings>
+                                                    </TextBox>
+
+                                                    <!-- Action Buttons (Normal State) -->
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsEditing}">
+                                                        <Button Classes="action-icon-btn" Command="{Binding StartEditCommand}" ToolTip.Tip="Rename Tag">
+                                                            <material:MaterialIcon Kind="PencilOutline" Width="15" Height="15" />
+                                                        </Button>
+                                                        <Button Classes="action-icon-btn danger-icon" Command="{Binding DeleteCommand}" ToolTip.Tip="Delete Tag">
+                                                            <material:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15" />
+                                                        </Button>
+                                                    </StackPanel>
+
+                                                    <!-- Action Buttons (Edit State) -->
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsEditing}">
+                                                        <Button Classes="action-icon-btn" Command="{Binding CommitEditCommand}" ToolTip.Tip="Save">
+                                                            <material:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="#22C55E" />
+                                                        </Button>
+                                                        <Button Classes="action-icon-btn" Command="{Binding CancelEditCommand}" ToolTip.Tip="Cancel">
+                                                            <material:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#EF4444" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                        <ListBox.Styles>
+                                            <Style Selector="ListBoxItem">
+                                                <Setter Property="CornerRadius" Value="6" />
+                                                <Setter Property="Padding" Value="8,4" />
+                                                <Setter Property="Margin" Value="0,0,0,3" />
+                                                <Setter Property="Background" Value="#1A1F2C" />
+                                            </Style>
+                                            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                                <Setter Property="Background" Value="#242B3D" />
+                                            </Style>
+                                            <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                                                <Setter Property="Background" Value="#1E293B" />
+                                            </Style>
+                                        </ListBox.Styles>
+                                    </ListBox>
+                                </Border>
+
+                                <!-- Delete Confirmation Card Overlay (when tag in use is deleted) -->
+                                <Border Grid.Row="0" Grid.RowSpan="2" 
+                                        Background="#EE14171F" 
+                                        CornerRadius="8" 
+                                        Padding="24" 
+                                        IsVisible="{Binding IsDeleteTagConfirmOpen}"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        MaxWidth="480"
+                                        BorderBrush="#EF4444"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="14">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <material:MaterialIcon Kind="AlertCircleOutline" Width="20" Height="20" Foreground="#EF4444" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding DeleteTagConfirmTitle}" FontWeight="Bold" FontSize="15" Foreground="#FFFFFF" VerticalAlignment="Center" />
                                         </StackPanel>
-                                    </Button>
-                                </StackPanel>
+
+                                        <TextBlock Text="{Binding DeleteTagConfirmMessage}" TextWrapping="Wrap" Foreground="#CBD5E1" FontSize="13" LineHeight="18" />
+
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+                                            <Button Classes="secondary" Content="Cancel" Command="{Binding CancelDeleteTagCommand}" Height="34" />
+                                            <Button Classes="danger" Content="Delete &amp; Unlink" Command="{Binding ConfirmDeleteTagCommand}" Height="34" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- View 6: Taxonomy (Hierarchy) -->
+                        <Grid RowDefinitions="Auto,*">
+                            <!-- Clean Header Bar with Single '+ Add Root' Action Button -->
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,4,0,12">
+                                <TextBlock Grid.Column="0" Text="TAXONOMY HIERARCHY" Foreground="#888888" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
+                                
+                                <Button Grid.Column="1" 
+                                        Classes="secondary" 
+                                        Height="28" 
+                                        Padding="10,2" 
+                                        FontSize="11" 
+                                        Command="{Binding AddRootNodeCommand}"
+                                        ToolTip.Tip="Add root category (Press Enter to commit)">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <material:MaterialIcon Kind="FolderPlusOutline" Width="13" Height="13" Foreground="#A78BFA" />
+                                        <TextBlock Text="+ Add Root" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Clean TreeView Container -->
+                            <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="320" MaxHeight="380">
+                                <TreeView ItemsSource="{Binding HierarchyNodes}" 
+                                          SelectedItem="{Binding SelectedHierarchyNode, Mode=TwoWay}" 
+                                          Background="Transparent" 
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <TreeView.Styles>
+                                        <Style Selector="TreeViewItem" x:DataType="vm:HierarchyNodeViewModel">
+                                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                        </Style>
+                                    </TreeView.Styles>
+                                    <TreeView.KeyBindings>
+                                        <KeyBinding Gesture="F2" Command="{Binding StartEditSelectedNodeCommand}" />
+                                        <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedNodeCommand}" />
+                                    </TreeView.KeyBindings>
+                                    <TreeView.ItemTemplate>
+                                        <TreeDataTemplate DataType="vm:HierarchyNodeViewModel" ItemsSource="{Binding Children}">
+                                            <Panel Margin="0,2">
+                                                <!-- Normal Display Mode -->
+                                                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
+                                                    <!-- Folder / Node Icon -->
+                                                    <material:MaterialIcon Grid.Column="0" Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                                                    <!-- Normal View: TextBlock -->
+                                                    <TextBlock Grid.Column="1" 
+                                                               Text="{Binding Name}" 
+                                                               FontSize="13" 
+                                                               Foreground="#E2E8F0" 
+                                                               VerticalAlignment="Center">
+                                                        <TextBlock.ContextMenu>
+                                                            <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
+                                                                <MenuItem Header="Add Sub-Node" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddSubNodeCommand}" CommandParameter="{Binding}" />
+                                                                <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
+                                                                <MenuItem Header="Create Group from Branch" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).CreateGroupFromTaxonomyNodeCommand}" CommandParameter="{Binding}" />
+                                                                <Separator />
+                                                                <MenuItem Header="Delete" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
+                                                            </ContextMenu>
+                                                        </TextBlock.ContextMenu>
+                                                    </TextBlock>
+
+                                                    <!-- Row Hover Action Buttons (Visible on PointerOver / Selected) -->
+                                                    <StackPanel Grid.Column="2" 
+                                                                Classes="tree-row-actions" 
+                                                                Orientation="Horizontal" 
+                                                                Spacing="4" 
+                                                                HorizontalAlignment="Right" 
+                                                                VerticalAlignment="Center"
+                                                                Margin="8,0,4,0">
+                                                        <Button Classes="action-icon-btn" 
+                                                                Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddSubNodeCommand}" 
+                                                                CommandParameter="{Binding}" 
+                                                                ToolTip.Tip="Add Sub-Node">
+                                                            <material:MaterialIcon Kind="Plus" Width="14" Height="14" Foreground="#38BDF8" />
+                                                        </Button>
+                                                        <Button Classes="action-icon-btn danger-icon" 
+                                                                Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteNodeCommand}" 
+                                                                CommandParameter="{Binding}" 
+                                                                ToolTip.Tip="Delete Node (Delete)">
+                                                            <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" Foreground="#EF4444" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Inline Edit Mode -->
+                                                <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" IsVisible="{Binding IsEditing}">
+                                                    <!-- Folder / Node Icon -->
+                                                    <material:MaterialIcon Grid.Column="0" Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                                                    <!-- AutoCompleteBox for typing/selecting tag name -->
+                                                    <AutoCompleteBox Grid.Column="1" 
+                                                                     Classes="InlineTaxonomyEditor"
+                                                                     ItemsSource="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).TagSuggestions}"
+                                                                     Text="{Binding EditingName, Mode=TwoWay}"
+                                                                     FilterMode="ContainsOrdinal"
+                                                                     MinimumPrefixLength="0"
+                                                                     MinimumPopulateDelay="00:00:00"
+                                                                     GotFocus="OnInlineAutoCompleteGotFocus"
+                                                                     AttachedToVisualTree="OnInlineAutoCompleteAttached"
+                                                                     Watermark="Select or type tag..."
+                                                                     Margin="2,0,0,0"
+                                                                     VerticalAlignment="Center">
+                                                        <AutoCompleteBox.ItemTemplate>
+                                                            <DataTemplate DataType="x:String">
+                                                                <TextBlock Text="{Binding}" 
+                                                                           FontSize="13" 
+                                                                           Foreground="#FFFFFF" 
+                                                                           VerticalAlignment="Center" />
+                                                            </DataTemplate>
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                        <AutoCompleteBox.KeyBindings>
+                                                            <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
+                                                            <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
+                                                        </AutoCompleteBox.KeyBindings>
+                                                    </AutoCompleteBox>
+                                                </Grid>
+                                            </Panel>
+                                        </TreeDataTemplate>
+                                    </TreeView.ItemTemplate>
+                                </TreeView>
                             </Border>
+                        </Grid>
 
-                            <!-- Sub-Tab Content Carousel -->
-                            <Carousel Grid.Row="1" SelectedIndex="{Binding KeywordsSubTabIndex}">
+                        <!-- View 7: Groups (Presets & Taxonomy Mirroring) -->
+                        <Grid ColumnDefinitions="240,14,*">
+                            <!-- Left Column: Master List of Groups -->
+                            <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
+                                <TextBlock Grid.Row="0" Text="GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" Margin="2,4,0,8" />
 
-                                <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <!-- SUB-TAB 0: TAGS (CATALOG) -->
-                                <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <Grid RowDefinitions="Auto,*,Auto">
-                                    <!-- Top Inline Entry Field -->
-                                    <Grid Grid.Row="0" ColumnDefinitions="*, 8, Auto" Margin="0,0,0,12">
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding NewTagName, Mode=TwoWay}"
-                                                 Height="36"
-                                                 VerticalContentAlignment="Center"
-                                                 Watermark="New tag name... (Press Enter to add)"
-                                                 Background="#14171F"
-                                                 BorderBrush="#323846"
-                                                 Foreground="#F8FAFC">
+                                <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="260" MaxHeight="300">
+                                    <ListBox ItemsSource="{Binding TagGroups}"
+                                             SelectedItem="{Binding SelectedTagGroup, Mode=TwoWay}"
+                                             Background="Transparent"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="models:TagGroup">
+                                                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <material:MaterialIcon Kind="BookmarkOutline" Width="14" Height="14" Foreground="#818CF8" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding GroupName}" FontSize="13" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                                                    </StackPanel>
+
+                                                    <Button Grid.Column="1" 
+                                                            Classes="action-icon-btn danger-icon" 
+                                                            Command="{Binding $parent[ListBox].((vm:SettingsDialogViewModel)DataContext).DeleteTagGroupCommand}" 
+                                                            CommandParameter="{Binding}" 
+                                                            ToolTip.Tip="Delete Group">
+                                                        <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" />
+                                                    </Button>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                        <ListBox.Styles>
+                                            <Style Selector="ListBoxItem">
+                                                <Setter Property="CornerRadius" Value="6" />
+                                                <Setter Property="Padding" Value="8,5" />
+                                                <Setter Property="Margin" Value="0,0,0,2" />
+                                            </Style>
+                                            <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                                                <Setter Property="Background" Value="#38383E" />
+                                            </Style>
+                                        </ListBox.Styles>
+                                    </ListBox>
+                                </Border>
+
+                                <!-- Add Group Bottom Creation Bar (Branch ComboBox + Name Input + Add Button) -->
+                                <StackPanel Grid.Row="2" Spacing="6" Margin="0,8,0,0">
+                                    <ComboBox ItemsSource="{Binding AvailableTaxonomyBranches}"
+                                              SelectedItem="{Binding SelectedTaxonomyBranch, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              PlaceholderText="Or import branch..."
+                                              Height="30"
+                                              FontSize="11" />
+                                    <Grid ColumnDefinitions="*,6,Auto">
+                                        <TextBox Grid.Column="0" 
+                                                 Text="{Binding NewTagGroupName, Mode=TwoWay}" 
+                                                 Watermark="New group name..." 
+                                                 Height="32" 
+                                                 VerticalContentAlignment="Center" 
+                                                 Background="#14171F" 
+                                                 BorderBrush="#323846" 
+                                                 Foreground="#F8FAFC"
+                                                 Padding="8,4"
+                                                 FontSize="12">
                                             <TextBox.KeyBindings>
-                                                <KeyBinding Gesture="Return" Command="{Binding AddTagCommand}" />
+                                                <KeyBinding Gesture="Return" Command="{Binding AddTagGroupCommand}" />
                                             </TextBox.KeyBindings>
                                         </TextBox>
                                         <Button Grid.Column="2" 
-                                                Command="{Binding AddTagCommand}" 
-                                                Height="36" 
+                                                Command="{Binding AddTagGroupCommand}" 
+                                                Height="32" 
+                                                Padding="12,4" 
                                                 Classes="primary" 
-                                                Content="+ Add Tag" />
+                                                Content="Add" 
+                                                FontSize="12" />
                                     </Grid>
+                                </StackPanel>
+                            </Grid>
 
-                                    <!-- Tags Catalog ListBox -->
-                                    <Border Grid.Row="1" Background="#14171F" CornerRadius="8" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="260" MaxHeight="320">
-                                        <ListBox ItemsSource="{Binding Tags}"
-                                                 Background="Transparent"
-                                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate DataType="vm:TagItemViewModel">
-                                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="2,1">
-                                                        <!-- Tag Icon -->
-                                                        <material:MaterialIcon Grid.Column="0" Kind="TagOutline" Width="16" Height="16" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0,8,0" />
+                            <!-- Right Column: Detail Content of Selected Group -->
+                            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" IsEnabled="{Binding SelectedTagGroup, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <!-- Group Header -->
+                                <StackPanel Grid.Row="0" Spacing="2" Margin="0,4,0,8">
+                                    <TextBlock Text="TAGS IN GROUP" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
+                                    <TextBlock Text="{Binding SelectedTagGroup.GroupName, StringFormat='Editing: {0}'}" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF" />
+                                </StackPanel>
 
-                                                        <!-- Normal View: Display Name -->
-                                                        <TextBlock Grid.Column="1" 
-                                                                   Text="{Binding Name}" 
-                                                                   VerticalAlignment="Center" 
-                                                                   FontSize="13" 
-                                                                   Foreground="#E2E8F0" 
-                                                                   IsVisible="{Binding !IsEditing}" />
-
-                                                        <!-- Edit View: Inline TextBox -->
-                                                        <TextBox Grid.Column="1" 
-                                                                 Text="{Binding EditingName, Mode=TwoWay}" 
-                                                                 Height="30" 
-                                                                 Padding="6,3" 
-                                                                 FontSize="13" 
-                                                                 Background="#1E293B" 
-                                                                 BorderBrush="#4F46E5" 
-                                                                 Foreground="#FFFFFF" 
-                                                                 VerticalContentAlignment="Center" 
-                                                                 IsVisible="{Binding IsEditing}">
-                                                            <TextBox.KeyBindings>
-                                                                <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
-                                                                <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
-                                                            </TextBox.KeyBindings>
-                                                        </TextBox>
-
-                                                        <!-- Action Buttons (Normal State) -->
-                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsEditing}">
-                                                            <Button Classes="action-icon-btn" Command="{Binding StartEditCommand}" ToolTip.Tip="Rename Tag">
-                                                                <material:MaterialIcon Kind="PencilOutline" Width="15" Height="15" />
-                                                            </Button>
-                                                            <Button Classes="action-icon-btn danger-icon" Command="{Binding DeleteCommand}" ToolTip.Tip="Delete Tag">
-                                                                <material:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15" />
-                                                            </Button>
-                                                        </StackPanel>
-
-                                                        <!-- Action Buttons (Edit State) -->
-                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsEditing}">
-                                                            <Button Classes="action-icon-btn" Command="{Binding CommitEditCommand}" ToolTip.Tip="Save">
-                                                                <material:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="#22C55E" />
-                                                            </Button>
-                                                            <Button Classes="action-icon-btn" Command="{Binding CancelEditCommand}" ToolTip.Tip="Cancel">
-                                                                <material:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#EF4444" />
-                                                            </Button>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                            <ListBox.Styles>
-                                                <Style Selector="ListBoxItem">
-                                                    <Setter Property="CornerRadius" Value="6" />
-                                                    <Setter Property="Padding" Value="8,4" />
-                                                    <Setter Property="Margin" Value="0,0,0,3" />
-                                                    <Setter Property="Background" Value="#1A1F2C" />
-                                                </Style>
-                                                <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                                                    <Setter Property="Background" Value="#242B3D" />
-                                                </Style>
-                                                <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-                                                    <Setter Property="Background" Value="#1E293B" />
-                                                </Style>
-                                            </ListBox.Styles>
-                                        </ListBox>
-                                    </Border>
-
-                                    <!-- Delete Confirmation Card Overlay (when tag in use is deleted) -->
-                                    <Border Grid.Row="0" Grid.RowSpan="2" 
-                                            Background="#EE14171F" 
-                                            CornerRadius="8" 
-                                            Padding="24" 
-                                            IsVisible="{Binding IsDeleteTagConfirmOpen}"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"
-                                            MaxWidth="480"
-                                            BorderBrush="#EF4444"
-                                            BorderThickness="1">
-                                        <StackPanel Spacing="14">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <material:MaterialIcon Kind="AlertCircleOutline" Width="20" Height="20" Foreground="#EF4444" VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding DeleteTagConfirmTitle}" FontWeight="Bold" FontSize="15" Foreground="#FFFFFF" VerticalAlignment="Center" />
-                                            </StackPanel>
-
-                                            <TextBlock Text="{Binding DeleteTagConfirmMessage}" TextWrapping="Wrap" Foreground="#CBD5E1" FontSize="13" LineHeight="18" />
-
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
-                                                <Button Classes="secondary" Content="Cancel" Command="{Binding CancelDeleteTagCommand}" Height="34" />
-                                                <Button Classes="danger" Content="Delete &amp; Unlink" Command="{Binding ConfirmDeleteTagCommand}" Height="34" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-
-
-                                <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <!-- SUB-TAB 1: TAXONOMY (HIERARCHY) - CLEAN DIRECT TREE INTERACTION -->
-                                <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <Grid RowDefinitions="Auto,*" Margin="0,0,0,0">
-                                    <!-- Clean Header Bar with Single '+ Add Root' Action Button -->
-                                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="2,0,0,8">
-                                        <TextBlock Grid.Column="0" Text="TAXONOMY HIERARCHY" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
-                                        
-                                        <Button Grid.Column="1" 
-                                                Classes="secondary" 
-                                                Height="28" 
-                                                Padding="10,2" 
-                                                FontSize="11" 
-                                                Command="{Binding AddRootNodeCommand}"
-                                                ToolTip.Tip="Add root category (Press Enter to commit)">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <material:MaterialIcon Kind="FolderPlusOutline" Width="13" Height="13" Foreground="#A78BFA" />
-                                                <TextBlock Text="+ Add Root" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
-                                    </Grid>
-
-                                    <!-- Clean TreeView Container (No inside footer) -->
-                                    <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="6" MinHeight="260" MaxHeight="330">
-                                        <TreeView ItemsSource="{Binding HierarchyNodes}" 
-                                                  SelectedItem="{Binding SelectedHierarchyNode, Mode=TwoWay}" 
-                                                  Background="Transparent" 
-                                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
-                                            <TreeView.Styles>
-                                                <Style Selector="TreeViewItem" x:DataType="vm:HierarchyNodeViewModel">
-                                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                                </Style>
-                                            </TreeView.Styles>
-                                            <TreeView.KeyBindings>
-                                                <KeyBinding Gesture="F2" Command="{Binding StartEditSelectedNodeCommand}" />
-                                                <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedNodeCommand}" />
-                                            </TreeView.KeyBindings>
-                                            <TreeView.ItemTemplate>
-                                                <TreeDataTemplate DataType="vm:HierarchyNodeViewModel" ItemsSource="{Binding Children}">
-                                                    <Panel Margin="0,2">
-                                                        <!-- Normal Display Mode -->
-                                                        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
-                                                            <!-- Folder / Node Icon -->
-                                                            <material:MaterialIcon Grid.Column="0" Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
-
-                                                            <!-- Normal View: TextBlock -->
-                                                            <TextBlock Grid.Column="1" 
-                                                                       Text="{Binding Name}" 
-                                                                       FontSize="13" 
-                                                                       Foreground="#E2E8F0" 
-                                                                       VerticalAlignment="Center">
-                                                                <TextBlock.ContextMenu>
-                                                                    <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
-                                                                        <MenuItem Header="Add Sub-Node" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddSubNodeCommand}" CommandParameter="{Binding}" />
-                                                                        <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
-                                                                        <MenuItem Header="Create Group from Branch" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).CreateGroupFromTaxonomyNodeCommand}" CommandParameter="{Binding}" />
-                                                                        <Separator />
-                                                                        <MenuItem Header="Delete" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
-                                                                    </ContextMenu>
-                                                                </TextBlock.ContextMenu>
-                                                            </TextBlock>
-
-                                                            <!-- Row Hover Action Buttons (Visible on PointerOver / Selected) -->
-                                                            <StackPanel Grid.Column="2" 
-                                                                        Classes="tree-row-actions" 
-                                                                        Orientation="Horizontal" 
-                                                                        Spacing="4" 
-                                                                        HorizontalAlignment="Right" 
-                                                                        VerticalAlignment="Center"
-                                                                        Margin="8,0,4,0">
-                                                                <Button Classes="action-icon-btn" 
-                                                                        Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddSubNodeCommand}" 
-                                                                        CommandParameter="{Binding}" 
-                                                                        ToolTip.Tip="Add Sub-Node">
-                                                                    <material:MaterialIcon Kind="Plus" Width="14" Height="14" Foreground="#38BDF8" />
-                                                                </Button>
-                                                                <Button Classes="action-icon-btn danger-icon" 
-                                                                        Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteNodeCommand}" 
-                                                                        CommandParameter="{Binding}" 
-                                                                        ToolTip.Tip="Delete Node (Delete)">
-                                                                    <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" Foreground="#EF4444" />
-                                                                </Button>
-                                                            </StackPanel>
-                                                        </Grid>
-
-                                                        <!-- Inline Edit Mode -->
-                                                        <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" IsVisible="{Binding IsEditing}">
-                                                            <!-- Folder / Node Icon -->
-                                                            <material:MaterialIcon Grid.Column="0" Kind="FolderOutline" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
-
-                                                            <!-- AutoCompleteBox for typing/selecting tag name -->
-                                                            <AutoCompleteBox Grid.Column="1" 
-                                                                             Classes="InlineTaxonomyEditor"
-                                                                             ItemsSource="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).TagSuggestions}"
-                                                                             Text="{Binding EditingName, Mode=TwoWay}"
-                                                                             FilterMode="ContainsOrdinal"
-                                                                             MinimumPrefixLength="0"
-                                                                             MinimumPopulateDelay="00:00:00"
-                                                                             GotFocus="OnInlineAutoCompleteGotFocus"
-                                                                             AttachedToVisualTree="OnInlineAutoCompleteAttached"
-                                                                             Watermark="Select or type tag..."
-                                                                             Margin="2,0,0,0"
-                                                                             VerticalAlignment="Center">
-                                                                <AutoCompleteBox.ItemTemplate>
-                                                                    <DataTemplate DataType="x:String">
-                                                                        <TextBlock Text="{Binding}" 
-                                                                                   FontSize="13" 
-                                                                                   Foreground="#FFFFFF" 
-                                                                                   VerticalAlignment="Center" />
-                                                                    </DataTemplate>
-                                                                </AutoCompleteBox.ItemTemplate>
-                                                                <AutoCompleteBox.KeyBindings>
-                                                                    <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
-                                                                    <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
-                                                                </AutoCompleteBox.KeyBindings>
-                                                            </AutoCompleteBox>
-                                                        </Grid>
-                                                    </Panel>
-                                                </TreeDataTemplate>
-                                            </TreeView.ItemTemplate>
-                                        </TreeView>
-                                    </Border>
-                                </Grid>
-
-
-                                <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <!-- SUB-TAB 2: GROUPS (PRESETS & TAXONOMY MIRRORING) -->
-                                <!-- ══════════════════════════════════════════════════════════════════════ -->
-                                <Grid ColumnDefinitions="240,14,*">
-                                    <!-- Left Column: Master List of Groups -->
-                                    <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
-                                        <TextBlock Grid.Row="0" Text="GROUPS" Foreground="#888888" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" Margin="2,0,0,8" />
-
-                                        <Border Grid.Row="1" Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MinHeight="220" MaxHeight="250">
-                                            <ListBox ItemsSource="{Binding TagGroups}"
-                                                     SelectedItem="{Binding SelectedTagGroup, Mode=TwoWay}"
-                                                     Background="Transparent"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate DataType="models:TagGroup">
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                <material:MaterialIcon Kind="BookmarkOutline" Width="14" Height="14" Foreground="#818CF8" VerticalAlignment="Center" />
-                                                                <TextBlock Text="{Binding GroupName}" FontSize="13" Foreground="#E2E8F0" VerticalAlignment="Center" />
-                                                            </StackPanel>
-
-                                                            <Button Grid.Column="1" 
-                                                                    Classes="action-icon-btn danger-icon" 
-                                                                    Command="{Binding $parent[ListBox].((vm:SettingsDialogViewModel)DataContext).DeleteTagGroupCommand}" 
+                                <!-- Chips / Badges Area -->
+                                <Border Grid.Row="1" Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="8" MinHeight="220" MaxHeight="270">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding SelectedGroupTags}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="models:Tag">
+                                                    <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="16" Padding="10,4" Margin="0,0,6,6">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <material:MaterialIcon Kind="Tag" Width="12" Height="12" Foreground="#818CF8" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding Name}" Foreground="#E2E8F0" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+                                                            <Button Command="{Binding $parent[ItemsControl].((vm:SettingsDialogViewModel)DataContext).RemoveTagFromGroupCommand}" 
                                                                     CommandParameter="{Binding}" 
-                                                                    ToolTip.Tip="Delete Group">
-                                                                <material:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14" />
-                                                            </Button>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                                <ListBox.Styles>
-                                                    <Style Selector="ListBoxItem">
-                                                        <Setter Property="CornerRadius" Value="6" />
-                                                        <Setter Property="Padding" Value="8,5" />
-                                                        <Setter Property="Margin" Value="0,0,0,2" />
-                                                    </Style>
-                                                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-                                                        <Setter Property="Background" Value="#38383E" />
-                                                    </Style>
-                                                </ListBox.Styles>
-                                            </ListBox>
-                                        </Border>
-
-                                        <!-- Add Group Bottom Creation Bar (Branch ComboBox + Name Input + Add Button) -->
-                                        <StackPanel Grid.Row="2" Spacing="6" Margin="0,8,0,0">
-                                            <ComboBox ItemsSource="{Binding AvailableTaxonomyBranches}"
-                                                      SelectedItem="{Binding SelectedTaxonomyBranch, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch"
-                                                      PlaceholderText="Or import branch..."
-                                                      Height="30"
-                                                      FontSize="11" />
-                                            <Grid ColumnDefinitions="*,6,Auto">
-                                                <TextBox Grid.Column="0" 
-                                                         Text="{Binding NewTagGroupName, Mode=TwoWay}" 
-                                                         Watermark="New group name..." 
-                                                         Height="32" 
-                                                         VerticalContentAlignment="Center" 
-                                                         Background="#14171F" 
-                                                         BorderBrush="#323846" 
-                                                         Foreground="#F8FAFC"
-                                                         Padding="8,4"
-                                                         FontSize="12">
-                                                    <TextBox.KeyBindings>
-                                                        <KeyBinding Gesture="Return" Command="{Binding AddTagGroupCommand}" />
-                                                    </TextBox.KeyBindings>
-                                                </TextBox>
-                                                <Button Grid.Column="2" 
-                                                        Command="{Binding AddTagGroupCommand}" 
-                                                        Height="32" 
-                                                        Padding="12,4" 
-                                                        Classes="primary" 
-                                                        Content="Add" 
-                                                        FontSize="12" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Right Column: Detail Content of Selected Group -->
-                                    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" IsEnabled="{Binding SelectedTagGroup, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                        <!-- Group Header -->
-                                        <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,8">
-                                            <TextBlock Text="TAGS IN GROUP" Foreground="#888888" FontSize="11" FontWeight="Bold" LetterSpacing="1" />
-                                            <TextBlock Text="{Binding SelectedTagGroup.GroupName, StringFormat='Editing: {0}'}" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF" />
-                                        </StackPanel>
-
-                                        <!-- Chips / Badges Area -->
-                                        <Border Grid.Row="1" Background="#14171F" BorderBrush="#2A2E39" BorderThickness="1" CornerRadius="6" Padding="8" MinHeight="190" MaxHeight="240">
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <ItemsControl ItemsSource="{Binding SelectedGroupTags}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <WrapPanel Orientation="Horizontal" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="models:Tag">
-                                                            <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="16" Padding="10,4" Margin="0,0,6,6">
-                                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                    <material:MaterialIcon Kind="Tag" Width="12" Height="12" Foreground="#818CF8" VerticalAlignment="Center" />
-                                                                    <TextBlock Text="{Binding Name}" Foreground="#E2E8F0" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
-                                                                    <Button Command="{Binding $parent[ItemsControl].((vm:SettingsDialogViewModel)DataContext).RemoveTagFromGroupCommand}" 
-                                                                            CommandParameter="{Binding}" 
-                                                                            Background="Transparent" 
-                                                                            BorderThickness="0" 
-                                                                            Padding="2" 
-                                                                            ToolTip.Tip="Remove tag from group">
+                                                                    Background="Transparent" 
+                                                                    BorderThickness="0" 
+                                                                    Padding="2" 
+                                                                    ToolTip.Tip="Remove tag from group">
                                                                         <material:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="#EF4444" />
-                                                                    </Button>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </ScrollViewer>
-                                        </Border>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
 
-                                        <!-- Autocomplete Tag Entry -->
-                                        <Grid Grid.Row="2" ColumnDefinitions="*,8,Auto" Margin="0,8,0,0">
-                                            <AutoCompleteBox Grid.Column="0"
-                                                             ItemsSource="{Binding TagSuggestions}"
-                                                             Text="{Binding NewGroupTagInput, Mode=TwoWay}"
-                                                             Watermark="Type tag to add (Press Enter)..."
-                                                             FilterMode="ContainsOrdinal"
-                                                             Height="34"
-                                                             Padding="8,4"
-                                                             FontSize="12">
-                                                <AutoCompleteBox.KeyBindings>
-                                                    <KeyBinding Gesture="Return" Command="{Binding AddTagToSelectedGroupCommand}" />
-                                                </AutoCompleteBox.KeyBindings>
-                                            </AutoCompleteBox>
+                                <!-- Autocomplete Tag Entry -->
+                                <Grid Grid.Row="2" ColumnDefinitions="*,8,Auto" Margin="0,8,0,0">
+                                    <AutoCompleteBox Grid.Column="0"
+                                                     ItemsSource="{Binding TagSuggestions}"
+                                                     Text="{Binding NewGroupTagInput, Mode=TwoWay}"
+                                                     Watermark="Type tag to add (Press Enter)..."
+                                                     FilterMode="ContainsOrdinal"
+                                                     Height="34"
+                                                     Padding="8,4"
+                                                     FontSize="12">
+                                        <AutoCompleteBox.KeyBindings>
+                                            <KeyBinding Gesture="Return" Command="{Binding AddTagToSelectedGroupCommand}" />
+                                        </AutoCompleteBox.KeyBindings>
+                                    </AutoCompleteBox>
 
-                                            <Button Grid.Column="2" 
-                                                    Command="{Binding AddTagToSelectedGroupCommand}" 
-                                                    Height="34" 
-                                                    Classes="primary" 
-                                                    Content="+ Add Tag" 
-                                                    FontSize="12" />
-                                        </Grid>
-                                    </Grid>
+                                    <Button Grid.Column="2" 
+                                            Command="{Binding AddTagToSelectedGroupCommand}" 
+                                            Height="34" 
+                                            Classes="primary" 
+                                            Content="+ Add Tag" 
+                                            FontSize="12" />
                                 </Grid>
-                            </Carousel>
+                            </Grid>
                         </Grid>
                     </Carousel>
                 </ScrollViewer>

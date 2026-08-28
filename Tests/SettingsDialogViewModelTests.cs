@@ -64,6 +64,7 @@ public class SettingsDialogViewModelTests {
     public void SubTabNavigation_SwitchesCorrectly() {
         var vm = new SettingsDialogViewModel(_fakeService);
 
+        vm.SelectTagsCatalogTabCommand.Execute(null);
         Assert.That(vm.KeywordsSubTabIndex, Is.EqualTo(0));
         Assert.That(vm.IsTagsSubTabActive, Is.True);
         Assert.That(vm.IsTaxonomySubTabActive, Is.False);
@@ -319,6 +320,68 @@ public class SettingsDialogViewModelTests {
     }
 
     [Test]
+    public void Navigation_SidebarExpandableTags_AndSubItemsRouting() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+
+        // Initial state: starts on General (index 0) and Tags menu collapsed
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(0));
+        Assert.That(vm.IsGeneralTabActive, Is.True);
+        Assert.That(vm.IsTagsMenuExpanded, Is.False);
+
+        // Click parent Tags item: expands and routes to Catalog (View 5)
+        vm.SelectTagsCategoryCommand.Execute(null);
+        Assert.That(vm.IsTagsMenuExpanded, Is.True);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(5));
+        Assert.That(vm.IsTagsCatalogTabActive, Is.True);
+        Assert.That(vm.IsTagsCategoryActive, Is.True);
+
+        // Navigate to Taxonomy
+        vm.SelectTaxonomyTabCommand.Execute(null);
+        Assert.That(vm.IsTagsMenuExpanded, Is.True);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(6));
+        Assert.That(vm.IsTaxonomyTabActive, Is.True);
+        Assert.That(vm.IsTagsCategoryActive, Is.True);
+
+        // Navigate to Groups
+        vm.SelectGroupsTabCommand.Execute(null);
+        Assert.That(vm.IsTagsMenuExpanded, Is.True);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(7));
+        Assert.That(vm.IsGroupsTabActive, Is.True);
+        Assert.That(vm.IsTagsCategoryActive, Is.True);
+
+        // Navigate to another setting (e.g. Storage) -> Tags sub options must automatically close
+        vm.SelectStorageTabCommand.Execute(null);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(1));
+        Assert.That(vm.IsStorageTabActive, Is.True);
+        Assert.That(vm.IsTagsMenuExpanded, Is.False);
+        Assert.That(vm.IsTagsCategoryActive, Is.False);
+
+        // Navigate to Culling -> remains closed
+        vm.SelectCullingTabCommand.Execute(null);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(2));
+        Assert.That(vm.IsCullingTabActive, Is.True);
+        Assert.That(vm.IsTagsMenuExpanded, Is.False);
+
+        // Navigate to Color Labels -> remains closed
+        vm.SelectColorLabelsTabCommand.Execute(null);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(3));
+        Assert.That(vm.IsColorLabelsTabActive, Is.True);
+        Assert.That(vm.IsTagsMenuExpanded, Is.False);
+
+        // Navigate back to Shortcuts (top level tab) -> remains closed
+        vm.SelectShortcutsTabCommand.Execute(null);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(4));
+        Assert.That(vm.IsShortcutsTabActive, Is.True);
+        Assert.That(vm.IsTagsMenuExpanded, Is.False);
+
+        // Navigate back to General -> remains closed
+        vm.SelectGeneralTabCommand.Execute(null);
+        Assert.That(vm.ActiveViewIndex, Is.EqualTo(0));
+        Assert.That(vm.IsGeneralTabActive, Is.True);
+        Assert.That(vm.IsTagsMenuExpanded, Is.False);
+    }
+
+    [Test]
     public void DiscardChanges_RevertsModifications() {
         var vm = new SettingsDialogViewModel(_fakeService);
         vm.NewTagName = "temporarytag";
@@ -330,3 +393,4 @@ public class SettingsDialogViewModelTests {
         Assert.That(vm.Tags.Any(t => t.Name == "temporarytag"), Is.False);
     }
 }
+
