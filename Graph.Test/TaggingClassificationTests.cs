@@ -39,11 +39,13 @@ public class TaggingClassificationTests : IDisposable {
     [OneTimeSetUp]
     public void OneTimeSetup() {
         _datasetsPath = FindDatasetsPath();
+        CleanupXmpFiles();
         TestContext.Progress.WriteLine($"Found datasets folder at: {_datasetsPath}");
     }
 
     [SetUp]
     public void Setup() {
+        CleanupXmpFiles();
         _fileSystem = new FileSystem();
 
         _connection = new SqliteConnection("Filename=:memory:");
@@ -98,12 +100,37 @@ public class TaggingClassificationTests : IDisposable {
 
     [TearDown]
     public void TearDown() {
-        _context.Dispose();
-        _connection.Close();
+        CleanupXmpFiles();
+        _context?.Dispose();
+        _connection?.Close();
+    }
+
+    [OneTimeTearDown]
+    public void OneTimeTearDown() {
+        CleanupXmpFiles();
     }
 
     public void Dispose() {
         TearDown();
+    }
+
+    private void CleanupXmpFiles() {
+        if (string.IsNullOrEmpty(_datasetsPath) || !Directory.Exists(_datasetsPath)) {
+            return;
+        }
+
+        try {
+            var xmpFiles = Directory.GetFiles(_datasetsPath, "*.xmp", SearchOption.AllDirectories);
+            foreach (var file in xmpFiles) {
+                try {
+                    File.Delete(file);
+                } catch {
+                    // Ignore transient locks
+                }
+            }
+        } catch {
+            // Ignore directory scanning errors
+        }
     }
 
     [Test]
@@ -394,6 +421,17 @@ public class TaggingClassificationTests : IDisposable {
                     $"Intra-class similarity for '{testClass}' ({ownSimilarity:F4}) must exceed cross-class similarity with '{otherClass}' ({otherSimilarity:F4})");
             }
         }
+    }
+
+    [Test]
+    public void CleanupXmpFiles_RemovesAnyGeneratedXmpFiles() {
+        var dummyXmp = Path.Combine(_datasetsPath, "Car", "Testing", "Correct", "temp_test_dummy.xmp");
+        File.WriteAllText(dummyXmp, "<xmp></xmp>");
+        Assert.That(File.Exists(dummyXmp), Is.True);
+
+        CleanupXmpFiles();
+
+        Assert.That(File.Exists(dummyXmp), Is.False, "XMP file should be cleaned up by CleanupXmpFiles");
     }
 
     private async Task<List<float[]>> LoadEmbeddingsAsync(string directory) {
