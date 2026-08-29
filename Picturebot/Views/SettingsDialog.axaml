@@ -54,7 +54,7 @@
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="Margin" Value="0,0,0,2" />
-            <Setter Property="Foreground" Value="#949BA4" />
+            <Setter Property="Foreground" Value="#8E9297" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="Normal" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -62,15 +62,15 @@
         </Style>
         <Style Selector="Button.nav-tree-subitem:pointerover">
             <Setter Property="Background" Value="#25252B" />
-            <Setter Property="Foreground" Value="#DBDEE1" />
+            <Setter Property="Foreground" Value="#CBD5E1" />
         </Style>
         <Style Selector="Button.nav-tree-subitem.active">
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="#2A2A32" />
             <Setter Property="Foreground" Value="#FFFFFF" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style Selector="Button.nav-tree-subitem.active:pointerover">
-            <Setter Property="Background" Value="#25252B" />
+            <Setter Property="Background" Value="#2F2F38" />
             <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
 
@@ -407,10 +407,12 @@
                                         Classes.active="{Binding IsTagsCatalogTabActive}" 
                                         Command="{Binding SelectTagsCatalogTabCommand}">
                                     <Grid ColumnDefinitions="Auto,*">
-                                        <!-- Active White Indicator Line on the rail -->
-                                        <Rectangle Width="2" 
-                                                   Height="16" 
-                                                   Fill="#FFFFFF" 
+                                        <!-- Active Accent Indicator Line on the rail -->
+                                        <Rectangle Width="3" 
+                                                   Height="18" 
+                                                   Fill="#818CF8" 
+                                                   RadiusX="1.5" 
+                                                   RadiusY="1.5" 
                                                    HorizontalAlignment="Left" 
                                                    VerticalAlignment="Center" 
                                                    Margin="-17,0,0,0" 
@@ -424,9 +426,11 @@
                                         Classes.active="{Binding IsTaxonomyTabActive}" 
                                         Command="{Binding SelectTaxonomyTabCommand}">
                                     <Grid ColumnDefinitions="Auto,*">
-                                        <Rectangle Width="2" 
-                                                   Height="16" 
-                                                   Fill="#FFFFFF" 
+                                        <Rectangle Width="3" 
+                                                   Height="18" 
+                                                   Fill="#818CF8" 
+                                                   RadiusX="1.5" 
+                                                   RadiusY="1.5" 
                                                    HorizontalAlignment="Left" 
                                                    VerticalAlignment="Center" 
                                                    Margin="-17,0,0,0" 
@@ -440,9 +444,11 @@
                                         Classes.active="{Binding IsGroupsTabActive}" 
                                         Command="{Binding SelectGroupsTabCommand}">
                                     <Grid ColumnDefinitions="Auto,*">
-                                        <Rectangle Width="2" 
-                                                   Height="16" 
-                                                   Fill="#FFFFFF" 
+                                        <Rectangle Width="3" 
+                                                   Height="18" 
+                                                   Fill="#818CF8" 
+                                                   RadiusX="1.5" 
+                                                   RadiusY="1.5" 
                                                    HorizontalAlignment="Left" 
                                                    VerticalAlignment="Center" 
                                                    Margin="-17,0,0,0" 
@@ -852,12 +858,36 @@
                                                 <Setter Property="Padding" Value="8,4" />
                                                 <Setter Property="Margin" Value="0,0,0,3" />
                                                 <Setter Property="Background" Value="#1A1F2C" />
+                                                <Setter Property="BorderBrush" Value="Transparent" />
+                                                <Setter Property="BorderThickness" Value="1" />
+                                                <Setter Property="Template">
+                                                    <ControlTemplate>
+                                                        <Border Name="PART_ItemBorder"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                                CornerRadius="{TemplateBinding CornerRadius}"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter Name="PART_ContentPresenter"
+                                                                              Content="{TemplateBinding Content}"
+                                                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter>
                                             </Style>
-                                            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                            <Style Selector="ListBoxItem:pointerover">
                                                 <Setter Property="Background" Value="#242B3D" />
+                                                <Setter Property="BorderBrush" Value="#334155" />
                                             </Style>
-                                            <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-                                                <Setter Property="Background" Value="#1E293B" />
+                                            <Style Selector="ListBoxItem:selected">
+                                                <Setter Property="Background" Value="#2A3042" />
+                                                <Setter Property="BorderBrush" Value="#4F46E5" />
+                                            </Style>
+                                            <Style Selector="ListBoxItem:selected:pointerover">
+                                                <Setter Property="Background" Value="#323A50" />
+                                                <Setter Property="BorderBrush" Value="#6366F1" />
                                             </Style>
                                         </ListBox.Styles>
                                     </ListBox>

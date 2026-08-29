@@ -275,15 +275,9 @@ public class SettingsDialogViewModelTests {
         var vm = new SettingsDialogViewModel(_fakeService);
         var natureRoot = vm.HierarchyNodes.First();
 
-        // Select "nature" branch in the ComboBox
+        // Select "nature" branch in the ComboBox -> immediately imports branch
         var branchItem = vm.AvailableTaxonomyBranches.First(b => b.Node == natureRoot);
         vm.SelectedTaxonomyBranch = branchItem;
-
-        // Verify TextBox auto-populated with branch name
-        Assert.That(vm.NewTagGroupName, Is.EqualTo("nature"));
-
-        // User clicks Add
-        vm.AddTagGroupCommand.Execute(null);
 
         var createdGroup = vm.TagGroups.FirstOrDefault(g => g.GroupName == "nature");
         Assert.That(createdGroup, Is.Not.Null);
@@ -291,7 +285,6 @@ public class SettingsDialogViewModelTests {
         Assert.That(createdGroup!.TagIds.Count, Is.EqualTo(3));
         Assert.That(vm.SelectedTagGroup, Is.EqualTo(createdGroup));
         Assert.That(vm.SelectedTaxonomyBranch, Is.Null);
-        Assert.That(string.IsNullOrEmpty(vm.NewTagGroupName), Is.True);
     }
 
     [Test]
@@ -317,6 +310,71 @@ public class SettingsDialogViewModelTests {
         var group = vm.TagGroups.FirstOrDefault(g => g.GroupName == "nature");
         Assert.That(group, Is.Not.Null);
         Assert.That(group!.TagIds.Count, Is.EqualTo(3));
+    }
+
+    [Test]
+    public void Groups_AddInlineGroup_CommitAndCancel() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var initialCount = vm.TagGroups.Count;
+
+        // 1. Test AddInlineGroup + Cancel (Escape)
+        vm.AddInlineGroupCommand.Execute(null);
+        Assert.That(vm.TagGroups.Count, Is.EqualTo(initialCount + 1));
+        var tempGroup = vm.SelectedTagGroup;
+        Assert.That(tempGroup, Is.Not.Null);
+        Assert.That(tempGroup!.IsEditing, Is.True);
+
+        tempGroup.CancelEditCommand.Execute(null);
+        Assert.That(vm.TagGroups.Count, Is.EqualTo(initialCount));
+        Assert.That(vm.TagGroups.Contains(tempGroup), Is.False);
+
+        // 2. Test AddInlineGroup + Commit (Enter)
+        vm.AddInlineGroupCommand.Execute(null);
+        var newGroup = vm.SelectedTagGroup;
+        Assert.That(newGroup, Is.Not.Null);
+        newGroup!.EditingName = " Portraits ";
+        newGroup.CommitEditCommand.Execute(null);
+
+        Assert.That(vm.TagGroups.Count, Is.EqualTo(initialCount + 1));
+        Assert.That(newGroup.GroupName, Is.EqualTo("portraits"));
+        Assert.That(newGroup.IsEditing, Is.False);
+        Assert.That(newGroup.TagCountBadge, Is.EqualTo("0 tags"));
+        Assert.That(vm.HasGroupTags, Is.False);
+    }
+
+    [Test]
+    public void Groups_InlineRename_And_InlineChipInput_AddsAndRegisters() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var group = vm.TagGroups.First();
+
+        // 1. Test inline rename
+        group.StartEditCommand.Execute(null);
+        Assert.That(group.IsEditing, Is.True);
+        group.EditingName = " Best Photos ";
+        group.CommitEditCommand.Execute(null);
+        Assert.That(group.IsEditing, Is.False);
+        Assert.That(group.GroupName, Is.EqualTo("best photos"));
+        Assert.That(vm.SelectedGroupName, Is.EqualTo("best photos"));
+
+        // 2. Test inline tag chip entry
+        vm.SelectedTagGroup = group;
+        vm.NewGroupTagInput = " Urban ";
+        vm.AddTagToSelectedGroupCommand.Execute(null);
+
+        // Tag added to group
+        Assert.That(vm.SelectedGroupTags.Any(t => t.Name == "urban"), Is.True);
+        Assert.That(vm.HasGroupTags, Is.True);
+        Assert.That(group.TagCountBadge, Is.EqualTo("1 tag"));
+        // Automatically registered in global catalog
+        Assert.That(vm.Tags.Any(t => t.Name == "urban"), Is.True);
+        Assert.That(string.IsNullOrEmpty(vm.NewGroupTagInput), Is.True);
+
+        // 3. Remove tag
+        var urbanTag = vm.SelectedGroupTags.First(t => t.Name == "urban");
+        vm.RemoveTagFromGroupCommand.Execute(urbanTag);
+        Assert.That(vm.SelectedGroupTags.Any(t => t.Name == "urban"), Is.False);
+        Assert.That(group.TagCountBadge, Is.EqualTo("0 tags"));
+        Assert.That(vm.HasGroupTags, Is.False);
     }
 
     [Test]
@@ -392,5 +450,153 @@ public class SettingsDialogViewModelTests {
         Assert.That(vm.Tags.Count, Is.EqualTo(3));
         Assert.That(vm.Tags.Any(t => t.Name == "temporarytag"), Is.False);
     }
+
+    [Test]
+    public void Groups_SelectedGroupTagCountBadge_UpdatesCorrectly() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var group = vm.TagGroups.First();
+        vm.SelectedTagGroup = group;
+
+        Assert.That(vm.SelectedGroupTagCountBadge, Is.EqualTo("0 tags"));
+
+        vm.NewGroupTagInput = "wildlife";
+        vm.AddTagToSelectedGroupCommand.Execute(null);
+
+        Assert.That(vm.SelectedGroupTagCountBadge, Is.EqualTo("1 tag"));
+
+        vm.NewGroupTagInput = "macro";
+        vm.AddTagToSelectedGroupCommand.Execute(null);
+
+        Assert.That(vm.SelectedGroupTagCountBadge, Is.EqualTo("2 tags"));
+
+        var tagToRemove = vm.SelectedGroupTags.First(t => t.Name == "wildlife");
+        vm.RemoveTagFromGroupCommand.Execute(tagToRemove);
+
+        Assert.That(vm.SelectedGroupTagCountBadge, Is.EqualTo("1 tag"));
+    }
+
+    [Test]
+    public void Groups_IsAddingGroupTag_StartAndCancel() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        Assert.That(vm.IsAddingGroupTag, Is.False);
+
+        vm.StartAddGroupTagCommand.Execute(null);
+        Assert.That(vm.IsAddingGroupTag, Is.True);
+        Assert.That(string.IsNullOrEmpty(vm.NewGroupTagInput), Is.True);
+
+        vm.NewGroupTagInput = "test";
+        vm.CancelAddGroupTagCommand.Execute(null);
+        Assert.That(vm.IsAddingGroupTag, Is.False);
+        Assert.That(string.IsNullOrEmpty(vm.NewGroupTagInput), Is.True);
+    }
+
+    [Test]
+    public void Groups_KeyboardCommands_StartEditAndDeleteSelectedGroup() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var group = vm.TagGroups.First();
+        vm.SelectedTagGroup = group;
+
+        // F2 StartEdit
+        vm.StartEditSelectedGroupCommand.Execute(null);
+        Assert.That(group.IsEditing, Is.True);
+
+        group.CancelEditCommand.Execute(null);
+        Assert.That(group.IsEditing, Is.False);
+
+        // Delete key
+        var countBefore = vm.TagGroups.Count;
+        vm.DeleteSelectedGroupCommand.Execute(null);
+        Assert.That(vm.TagGroups.Count, Is.EqualTo(countBefore - 1));
+    }
+
+    [Test]
+    public void Groups_HasTaxonomyBranches_PropertyReflectsTree() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        Assert.That(vm.HasTaxonomyBranches, Is.True);
+        Assert.That(vm.AvailableTaxonomyBranches.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void Groups_TreeStructure_GroupAndTagNodes_EnforcesStrict2LevelHierarchy() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        Assert.That(vm.TagGroupTreeNodes.Count, Is.GreaterThan(0));
+
+        var groupNode = vm.TagGroupTreeNodes.First();
+        Assert.That(groupNode.IsGroup, Is.True);
+        Assert.That(groupNode.IsTag, Is.False);
+
+        // Add a child tag under this group
+        vm.SelectedGroupTreeNode = groupNode;
+        vm.AddTagToGroupNodeCommand.Execute(groupNode);
+
+        var childTagNode = groupNode.Children.LastOrDefault();
+        Assert.That(childTagNode, Is.Not.Null);
+        Assert.That(childTagNode!.IsTag, Is.True);
+        Assert.That(childTagNode.IsGroup, Is.False);
+        Assert.That(childTagNode.ParentGroup, Is.EqualTo(groupNode));
+
+        // Strict flat constraint: child tags have NO children
+        Assert.That(childTagNode.Children.Count, Is.EqualTo(0));
+
+        // Commit tag name
+        childTagNode.EditingName = "portrait";
+        childTagNode.CommitEditCommand.Execute(null);
+
+        Assert.That(childTagNode.Name, Is.EqualTo("portrait"));
+        Assert.That(childTagNode.IsEditing, Is.False);
+        Assert.That(childTagNode.Children.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Groups_BreadcrumbPath_DisplaysCorrectGroupAndTagPaths() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        vm.SelectGroupsTabCommand.Execute(null);
+        Assert.That(vm.IsGroupsTabActive, Is.True);
+
+        var groupNode = vm.TagGroupTreeNodes.First();
+        vm.SelectedGroupTreeNode = groupNode;
+
+        Assert.That(vm.HasSelectedBreadcrumb, Is.True);
+        Assert.That(vm.SelectedBreadcrumbLabel, Is.EqualTo("Group:"));
+        Assert.That(vm.SelectedBreadcrumbPath, Is.EqualTo(groupNode.Name));
+
+        // Add child tag and select it
+        vm.AddTagToGroupNodeCommand.Execute(groupNode);
+        var childTag = groupNode.Children.Last();
+        childTag.EditingName = "testtag";
+        childTag.CommitEditCommand.Execute(null);
+        vm.SelectedGroupTreeNode = childTag;
+
+        Assert.That(vm.HasSelectedBreadcrumb, Is.True);
+        Assert.That(vm.SelectedBreadcrumbLabel, Is.EqualTo("Group:"));
+        Assert.That(vm.SelectedBreadcrumbPath, Is.EqualTo($"{groupNode.Name} > testtag"));
+    }
+
+    [Test]
+    public void Groups_DeleteGroupTreeNode_RemovesGroupOrTag() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var groupNode = vm.TagGroupTreeNodes.First();
+        var initialGroupCount = vm.TagGroupTreeNodes.Count;
+
+        // Add tag under group
+        vm.AddTagToGroupNodeCommand.Execute(groupNode);
+        var childTag = groupNode.Children.Last();
+        childTag.EditingName = "removabletag";
+        childTag.CommitEditCommand.Execute(null);
+
+        var childCountBefore = groupNode.Children.Count;
+        Assert.That(childCountBefore, Is.GreaterThan(0));
+
+        // Delete tag node
+        vm.DeleteGroupTreeNodeCommand.Execute(childTag);
+        Assert.That(groupNode.Children.Count, Is.EqualTo(childCountBefore - 1));
+        Assert.That(vm.TagGroupTreeNodes.Count, Is.EqualTo(initialGroupCount));
+
+        // Delete group node
+        vm.DeleteGroupTreeNodeCommand.Execute(groupNode);
+        Assert.That(vm.TagGroupTreeNodes.Count, Is.EqualTo(initialGroupCount - 1));
+    }
 }
+
+
 

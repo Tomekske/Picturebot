@@ -25,6 +25,89 @@ public class TaxonomyBranchItem {
     public override string ToString() => DisplayPath;
 }
 
+public partial class TagGroupItemViewModel : ViewModelBase {
+    public TagGroup Model { get; }
+    private readonly Action<TagGroupItemViewModel> _deleteAction;
+    private readonly Action<TagGroupItemViewModel, string> _renameAction;
+    private readonly Action<TagGroupItemViewModel>? _cancelAction;
+
+    public Guid GroupId => Model.GroupId;
+    public ObservableCollection<Guid> TagIds => Model.TagIds;
+
+    [ObservableProperty]
+    private string _groupName;
+
+    [ObservableProperty]
+    private bool _isEditing;
+
+    [ObservableProperty]
+    private string _editingName = string.Empty;
+
+    public bool IsNewUncommitted { get; set; }
+    public bool IsNewNode { get; set; }
+
+    public int TagCount => TagIds.Count;
+    public string TagCountBadge => TagIds.Count == 1 ? "1 tag" : $"{TagIds.Count} tags";
+
+    public TagGroupItemViewModel(
+        TagGroup model, 
+        Action<TagGroupItemViewModel> deleteAction, 
+        Action<TagGroupItemViewModel, string> renameAction,
+        Action<TagGroupItemViewModel>? cancelAction = null) {
+        Model = model;
+        _deleteAction = deleteAction;
+        _renameAction = renameAction;
+        _cancelAction = cancelAction;
+        _groupName = model.GroupName;
+        _editingName = model.GroupName;
+    }
+
+    public void NotifyTagCountChanged() {
+        OnPropertyChanged(nameof(TagCount));
+        OnPropertyChanged(nameof(TagCountBadge));
+    }
+
+    [RelayCommand]
+    public void StartEdit() {
+        EditingName = GroupName;
+        IsEditing = true;
+    }
+
+    [RelayCommand]
+    public void CommitEdit() {
+        var trimmed = EditingName.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            if (IsNewUncommitted || IsNewNode) {
+                _cancelAction?.Invoke(this);
+            } else {
+                EditingName = GroupName;
+                IsEditing = false;
+            }
+            return;
+        }
+
+        IsNewUncommitted = false;
+        IsNewNode = false;
+        _renameAction(this, trimmed);
+        IsEditing = false;
+    }
+
+    [RelayCommand]
+    public void CancelEdit() {
+        if (IsNewUncommitted || IsNewNode) {
+            _cancelAction?.Invoke(this);
+        } else {
+            EditingName = GroupName;
+            IsEditing = false;
+        }
+    }
+
+    [RelayCommand]
+    public void Delete() {
+        _deleteAction(this);
+    }
+}
+
 public partial class SettingsDialogViewModel : ViewModelBase {
     private readonly ISettingsService _settingsService;
 
@@ -155,6 +238,11 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [NotifyPropertyChangedFor(nameof(IsGroupsSubTabActive))]
     [NotifyPropertyChangedFor(nameof(HasSelectedTaxonomyNode))]
     [NotifyPropertyChangedFor(nameof(IsTaxonomyPathVisible))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedGroupNode))]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupPath))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedBreadcrumb))]
+    [NotifyPropertyChangedFor(nameof(SelectedBreadcrumbLabel))]
+    [NotifyPropertyChangedFor(nameof(SelectedBreadcrumbPath))]
     [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]
     [NotifyPropertyChangedFor(nameof(KeywordsSubTabIndex))]
     private int _activeViewIndex;
@@ -183,6 +271,21 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     public bool IsTaxonomyPathVisible => HasSelectedTaxonomyNode;
 
     public string SelectedTaxonomyPath => CalculatedBreadcrumbPath;
+
+    public bool HasSelectedGroupNode =>
+        IsGroupsTabActive && SelectedGroupTreeNode != null && !string.IsNullOrWhiteSpace(SelectedGroupTreeNode.Name);
+
+    public string SelectedGroupPath =>
+        SelectedGroupTreeNode?.GetBreadcrumbPath() ?? string.Empty;
+
+    public bool HasSelectedBreadcrumb =>
+        HasSelectedTaxonomyNode || HasSelectedGroupNode;
+
+    public string SelectedBreadcrumbLabel =>
+        IsTaxonomyTabActive ? "Path:" : (IsGroupsTabActive ? "Group:" : "Path:");
+
+    public string SelectedBreadcrumbPath =>
+        IsTaxonomyTabActive ? SelectedTaxonomyPath : (IsGroupsTabActive ? SelectedGroupPath : string.Empty);
 
     public int SelectedTabIndex {
         get => ActiveViewIndex switch {
@@ -300,15 +403,26 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         }
         SelectedHierarchyNode = null;
 
-        // Groups
+        // Groups (Single-Container 2-Level Expandable Tree & Legacy List)
+        TagGroupTreeNodes.Clear();
         TagGroups.Clear();
         foreach (var group in settings.TagGroups) {
-            TagGroups.Add(group);
+            var groupNode = new GroupTreeNodeViewModel(group, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag);
+            foreach (var tagId in group.TagIds) {
+                var tag = MasterTags.FirstOrDefault(t => t.Id == tagId) ?? Tags.FirstOrDefault(t => t.Id == tagId)?.Model;
+                if (tag != null) {
+                    groupNode.Children.Add(new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete));
+                }
+            }
+            TagGroupTreeNodes.Add(groupNode);
+            TagGroups.Add(new TagGroupItemViewModel(group, DeleteTagGroupItem, RenameTagGroupItem, CancelTagGroupItem));
         }
 
+        SelectedGroupTreeNode = TagGroupTreeNodes.FirstOrDefault(g => g.GroupModel?.GroupId == settings.ActiveTagGroupId) ?? TagGroupTreeNodes.FirstOrDefault();
         SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupId == settings.ActiveTagGroupId) ?? TagGroups.FirstOrDefault();
         RefreshTagSuggestions();
         RefreshAvailableTaxonomyBranches();
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
 
         ThemeIndex = settings.ThemeMode switch {
             ThemeMode.Light => 0,
@@ -545,8 +659,12 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             PrintFolderPath = PrintFolderPath,
             MasterTags = Tags.Select(t => t.Model).ToList(),
             HierarchyNodes = HierarchyNodes.Select(n => n.ToModel()).ToList(),
-            TagGroups = TagGroups.ToList(),
-            ActiveTagGroupId = SelectedTagGroup?.GroupId,
+            TagGroups = TagGroupTreeNodes.Select(g => new TagGroup {
+                GroupId = g.GroupModel?.GroupId ?? Guid.NewGuid(),
+                GroupName = g.Name,
+                TagIds = new ObservableCollection<Guid>(g.Children.Where(c => c.TagId.HasValue).Select(c => c.TagId!.Value))
+            }).ToList(),
+            ActiveTagGroupId = (SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode.GroupModel?.GroupId : SelectedGroupTreeNode?.ParentGroup?.GroupModel?.GroupId) ?? TagGroupTreeNodes.FirstOrDefault()?.GroupModel?.GroupId,
             ThemeMode = ThemeIndex switch {
                 0 => ThemeMode.Light,
                 1 => ThemeMode.Dark,
@@ -662,6 +780,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         // 3. Remove from all TagGroups
         foreach (var group in TagGroups) {
             group.TagIds.Remove(tagId);
+            group.NotifyTagCountChanged();
         }
 
         RefreshTagGroupViews();
@@ -878,11 +997,40 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         return newTag;
     }
 
-    // ── SUB-TAB 3: GROUPS (PRESETS & TAXONOMY MIRRORING) ───────────────────
-    public ObservableCollection<TagGroup> TagGroups { get; } = new();
+    // ── SUB-TAB 3: GROUPS (SINGLE-CONTAINER 2-LEVEL EXPANDABLE LIST) ───────
+    public ObservableCollection<GroupTreeNodeViewModel> TagGroupTreeNodes { get; } = new();
+    public ObservableCollection<TagGroupItemViewModel> TagGroups { get; } = new();
+
+    public string GroupsHeaderTitle => $"GROUPS ({TagGroupTreeNodes.Count})";
 
     [ObservableProperty]
-    private TagGroup? _selectedTagGroup;
+    [NotifyPropertyChangedFor(nameof(HasSelectedGroupNode))]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupPath))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedBreadcrumb))]
+    [NotifyPropertyChangedFor(nameof(SelectedBreadcrumbPath))]
+    private GroupTreeNodeViewModel? _selectedGroupTreeNode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupName))]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupNameHeader))]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupTagCountBadge))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedGroup))]
+    private TagGroupItemViewModel? _selectedTagGroup;
+
+    public bool HasSelectedGroup => SelectedTagGroup != null;
+
+    public string SelectedGroupName =>
+        SelectedTagGroup != null && !string.IsNullOrWhiteSpace(SelectedTagGroup.GroupName)
+            ? SelectedTagGroup.GroupName
+            : (SelectedGroupTreeNode != null ? SelectedGroupTreeNode.Name : string.Empty);
+
+    public string SelectedGroupNameHeader =>
+        !string.IsNullOrWhiteSpace(SelectedGroupName)
+            ? $"TAGS IN GROUP: {SelectedGroupName}"
+            : "TAGS IN GROUP: (None selected)";
+
+    public string SelectedGroupTagCountBadge =>
+        SelectedTagGroup != null ? SelectedTagGroup.TagCountBadge : "0 tags";
 
     [ObservableProperty]
     private string _newTagGroupName = string.Empty;
@@ -890,21 +1038,290 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private string _newGroupTagInput = string.Empty;
 
+    [ObservableProperty]
+    private bool _isAddingGroupTag;
+
     public ObservableCollection<Tag> SelectedGroupTags { get; } = new();
     public ObservableCollection<string> TagSuggestions { get; } = new();
     public ObservableCollection<TaxonomyBranchItem> AvailableTaxonomyBranches { get; } = new();
 
+    public bool HasTaxonomyBranches => AvailableTaxonomyBranches.Count > 0;
+
+    public bool HasGroupTags => SelectedGroupTags.Count > 0;
+
     [ObservableProperty]
     private TaxonomyBranchItem? _selectedTaxonomyBranch;
 
-    partial void OnSelectedTagGroupChanged(TagGroup? value) {
+    partial void OnSelectedTagGroupChanged(TagGroupItemViewModel? value) {
+        IsAddingGroupTag = false;
         RefreshTagGroupViews();
+        OnPropertyChanged(nameof(SelectedGroupTagCountBadge));
+    }
+
+    partial void OnSelectedGroupTreeNodeChanged(GroupTreeNodeViewModel? value) {
+        if (value != null) {
+            var groupName = value.IsGroup ? value.Name : value.ParentGroup?.Name;
+            if (!string.IsNullOrEmpty(groupName)) {
+                _selectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                OnPropertyChanged(nameof(SelectedTagGroup));
+                RefreshTagGroupViews();
+            }
+        }
+        OnPropertyChanged(nameof(HasSelectedGroupNode));
+        OnPropertyChanged(nameof(SelectedGroupPath));
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
     }
 
     partial void OnSelectedTaxonomyBranchChanged(TaxonomyBranchItem? value) {
         if (value != null) {
-            NewTagGroupName = value.Node.Name.ToLowerInvariant();
+            ImportTaxonomyBranchAsGroup(value);
         }
+    }
+
+    [RelayCommand]
+    public void AddInlineGroup() {
+        var newGroupNode = new GroupTreeNodeViewModel(
+            isGroup: true,
+            string.Empty,
+            null,
+            OnGroupTreeCommit,
+            OnGroupTreeCancel,
+            OnGroupTreeDelete,
+            OnGroupTreeAddChildTag) {
+            IsNewNode = true,
+            IsNewUncommitted = true,
+            IsEditing = true,
+            EditingName = string.Empty
+        };
+        TagGroupTreeNodes.Add(newGroupNode);
+        SyncLegacyTagGroups();
+        SelectedGroupTreeNode = newGroupNode;
+        SelectedTagGroup = TagGroups.LastOrDefault();
+        if (SelectedTagGroup != null) {
+            SelectedTagGroup.IsNewNode = true;
+            SelectedTagGroup.IsNewUncommitted = true;
+            SelectedTagGroup.IsEditing = true;
+        }
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
+    }
+
+    [RelayCommand]
+    public void AddTagToGroupNode(GroupTreeNodeViewModel? targetGroup = null) {
+        var group = targetGroup ?? (SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode : SelectedGroupTreeNode?.ParentGroup);
+        if (group == null && TagGroupTreeNodes.Count > 0) {
+            group = TagGroupTreeNodes.First();
+        }
+        if (group == null) return;
+
+        group.IsExpanded = true;
+        var childNode = new GroupTreeNodeViewModel(
+            isGroup: false,
+            string.Empty,
+            group,
+            OnGroupTreeCommit,
+            OnGroupTreeCancel,
+            OnGroupTreeDelete) {
+            IsNewNode = true,
+            IsNewUncommitted = true,
+            IsEditing = true,
+            EditingName = string.Empty
+        };
+        group.Children.Add(childNode);
+        SelectedGroupTreeNode = childNode;
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
+    }
+
+    [RelayCommand]
+    public void DeleteGroupTreeNode(GroupTreeNodeViewModel? targetNode = null) {
+        var node = targetNode ?? SelectedGroupTreeNode;
+        if (node == null) return;
+        OnGroupTreeDelete(node);
+    }
+
+    [RelayCommand]
+    public void StartEditSelectedGroupTreeNode() {
+        SelectedGroupTreeNode?.StartEdit();
+        SelectedTagGroup?.StartEdit();
+    }
+
+    [RelayCommand]
+    public void DeleteSelectedGroupTreeNode() {
+        DeleteGroupTreeNode(SelectedGroupTreeNode);
+    }
+
+    private void OnGroupTreeCommit(GroupTreeNodeViewModel node) {
+        var trimmed = node.EditingName.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            if (node.IsNewUncommitted || node.IsNewNode) {
+                OnGroupTreeCancel(node);
+            } else {
+                node.EditingName = node.Name;
+                node.IsEditing = false;
+            }
+            return;
+        }
+
+        if (node.IsGroup) {
+            var duplicate = TagGroupTreeNodes.FirstOrDefault(g => g != node && g.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+            if (duplicate != null) {
+                if (node.IsNewUncommitted || node.IsNewNode) {
+                    TagGroupTreeNodes.Remove(node);
+                    SelectedGroupTreeNode = duplicate;
+                } else {
+                    node.EditingName = node.Name;
+                    node.IsEditing = false;
+                }
+                return;
+            }
+
+            node.Name = trimmed;
+            if (node.GroupModel != null) {
+                node.GroupModel.GroupName = trimmed;
+            } else {
+                node.GroupModel = new TagGroup {
+                    GroupName = trimmed,
+                    TagIds = new ObservableCollection<Guid>(node.Children.Where(c => c.TagId.HasValue).Select(c => c.TagId!.Value))
+                };
+            }
+            node.IsNewNode = false;
+            node.IsNewUncommitted = false;
+            node.IsEditing = false;
+        } else if (node.IsTag && node.ParentGroup != null) {
+            var parent = node.ParentGroup;
+            var tag = EnsureTagInPool(trimmed);
+
+            var duplicate = parent.Children.FirstOrDefault(c => c != node && c.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+            if (duplicate != null) {
+                if (node.IsNewUncommitted || node.IsNewNode) {
+                    parent.Children.Remove(node);
+                    SelectedGroupTreeNode = duplicate;
+                } else {
+                    node.EditingName = node.Name;
+                    node.IsEditing = false;
+                }
+                return;
+            }
+
+            node.Name = trimmed;
+            node.TagId = tag.Id;
+            node.TagModel = tag;
+            if (parent.GroupModel != null && !parent.GroupModel.TagIds.Contains(tag.Id)) {
+                parent.GroupModel.TagIds.Add(tag.Id);
+            }
+            node.IsNewNode = false;
+            node.IsNewUncommitted = false;
+            node.IsEditing = false;
+        }
+
+        SyncLegacyTagGroups();
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedGroupPath));
+    }
+
+    private void OnGroupTreeCancel(GroupTreeNodeViewModel node) {
+        if (node.IsNewUncommitted || node.IsNewNode) {
+            if (node.IsGroup) {
+                TagGroupTreeNodes.Remove(node);
+                SelectedGroupTreeNode = TagGroupTreeNodes.FirstOrDefault();
+            } else if (node.ParentGroup != null) {
+                node.ParentGroup.Children.Remove(node);
+                SelectedGroupTreeNode = node.ParentGroup;
+            }
+        } else {
+            node.EditingName = node.Name;
+            node.IsEditing = false;
+        }
+        SyncLegacyTagGroups();
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedGroupPath));
+    }
+
+    private void OnGroupTreeDelete(GroupTreeNodeViewModel node) {
+        if (node.IsGroup) {
+            TagGroupTreeNodes.Remove(node);
+            SelectedGroupTreeNode = TagGroupTreeNodes.FirstOrDefault();
+        } else if (node.ParentGroup != null) {
+            node.ParentGroup.Children.Remove(node);
+            if (node.TagId.HasValue && node.ParentGroup.GroupModel != null) {
+                node.ParentGroup.GroupModel.TagIds.Remove(node.TagId.Value);
+            }
+            SelectedGroupTreeNode = node.ParentGroup;
+        }
+        SyncLegacyTagGroups();
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
+        OnPropertyChanged(nameof(SelectedGroupPath));
+    }
+
+    private void OnGroupTreeAddChildTag(GroupTreeNodeViewModel parentGroup) {
+        AddTagToGroupNode(parentGroup);
+    }
+
+    private void SyncLegacyTagGroups() {
+        TagGroups.Clear();
+        foreach (var gNode in TagGroupTreeNodes) {
+            var tagIds = new ObservableCollection<Guid>(gNode.Children.Where(c => c.TagId.HasValue).Select(c => c.TagId!.Value));
+            var model = gNode.GroupModel ?? new TagGroup { GroupName = gNode.Name, TagIds = tagIds };
+            model.GroupName = gNode.Name;
+            model.TagIds = tagIds;
+            gNode.GroupModel = model;
+            TagGroups.Add(new TagGroupItemViewModel(model, DeleteTagGroupItem, RenameTagGroupItem, CancelTagGroupItem));
+        }
+        if (SelectedGroupTreeNode != null) {
+            var gName = SelectedGroupTreeNode.IsGroup ? SelectedGroupTreeNode.Name : SelectedGroupTreeNode.ParentGroup?.Name;
+            if (!string.IsNullOrEmpty(gName)) {
+                SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(gName, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+    }
+
+    [RelayCommand]
+    public void ImportBranch(TaxonomyBranchItem? branch) {
+        if (branch != null) {
+            ImportTaxonomyBranchAsGroup(branch);
+        }
+    }
+
+    public void ImportTaxonomyBranchAsGroup(TaxonomyBranchItem branch) {
+        var name = branch.Node.Name.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var existingNode = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (existingNode != null) {
+            SelectedGroupTreeNode = existingNode;
+            SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
+            SelectedTaxonomyBranch = null;
+            return;
+        }
+
+        var tagIds = CollectTagIdsFromNode(branch.Node, true);
+        var model = new TagGroup {
+            GroupName = name,
+            TagIds = new ObservableCollection<Guid>(tagIds)
+        };
+
+        var groupNode = new GroupTreeNodeViewModel(model, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag);
+        foreach (var id in tagIds) {
+            var tag = Tags.FirstOrDefault(t => t.Id == id)?.Model ?? MasterTags.FirstOrDefault(t => t.Id == id);
+            if (tag != null) {
+                groupNode.Children.Add(new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete));
+            }
+        }
+        TagGroupTreeNodes.Add(groupNode);
+        SyncLegacyTagGroups();
+        SelectedGroupTreeNode = groupNode;
+        SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        SelectedTaxonomyBranch = null;
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
     }
 
     [RelayCommand]
@@ -912,58 +1329,127 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         var name = NewTagGroupName.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        // Prevent duplicate group names
-        var existing = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var existing = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (existing != null) {
-            SelectedTagGroup = existing;
+            SelectedGroupTreeNode = existing;
+            SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
             NewTagGroupName = string.Empty;
-            SelectedTaxonomyBranch = null;
             return;
         }
 
-        TagGroup newGroup;
-        if (SelectedTaxonomyBranch != null) {
-            var tagIds = CollectTagIdsFromNode(SelectedTaxonomyBranch.Node, true);
-            newGroup = new TagGroup {
-                GroupName = name,
-                TagIds = new ObservableCollection<Guid>(tagIds)
-            };
-        } else {
-            newGroup = new TagGroup {
-                GroupName = name,
-                TagIds = new ObservableCollection<Guid>()
-            };
-        }
-
-        TagGroups.Add(newGroup);
-        SelectedTagGroup = newGroup;
+        var model = new TagGroup {
+            GroupName = name,
+            TagIds = new ObservableCollection<Guid>()
+        };
+        var groupNode = new GroupTreeNodeViewModel(model, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag);
+        TagGroupTreeNodes.Add(groupNode);
+        SyncLegacyTagGroups();
+        SelectedGroupTreeNode = groupNode;
+        SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
         NewTagGroupName = string.Empty;
-        SelectedTaxonomyBranch = null;
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+    }
+
+    private void DeleteTagGroupItem(TagGroupItemViewModel item) {
+        var match = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(item.GroupName, StringComparison.OrdinalIgnoreCase));
+        if (match != null) {
+            TagGroupTreeNodes.Remove(match);
+        }
+        TagGroups.Remove(item);
+        if (SelectedTagGroup == item) {
+            SelectedTagGroup = TagGroups.FirstOrDefault();
+        }
+        if (SelectedGroupTreeNode?.Name.Equals(item.GroupName, StringComparison.OrdinalIgnoreCase) == true) {
+            SelectedGroupTreeNode = TagGroupTreeNodes.FirstOrDefault();
+        }
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+    }
+
+    private void CancelTagGroupItem(TagGroupItemViewModel item) {
+        if (item.IsNewUncommitted || item.IsNewNode) {
+            DeleteTagGroupItem(item);
+        } else {
+            item.EditingName = item.GroupName;
+            item.IsEditing = false;
+        }
+    }
+
+    private void RenameTagGroupItem(TagGroupItemViewModel item, string newName) {
+        var duplicate = TagGroupTreeNodes.FirstOrDefault(g => !g.Name.Equals(item.GroupName, StringComparison.OrdinalIgnoreCase) && g.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
+        if (duplicate != null) {
+            item.EditingName = item.GroupName;
+            return;
+        }
+        var match = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(item.GroupName, StringComparison.OrdinalIgnoreCase));
+        if (match != null) {
+            match.Name = newName;
+            if (match.GroupModel != null) match.GroupModel.GroupName = newName;
+        }
+        item.GroupName = newName;
+        item.Model.GroupName = newName;
+        OnPropertyChanged(nameof(SelectedGroupName));
+        OnPropertyChanged(nameof(SelectedGroupNameHeader));
     }
 
     [RelayCommand]
-    private void DeleteTagGroup(TagGroup? group) {
+    public void DeleteTagGroup(TagGroupItemViewModel? group) {
         var target = group ?? SelectedTagGroup;
         if (target == null) return;
+        DeleteTagGroupItem(target);
+    }
 
-        TagGroups.Remove(target);
-        if (SelectedTagGroup == target) {
-            SelectedTagGroup = TagGroups.FirstOrDefault();
+    [RelayCommand]
+    public void StartEditSelectedGroup() {
+        if (SelectedGroupTreeNode != null) {
+            SelectedGroupTreeNode.StartEdit();
         }
+        SelectedTagGroup?.StartEdit();
+    }
+
+    [RelayCommand]
+    public void DeleteSelectedGroup() {
+        if (SelectedGroupTreeNode != null) {
+            DeleteGroupTreeNode(SelectedGroupTreeNode);
+        }
+        if (SelectedTagGroup != null) {
+            DeleteTagGroupItem(SelectedTagGroup);
+        }
+    }
+
+    [RelayCommand]
+    public void StartAddGroupTag() {
+        IsAddingGroupTag = true;
+        NewGroupTagInput = string.Empty;
+    }
+
+    [RelayCommand]
+    public void CancelAddGroupTag() {
+        IsAddingGroupTag = false;
+        NewGroupTagInput = string.Empty;
     }
 
     [RelayCommand]
     private void AddTagToSelectedGroup(string? tagNameParam) {
-        if (SelectedTagGroup == null) return;
-
         var name = (tagNameParam ?? NewGroupTagInput).Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(name)) return;
+        if (string.IsNullOrWhiteSpace(name)) {
+            IsAddingGroupTag = false;
+            return;
+        }
+
+        var groupNode = SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode : (SelectedGroupTreeNode?.ParentGroup ?? TagGroupTreeNodes.FirstOrDefault());
+        if (groupNode == null) return;
 
         var tag = EnsureTagInPool(name);
-
-        if (!SelectedTagGroup.TagIds.Contains(tag.Id)) {
-            SelectedTagGroup.TagIds.Add(tag.Id);
+        var existingTagNode = groupNode.Children.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (existingTagNode == null) {
+            var childNode = new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete);
+            groupNode.Children.Add(childNode);
+            if (groupNode.GroupModel != null && !groupNode.GroupModel.TagIds.Contains(tag.Id)) {
+                groupNode.GroupModel.TagIds.Add(tag.Id);
+            }
+            SyncLegacyTagGroups();
             RefreshTagGroupViews();
+            OnPropertyChanged(nameof(SelectedGroupTagCountBadge));
         }
 
         NewGroupTagInput = string.Empty;
@@ -971,9 +1457,20 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private void RemoveTagFromGroup(Tag? tag) {
-        if (SelectedTagGroup == null || tag == null) return;
-        SelectedTagGroup.TagIds.Remove(tag.Id);
+        if (tag == null) return;
+        var groupNode = SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode : (SelectedGroupTreeNode?.ParentGroup ?? TagGroupTreeNodes.FirstOrDefault());
+        if (groupNode == null) return;
+
+        var matchChild = groupNode.Children.FirstOrDefault(c => c.TagId == tag.Id || c.Name.Equals(tag.Name, StringComparison.OrdinalIgnoreCase));
+        if (matchChild != null) {
+            groupNode.Children.Remove(matchChild);
+        }
+        if (groupNode.GroupModel != null) {
+            groupNode.GroupModel.TagIds.Remove(tag.Id);
+        }
+        SyncLegacyTagGroups();
         RefreshTagGroupViews();
+        OnPropertyChanged(nameof(SelectedGroupTagCountBadge));
     }
 
     [RelayCommand]
@@ -982,22 +1479,30 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         if (targetNode == null) return;
 
         var groupName = targetNode.Name.Trim().ToLowerInvariant();
-        var existing = TagGroups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
-        if (existing != null) {
-            SelectedTagGroup = existing;
+        var existingNode = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+        if (existingNode != null) {
+            SelectedGroupTreeNode = existingNode;
             SelectGroupsTab();
             return;
         }
 
         var tagIds = CollectTagIdsFromNode(targetNode, true);
-
-        var newGroup = new TagGroup {
+        var model = new TagGroup {
             GroupName = groupName,
             TagIds = new ObservableCollection<Guid>(tagIds)
         };
 
-        TagGroups.Add(newGroup);
-        SelectedTagGroup = newGroup;
+        var groupNode = new GroupTreeNodeViewModel(model, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag);
+        foreach (var id in tagIds) {
+            var tag = Tags.FirstOrDefault(t => t.Id == id)?.Model ?? MasterTags.FirstOrDefault(t => t.Id == id);
+            if (tag != null) {
+                groupNode.Children.Add(new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete));
+            }
+        }
+        TagGroupTreeNodes.Add(groupNode);
+        SelectedGroupTreeNode = groupNode;
+        SyncLegacyTagGroups();
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
         SelectGroupsTab();
 
         try {
@@ -1037,6 +1542,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         foreach (var root in HierarchyNodes) {
             PopulateBranchesRecursive(root, "");
         }
+        OnPropertyChanged(nameof(HasTaxonomyBranches));
     }
 
     private void PopulateBranchesRecursive(HierarchyNodeViewModel node, string parentPath) {
@@ -1053,14 +1559,19 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     private void RefreshTagGroupViews() {
         SelectedGroupTags.Clear();
-        if (SelectedTagGroup == null) return;
+        var selectedGroup = SelectedTagGroup?.Model ?? (SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode.GroupModel : SelectedGroupTreeNode?.ParentGroup?.GroupModel);
+        if (selectedGroup == null) {
+            OnPropertyChanged(nameof(HasGroupTags));
+            return;
+        }
 
         var tagMap = Tags.ToDictionary(t => t.Id, t => t.Model);
-        foreach (var id in SelectedTagGroup.TagIds) {
+        foreach (var id in selectedGroup.TagIds) {
             if (tagMap.TryGetValue(id, out var tag)) {
                 SelectedGroupTags.Add(tag);
             }
         }
+        OnPropertyChanged(nameof(HasGroupTags));
     }
 
     private void RefreshTagSuggestions() {
