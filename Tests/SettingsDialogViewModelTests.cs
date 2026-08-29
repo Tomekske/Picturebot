@@ -557,7 +557,7 @@ public class SettingsDialogViewModelTests {
         vm.SelectedGroupTreeNode = groupNode;
 
         Assert.That(vm.HasSelectedBreadcrumb, Is.True);
-        Assert.That(vm.SelectedBreadcrumbLabel, Is.EqualTo("Group:"));
+        Assert.That(vm.SelectedBreadcrumbLabel, Is.EqualTo("Path:"));
         Assert.That(vm.SelectedBreadcrumbPath, Is.EqualTo(groupNode.Name));
 
         // Add child tag and select it
@@ -568,7 +568,7 @@ public class SettingsDialogViewModelTests {
         vm.SelectedGroupTreeNode = childTag;
 
         Assert.That(vm.HasSelectedBreadcrumb, Is.True);
-        Assert.That(vm.SelectedBreadcrumbLabel, Is.EqualTo("Group:"));
+        Assert.That(vm.SelectedBreadcrumbLabel, Is.EqualTo("Path:"));
         Assert.That(vm.SelectedBreadcrumbPath, Is.EqualTo($"{groupNode.Name} > testtag"));
     }
 

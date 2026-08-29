@@ -281,8 +281,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     public bool HasSelectedBreadcrumb =>
         HasSelectedTaxonomyNode || HasSelectedGroupNode;
 
-    public string SelectedBreadcrumbLabel =>
-        IsTaxonomyTabActive ? "Path:" : (IsGroupsTabActive ? "Group:" : "Path:");
+    public string SelectedBreadcrumbLabel => "Path:";
 
     public string SelectedBreadcrumbPath =>
         IsTaxonomyTabActive ? SelectedTaxonomyPath : (IsGroupsTabActive ? SelectedGroupPath : string.Empty);
