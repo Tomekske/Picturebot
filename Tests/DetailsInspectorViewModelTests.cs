@@ -235,4 +235,78 @@ public class DetailsInspectorViewModelTests {
         Assert.That(_viewModel.ActiveKeywordChips.Count, Is.EqualTo(1));
         Assert.That(_viewModel.ActiveKeywordChips[0].DisplayText, Is.EqualTo("Vehicles › Truck"));
     }
+
+    [Test]
+    public void ActiveKeywordGroups_GroupsTaxonomyParentsAsTitlesAndChildrenAsPills() {
+        var picture = new Picture {
+            Name = "test.jpg",
+            Keywords = new List<string> {
+                "faces|robin", "faces|katsiuska", "faces", "robin", "katsiuska",
+                "Vehicles|Car", "Vehicles|Truck", "Vehicles", "Car", "Truck",
+                "Hero", "Flagged"
+            }
+        };
+        var picVm = new PictureItemViewModel(picture);
+        _viewModel.SelectedPicture = picVm;
+
+        // Verify active keyword groups
+        Assert.That(_viewModel.ActiveKeywordGroups.Count, Is.EqualTo(3));
+
+        // Group 1: faces
+        var facesGroup = _viewModel.ActiveKeywordGroups.FirstOrDefault(g => g.Title == "faces");
+        Assert.That(facesGroup, Is.Not.Null);
+        Assert.That(facesGroup!.IsHierarchical, Is.True);
+        Assert.That(facesGroup.Chips.Count, Is.EqualTo(2));
+        Assert.That(facesGroup.Chips.Select(c => c.LeafName), Is.EqualTo(new[] { "katsiuska", "robin" }));
+        Assert.That(facesGroup.IsExpanded, Is.True);
+
+        // Group 2: Vehicles
+        var vehiclesGroup = _viewModel.ActiveKeywordGroups.FirstOrDefault(g => g.Title == "Vehicles");
+        Assert.That(vehiclesGroup, Is.Not.Null);
+        Assert.That(vehiclesGroup!.IsHierarchical, Is.True);
+        Assert.That(vehiclesGroup.Chips.Count, Is.EqualTo(2));
+        Assert.That(vehiclesGroup.Chips.Select(c => c.LeafName), Is.EqualTo(new[] { "Car", "Truck" }));
+
+        // Group 3: Flat Keywords
+        var flatGroup = _viewModel.ActiveKeywordGroups.FirstOrDefault(g => g.Title == "Keywords");
+        Assert.That(flatGroup, Is.Not.Null);
+        Assert.That(flatGroup!.IsHierarchical, Is.False);
+        Assert.That(flatGroup.Chips.Count, Is.EqualTo(2));
+        Assert.That(flatGroup.Chips.Select(c => c.LeafName), Is.EqualTo(new[] { "Flagged", "Hero" }));
+
+        // Toggle expand/collapse
+        facesGroup.ToggleExpandCommand.Execute(null);
+        Assert.That(facesGroup.IsExpanded, Is.False);
+        facesGroup.ToggleExpandCommand.Execute(null);
+        Assert.That(facesGroup.IsExpanded, Is.True);
+    }
+
+    [Test]
+    public void RemoveKeywordGroup_RemovesAllPillsInGroup() {
+        var picture = new Picture {
+            Name = "test.jpg",
+            Keywords = new List<string> {
+                "faces|robin", "faces|katsiuska", "faces", "robin", "katsiuska",
+                "Hero"
+            }
+        };
+        var picVm = new PictureItemViewModel(picture);
+        _viewModel.SelectedPicture = picVm;
+
+        Assert.That(_viewModel.ActiveKeywordGroups.Count, Is.EqualTo(2));
+        var facesGroup = _viewModel.ActiveKeywordGroups.First(g => g.Title == "faces");
+
+        _viewModel.RemoveKeywordGroupCommand.Execute(facesGroup);
+
+        Assert.That(picVm.Keywords, Does.Not.Contain("faces|robin"));
+        Assert.That(picVm.Keywords, Does.Not.Contain("faces|katsiuska"));
+        Assert.That(picVm.Keywords, Does.Not.Contain("robin"));
+        Assert.That(picVm.Keywords, Does.Not.Contain("katsiuska"));
+        Assert.That(picVm.Keywords, Does.Not.Contain("faces"));
+        Assert.That(picVm.Keywords, Contains.Item("Hero"));
+
+        Assert.That(_viewModel.ActiveKeywordGroups.Count, Is.EqualTo(1));
+        Assert.That(_viewModel.ActiveKeywordGroups[0].Title, Is.EqualTo("Keywords"));
+        Assert.That(_viewModel.ActiveKeywordGroups[0].Chips[0].LeafName, Is.EqualTo("Hero"));
+    }
 }

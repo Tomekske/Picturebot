@@ -65,6 +65,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     public ObservableCollection<KeywordChipViewModel> ActiveKeywordChips { get; } = new();
 
+    public ObservableCollection<KeywordGroupViewModel> ActiveKeywordGroups { get; } = new();
+
     public ObservableCollection<string> ActiveKeywords { get; } = new();
 
     public ObservableCollection<string> AvailableKeywordSuggestions { get; } = new();
@@ -201,6 +203,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     private void UpdateActiveKeywords() {
         ActiveKeywordChips.Clear();
         ActiveKeywords.Clear();
+        ActiveKeywordGroups.Clear();
 
         HashSet<string> rawKeywords;
         if (SelectedPictures.Count >= 2) {
@@ -218,6 +221,40 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             ActiveKeywordChips.Add(chip);
             ActiveKeywords.Add(chip.DisplayText);
         }
+
+        var groups = GroupKeywordChips(chips);
+        foreach (var group in groups) {
+            ActiveKeywordGroups.Add(group);
+        }
+    }
+
+    public static List<KeywordGroupViewModel> GroupKeywordChips(IEnumerable<KeywordChipViewModel> chips) {
+        if (chips == null) return new List<KeywordGroupViewModel>();
+
+        var groups = new List<KeywordGroupViewModel>();
+
+        // 1. Group hierarchical chips by their ParentPath
+        var hierarchicalGroups = chips
+            .Where(c => c.IsHierarchical && !string.IsNullOrWhiteSpace(c.ParentPath))
+            .GroupBy(c => c.ParentPath!, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var g in hierarchicalGroups) {
+            var groupChips = g.OrderBy(c => c.LeafName, StringComparer.OrdinalIgnoreCase);
+            groups.Add(new KeywordGroupViewModel(g.Key, g.Key, true, groupChips));
+        }
+
+        // 2. Flat chips grouped under "Keywords"
+        var flatChips = chips
+            .Where(c => !c.IsHierarchical || string.IsNullOrWhiteSpace(c.ParentPath))
+            .OrderBy(c => c.LeafName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (flatChips.Any()) {
+            groups.Add(new KeywordGroupViewModel("Keywords", "flat_keywords", false, flatChips));
+        }
+
+        return groups;
     }
 
     public static List<KeywordChipViewModel> DeduplicateAndFormatKeywords(IEnumerable<string> rawKeywords) {
@@ -620,6 +657,15 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     public void RemoveKeywordChip(KeywordChipViewModel? chip) {
         if (chip == null) return;
         RemoveKeyword(chip.RawValue);
+    }
+
+    [RelayCommand]
+    public void RemoveKeywordGroup(KeywordGroupViewModel? group) {
+        if (group == null) return;
+        var chipsToRemove = group.Chips.ToList();
+        foreach (var chip in chipsToRemove) {
+            RemoveKeywordChip(chip);
+        }
     }
 
     [RelayCommand]
