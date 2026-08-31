@@ -199,33 +199,78 @@
                     </Grid>
 
                     <!-- Keywords List Chips -->
-                    <ItemsControl ItemsSource="{Binding ActiveKeywords}">
+                    <ItemsControl ItemsSource="{Binding ActiveKeywordChips}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Top" ItemHeight="NaN" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="x:String">
-                                <Border Background="#25FFFFFF"
-                                        BorderBrush="#33FFFFFF"
+                            <DataTemplate DataType="vm:KeywordChipViewModel">
+                                <Border Background="#1E293B"
+                                        BorderBrush="#334155"
                                         BorderThickness="1"
-                                        CornerRadius="12"
+                                        CornerRadius="14"
                                         Margin="0,0,6,6"
-                                        Padding="10,4,6,4">
+                                        Padding="10,4,6,4"
+                                        ToolTip.Tip="{Binding Tooltip}">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding}"
-                                                   Foreground="#E0E0E0"
-                                                   FontSize="12"
-                                                   VerticalAlignment="Center" />
+                                        <!-- Icon: Tree icon for Hierarchical, Tag icon for Flat -->
+                                        <icons:MaterialIcon Kind="FileTreeOutline"
+                                                            Width="13"
+                                                            Height="13"
+                                                            Foreground="#818CF8"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding IsHierarchical}" />
+                                        <icons:MaterialIcon Kind="TagOutline"
+                                                            Width="13"
+                                                            Height="13"
+                                                            Foreground="#94A3B8"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding !IsHierarchical}" />
+
+                                        <!-- Content -->
+                                        <Panel VerticalAlignment="Center">
+                                            <!-- Hierarchical: Breadcrumb typography with parent prefix and leaf -->
+                                            <StackPanel Orientation="Horizontal" Spacing="3" IsVisible="{Binding IsHierarchical}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ParentPath}"
+                                                           Foreground="#94A3B8"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Text="›"
+                                                           Foreground="#818CF8"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"
+                                                           VerticalAlignment="Center"
+                                                           Margin="1,0,1,0" />
+                                                <TextBlock Text="{Binding LeafName}"
+                                                           Foreground="#F8FAFC"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center" />
+                                            </StackPanel>
+
+                                            <!-- Flat: Simple Tag Label -->
+                                            <TextBlock Text="{Binding LeafName}"
+                                                       Foreground="#E2E8F0"
+                                                       FontSize="12"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding !IsHierarchical}" />
+                                        </Panel>
+
+                                        <!-- Remove Chip Action Button -->
                                         <Button Classes="Basic"
-                                                Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordCommand}"
+                                                Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordChipCommand}"
                                                 CommandParameter="{Binding}"
                                                 Padding="2"
                                                 MinWidth="16"
                                                 MinHeight="16"
-                                                VerticalAlignment="Center">
-                                            <TextBlock Text="×" Foreground="#FF5555" FontWeight="Bold" FontSize="12" />
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="Remove keyword">
+                                            <icons:MaterialIcon Kind="Close"
+                                                                Width="12"
+                                                                Height="12"
+                                                                Foreground="#94A3B8" />
                                         </Button>
                                     </StackPanel>
                                 </Border>
@@ -233,13 +278,23 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- Add Keyword TextBox -->
-                    <TextBox Name="TagInput"
-                             Text="{Binding NewTagText, Mode=TwoWay}"
-                             Watermark="Add keyword..."
-                             Height="36"
-                             VerticalContentAlignment="Center"
-                             KeyDown="TagInput_KeyDown" />
+                    <!-- Add Keyword AutoCompleteBox -->
+                    <AutoCompleteBox Name="TagInput"
+                                     ItemsSource="{Binding AvailableKeywordSuggestions}"
+                                     Text="{Binding NewTagText, Mode=TwoWay}"
+                                     Watermark="Add keyword (e.g. Vehicles › Car or Hero)..."
+                                     FilterMode="ContainsOrdinal"
+                                     MinimumPrefixLength="0"
+                                     MinimumPopulateDelay="00:00:00"
+                                     GotFocus="TagInput_GotFocus"
+                                     Height="36"
+                                     KeyDown="TagInput_KeyDown">
+                        <AutoCompleteBox.ItemTemplate>
+                            <DataTemplate DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </AutoCompleteBox.ItemTemplate>
+                    </AutoCompleteBox>
 
                     <!-- Quick Tags Bar -->
                     <StackPanel Spacing="6" Margin="0,4,0,0">

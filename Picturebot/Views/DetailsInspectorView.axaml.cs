@@ -17,4 +17,10 @@ public partial class DetailsInspectorView : UserControl {
             }
         }
     }
+
+    private void TagInput_GotFocus(object? sender, GotFocusEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            acb.IsDropDownOpen = true;
+        }
+    }
 }

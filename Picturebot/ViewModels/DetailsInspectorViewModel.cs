@@ -63,7 +63,11 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     [ObservableProperty]
     private string _newTagText = string.Empty;
 
+    public ObservableCollection<KeywordChipViewModel> ActiveKeywordChips { get; } = new();
+
     public ObservableCollection<string> ActiveKeywords { get; } = new();
+
+    public ObservableCollection<string> AvailableKeywordSuggestions { get; } = new();
 
     public ObservableCollection<TagGroup> AvailableTagGroups { get; } = new();
 
@@ -92,12 +96,14 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         _settingsService.PropertyChanged += OnSettingsChanged;
         WeakReferenceMessenger.Default.RegisterAll(this);
         RefreshTagGroups();
+        RefreshKeywordSuggestions();
     }
 
     private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
         if (e.PropertyName == nameof(ISettingsService.Current)) {
             Avalonia.Threading.Dispatcher.UIThread.Post(() => {
                 RefreshTagGroups();
+                RefreshKeywordSuggestions();
             });
         }
     }
@@ -193,20 +199,130 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     }
 
     private void UpdateActiveKeywords() {
+        ActiveKeywordChips.Clear();
         ActiveKeywords.Clear();
-        HashSet<string> uniqueKeywords;
+
+        HashSet<string> rawKeywords;
         if (SelectedPictures.Count >= 2) {
-            uniqueKeywords = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            rawKeywords = SelectedPictures.SelectMany(p => p.Keywords).ToHashSet(StringComparer.OrdinalIgnoreCase);
         } else if (SelectedPictures.Count == 1) {
-            uniqueKeywords = SelectedPictures[0].Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            rawKeywords = SelectedPictures[0].Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
         } else if (SelectedPicture != null) {
-            uniqueKeywords = SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            rawKeywords = SelectedPicture.Keywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
         } else {
-            uniqueKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            rawKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        foreach (var kw in uniqueKeywords.OrderBy(k => k)) {
-            ActiveKeywords.Add(kw);
+        var chips = DeduplicateAndFormatKeywords(rawKeywords);
+        foreach (var chip in chips) {
+            ActiveKeywordChips.Add(chip);
+            ActiveKeywords.Add(chip.DisplayText);
+        }
+    }
+
+    public static List<KeywordChipViewModel> DeduplicateAndFormatKeywords(IEnumerable<string> rawKeywords) {
+        if (rawKeywords == null) return new List<KeywordChipViewModel>();
+
+        var rawList = rawKeywords
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Select(k => k.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var hierarchicalPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var flatTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var raw in rawList) {
+            var normalized = KeywordChipViewModel.NormalizePath(raw);
+            if (normalized.Contains('|')) {
+                hierarchicalPaths.Add(normalized);
+            } else {
+                flatTags.Add(normalized);
+            }
+        }
+
+        // 1. Remove subsumed / prefix hierarchical paths (keep longest canonical paths)
+        var canonicalHierarchies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in hierarchicalPaths) {
+            bool isSubsumed = hierarchicalPaths.Any(other =>
+                other.Length > path.Length &&
+                other.StartsWith(path + "|", StringComparison.OrdinalIgnoreCase));
+            if (!isSubsumed) {
+                canonicalHierarchies.Add(path);
+            }
+        }
+
+        // 2. Identify all absorbed ancestor segments and leaf segments
+        var absorbedSegments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in canonicalHierarchies) {
+            var segments = path.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var seg in segments) {
+                absorbedSegments.Add(seg);
+            }
+        }
+
+        var chips = new List<KeywordChipViewModel>();
+
+        // 3. Add canonical hierarchical chips
+        foreach (var path in canonicalHierarchies) {
+            chips.Add(KeywordChipViewModel.FromHierarchicalPath(path));
+        }
+
+        // 4. Add standalone flat tags (those not absorbed by hierarchical paths)
+        foreach (var flat in flatTags) {
+            if (!absorbedSegments.Contains(flat)) {
+                chips.Add(KeywordChipViewModel.FromFlatTag(flat));
+            }
+        }
+
+        return chips.OrderBy(c => c.DisplayText, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private void RefreshKeywordSuggestions() {
+        AvailableKeywordSuggestions.Clear();
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 1. Hierarchy paths from settings (formatted as breadcrumbs)
+        var hierarchy = _settingsService.Current?.HierarchyNodes;
+        if (hierarchy != null) {
+            foreach (var root in hierarchy) {
+                CollectHierarchyPathsForSuggestions(root, "", set);
+            }
+        }
+
+        // 2. Master tags
+        var masterTags = _settingsService.Current?.MasterTags;
+        if (masterTags != null) {
+            foreach (var t in masterTags) {
+                if (!string.IsNullOrWhiteSpace(t.Name)) {
+                    set.Add(t.Name.Trim());
+                }
+            }
+        }
+
+        // 3. Existing keywords from pictures
+        foreach (var pic in SelectedPictures) {
+            foreach (var kw in pic.Keywords) {
+                if (kw.Contains('|')) {
+                    set.Add(kw.Replace("|", " › "));
+                } else {
+                    set.Add(kw);
+                }
+            }
+        }
+
+        foreach (var item in set.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)) {
+            AvailableKeywordSuggestions.Add(item);
+        }
+    }
+
+    private static void CollectHierarchyPathsForSuggestions(HierarchyNode node, string parentPath, HashSet<string> set) {
+        var path = string.IsNullOrEmpty(parentPath) ? node.Name : $"{parentPath} › {node.Name}";
+        set.Add(path);
+        if (node.Children != null) {
+            foreach (var child in node.Children) {
+                CollectHierarchyPathsForSuggestions(child, path, set);
+            }
         }
     }
 
@@ -428,26 +544,64 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     }
 
     [RelayCommand]
-    private void AddKeyword(string keyword) {
+    public void AddKeyword(string keyword) {
         if (string.IsNullOrWhiteSpace(keyword)) return;
-        var trimmed = keyword.Trim();
+        var input = keyword.Trim();
 
         var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
         if (!targetVms.Any() && SelectedPicture != null) {
             targetVms.Add(SelectedPicture);
         }
 
+        string? resolvedHierarchicalPath = null;
+        List<string> flatSegmentsToAdd = new();
+
+        var normalized = KeywordChipViewModel.NormalizePath(input);
+        if (normalized.Contains('|')) {
+            resolvedHierarchicalPath = normalized;
+            flatSegmentsToAdd = normalized.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        } else {
+            // Check if input is a leaf tag in taxonomy service
+            if (_taxonomyService != null) {
+                var fullHierarchy = _taxonomyService.GetFullHierarchicalPath(input);
+                if (!string.IsNullOrEmpty(fullHierarchy) && fullHierarchy.Contains('|')) {
+                    resolvedHierarchicalPath = fullHierarchy;
+                    flatSegmentsToAdd = _taxonomyService.ResolveTaxonomySubjectChain(input).ToList();
+                }
+            }
+            if (resolvedHierarchicalPath == null) {
+                var pathFromHierarchy = FindHierarchicalPathForTagInSettings(input);
+                if (!string.IsNullOrEmpty(pathFromHierarchy) && pathFromHierarchy.Contains('|')) {
+                    resolvedHierarchicalPath = pathFromHierarchy;
+                    flatSegmentsToAdd = pathFromHierarchy.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                } else {
+                    flatSegmentsToAdd.Add(input);
+                }
+            }
+        }
+
         bool changed = false;
         foreach (var picVm in targetVms) {
-            if (!picVm.Keywords.Contains(trimmed, StringComparer.OrdinalIgnoreCase)) {
-                picVm.AddKeyword(trimmed);
-                _curationQueue.Enqueue(picVm.Picture);
-                changed = true;
+            if (!string.IsNullOrEmpty(resolvedHierarchicalPath)) {
+                if (!picVm.Keywords.Contains(resolvedHierarchicalPath, StringComparer.OrdinalIgnoreCase)) {
+                    picVm.AddKeyword(resolvedHierarchicalPath);
+                    changed = true;
+                }
+            }
 
+            foreach (var seg in flatSegmentsToAdd) {
+                if (!picVm.Keywords.Contains(seg, StringComparer.OrdinalIgnoreCase)) {
+                    picVm.AddKeyword(seg);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                _curationQueue.Enqueue(picVm.Picture);
                 if (_centroidService != null && _embeddingService != null) {
                     _ = Task.Run(async () => {
                         var vec = await _embeddingService.GetOrComputeEmbeddingAsync(picVm.Picture);
-                        _centroidService.OnTagAdded(picVm.Picture.Id, trimmed, vec);
+                        _centroidService.OnTagAdded(picVm.Picture.Id, resolvedHierarchicalPath ?? input, vec);
                     });
                 }
             }
@@ -455,7 +609,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         if (changed) {
             Log.Information("Manually added tag '{Keyword}' to {Count} picture(s): [{PictureNames}]",
-                trimmed, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
+                input, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
@@ -463,9 +617,15 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     }
 
     [RelayCommand]
-    private void RemoveKeyword(string keyword) {
+    public void RemoveKeywordChip(KeywordChipViewModel? chip) {
+        if (chip == null) return;
+        RemoveKeyword(chip.RawValue);
+    }
+
+    [RelayCommand]
+    public void RemoveKeyword(string keyword) {
         if (string.IsNullOrWhiteSpace(keyword)) return;
-        var trimmed = keyword.Trim();
+        var normalized = KeywordChipViewModel.NormalizePath(keyword);
 
         var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : new List<PictureItemViewModel>();
         if (!targetVms.Any() && SelectedPicture != null) {
@@ -474,16 +634,53 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         bool changed = false;
         foreach (var picVm in targetVms) {
-            var existing = picVm.Keywords.FirstOrDefault(k => k.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
-            if (existing != null) {
-                picVm.RemoveKeyword(existing);
-                _curationQueue.Enqueue(picVm.Picture);
-                changed = true;
+            if (normalized.Contains('|')) {
+                // 1. Remove the matching hierarchical path(s)
+                var matchingPaths = picVm.Keywords
+                    .Where(k => KeywordChipViewModel.NormalizePath(k).Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                foreach (var mp in matchingPaths) {
+                    picVm.RemoveKeyword(mp);
+                    changed = true;
+                }
 
+                // 2. Remove associated segments if they are not used in any remaining hierarchical path
+                var segmentsToRemove = normalized.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var remainingHierarchical = picVm.Keywords
+                    .Select(KeywordChipViewModel.NormalizePath)
+                    .Where(k => k.Contains('|'))
+                    .ToList();
+
+                foreach (var seg in segmentsToRemove) {
+                    bool usedInOtherHierarchy = remainingHierarchical.Any(other =>
+                        other.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                             .Any(s => s.Equals(seg, StringComparison.OrdinalIgnoreCase)));
+
+                    if (!usedInOtherHierarchy) {
+                        var flatMatch = picVm.Keywords.FirstOrDefault(k => k.Equals(seg, StringComparison.OrdinalIgnoreCase));
+                        if (flatMatch != null) {
+                            picVm.RemoveKeyword(flatMatch);
+                            changed = true;
+                        }
+                    }
+                }
+            } else {
+                // Flat tag removal
+                var existing = picVm.Keywords.FirstOrDefault(k =>
+                    k.Equals(normalized, StringComparison.OrdinalIgnoreCase) ||
+                    k.Equals(keyword.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (existing != null) {
+                    picVm.RemoveKeyword(existing);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                _curationQueue.Enqueue(picVm.Picture);
                 if (_centroidService != null && _embeddingService != null) {
                     _ = Task.Run(async () => {
                         var vec = await _embeddingService.GetOrComputeEmbeddingAsync(picVm.Picture);
-                        _centroidService.OnTagRemoved(picVm.Picture.Id, trimmed, vec);
+                        _centroidService.OnTagRemoved(picVm.Picture.Id, normalized, vec);
                     });
                 }
             }
@@ -491,7 +688,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         if (changed) {
             Log.Information("Manually removed tag '{Keyword}' from {Count} picture(s): [{PictureNames}]",
-                trimmed, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
+                keyword, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
@@ -522,16 +719,13 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             bool hasAny = paths.Any(p => picVm.Keywords.Contains(p, StringComparer.OrdinalIgnoreCase));
             if (hasAny) {
                 foreach (var p in paths) {
-                    picVm.RemoveKeyword(p);
+                    RemoveKeyword(p);
                 }
             } else {
                 foreach (var p in paths) {
-                    if (!picVm.Keywords.Contains(p, StringComparer.OrdinalIgnoreCase)) {
-                        picVm.AddKeyword(p);
-                    }
+                    AddKeyword(p);
                 }
             }
-            _curationQueue.Enqueue(picVm.Picture);
             changed = true;
         }
 
@@ -542,6 +736,24 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             UpdateQuickTagStates();
             WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
         }
+    }
+
+    private string? FindHierarchicalPathForTagInSettings(string leafTagName) {
+        var hierarchy = _settingsService.Current?.HierarchyNodes;
+        if (hierarchy == null) return null;
+        return FindPathToNodeByName(hierarchy, leafTagName, "");
+    }
+
+    private static string? FindPathToNodeByName(IEnumerable<HierarchyNode> nodes, string targetName, string currentPath) {
+        foreach (var node in nodes) {
+            var path = string.IsNullOrEmpty(currentPath) ? node.Name : $"{currentPath}|{node.Name}";
+            if (node.Name.Equals(targetName, StringComparison.OrdinalIgnoreCase)) {
+                return path;
+            }
+            var child = FindPathToNodeByName(node.Children, targetName, path);
+            if (child != null) return child;
+        }
+        return null;
     }
 
     [RelayCommand]
