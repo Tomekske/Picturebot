@@ -303,14 +303,16 @@ public partial class FilterToolbarViewModel : ViewModelBase
         var tagCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var pic in pictures)
         {
-            if (pic.Keywords != null)
+            if (pic.Keywords != null && pic.Keywords.Count > 0)
             {
-                foreach (var tag in pic.Keywords)
+                var chips = DetailsInspectorViewModel.DeduplicateAndFormatKeywords(pic.Keywords);
+                foreach (var chip in chips)
                 {
-                    if (tagCounts.ContainsKey(tag))
-                        tagCounts[tag]++;
+                    var key = chip.DisplayText;
+                    if (tagCounts.ContainsKey(key))
+                        tagCounts[key]++;
                     else
-                        tagCounts[tag] = 1;
+                        tagCounts[key] = 1;
                 }
             }
         }
@@ -321,7 +323,7 @@ public partial class FilterToolbarViewModel : ViewModelBase
         try
         {
             AllTags.Clear();
-            foreach (var kvp in tagCounts.OrderBy(k => k.Key))
+            foreach (var kvp in tagCounts.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
                 var isSel = selectedTags.Contains(kvp.Key);
                 AllTags.Add(new TagFilterItemViewModel(kvp.Key, kvp.Value, isSel, UpdateCollectionsAndNotify));

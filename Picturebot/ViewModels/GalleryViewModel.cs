@@ -1154,10 +1154,25 @@ public partial class GalleryViewModel : ViewModelBase,
         if (FilterToolbar.IsTagFilterActive) {
             var selectedTagNames = FilterToolbar.AllTags.Where(t => t.IsSelected).Select(t => t.Name).ToList();
             if (selectedTagNames.Any()) {
+                bool MatchesTag(PictureItemViewModel pic, string tag) {
+                    if (pic.Keywords == null || pic.Keywords.Count == 0) return false;
+                    var normalizedTag = KeywordChipViewModel.NormalizePath(tag);
+                    return pic.Keywords.Any(k => {
+                        if (string.Equals(k, tag, StringComparison.OrdinalIgnoreCase)) return true;
+                        var normK = KeywordChipViewModel.NormalizePath(k);
+                        if (string.Equals(normK, normalizedTag, StringComparison.OrdinalIgnoreCase)) return true;
+                        var segs = normK.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        return segs.Any(s => string.Equals(s, tag.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                                             string.Equals(s, normalizedTag, StringComparison.OrdinalIgnoreCase));
+                    });
+                }
+
                 if (FilterToolbar.IsMatchAll) {
-                    filtered = filtered.Where(p => selectedTagNames.All(tag => p.Keywords != null && p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+                    filtered = filtered.Where(p => selectedTagNames.All(tag => MatchesTag(p, tag)));
+                } else if (FilterToolbar.IsMatchNot) {
+                    filtered = filtered.Where(p => !selectedTagNames.Any(tag => MatchesTag(p, tag)));
                 } else {
-                    filtered = filtered.Where(p => selectedTagNames.Any(tag => p.Keywords != null && p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+                    filtered = filtered.Where(p => selectedTagNames.Any(tag => MatchesTag(p, tag)));
                 }
             }
         }
@@ -1770,19 +1785,20 @@ public partial class GalleryViewModel : ViewModelBase,
     [RelayCommand]
     public void PopulateAlbumTagsForBulkDelete() {
         AlbumTagsForBulkDelete.Clear();
-        if (_currentNode is not Album) return;
+        if (_currentNode is not Album && !IsGlobalSearchActive) return;
 
         var tagCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var picVm in _allPictures) {
-            if (picVm.Keywords != null) {
-                foreach (var kw in picVm.Keywords) {
-                    if (string.IsNullOrWhiteSpace(kw)) continue;
-                    tagCounts[kw] = tagCounts.GetValueOrDefault(kw, 0) + 1;
+            if (picVm.Keywords != null && picVm.Keywords.Count > 0) {
+                var chips = DetailsInspectorViewModel.DeduplicateAndFormatKeywords(picVm.Keywords);
+                foreach (var chip in chips) {
+                    var key = chip.DisplayText;
+                    tagCounts[key] = tagCounts.GetValueOrDefault(key, 0) + 1;
                 }
             }
         }
 
-        foreach (var kvp in tagCounts.OrderBy(k => k.Key)) {
+        foreach (var kvp in tagCounts.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase)) {
             AlbumTagsForBulkDelete.Add(new BulkDeleteTagItemViewModel {
                 TagName = kvp.Key,
                 Count = kvp.Value,
@@ -1793,7 +1809,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
     [RelayCommand]
     public async Task ExecuteBulkDeleteTagsAsync() {
-        if (_currentNode is not Album album) return;
+        if (_currentNode is not Album && !IsGlobalSearchActive) return;
 
         var selectedTags = AlbumTagsForBulkDelete
             .Where(t => t.IsSelected && !string.IsNullOrWhiteSpace(t.TagName))
@@ -1803,7 +1819,7 @@ public partial class GalleryViewModel : ViewModelBase,
         if (selectedTags.Count == 0) {
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("No Tag Selected")
-                .WithContent("Please check at least one tag to delete from the album.")
+                .WithContent("Please check at least one tag to delete.")
                 .Dismiss().After(TimeSpan.FromSeconds(3))
                 .Queue();
             return;
@@ -1813,10 +1829,21 @@ public partial class GalleryViewModel : ViewModelBase,
         var affectedVms = new List<PictureItemViewModel>();
 
         foreach (var tag in selectedTags) {
+            var normalizedTag = KeywordChipViewModel.NormalizePath(tag);
             foreach (var picVm in _allPictures) {
-                var existingTag = picVm.Keywords.FirstOrDefault(k => k.Equals(tag, StringComparison.OrdinalIgnoreCase));
-                if (existingTag != null) {
-                    picVm.RemoveKeyword(existingTag);
+                var tagsToRemove = picVm.Keywords.Where(k => {
+                    if (string.Equals(k, tag, StringComparison.OrdinalIgnoreCase)) return true;
+                    var normK = KeywordChipViewModel.NormalizePath(k);
+                    if (string.Equals(normK, normalizedTag, StringComparison.OrdinalIgnoreCase)) return true;
+                    var segs = normK.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    return segs.Any(s => string.Equals(s, tag.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                                         string.Equals(s, normalizedTag, StringComparison.OrdinalIgnoreCase));
+                }).ToList();
+
+                if (tagsToRemove.Count > 0) {
+                    foreach (var tr in tagsToRemove) {
+                        picVm.RemoveKeyword(tr);
+                    }
                     _curationQueue.Enqueue(picVm.Picture);
 
                     if (!affectedVms.Contains(picVm)) {
@@ -1826,7 +1853,9 @@ public partial class GalleryViewModel : ViewModelBase,
                     if (_centroidService != null) {
                         var vec = picVm.Picture.Metrics?.GetEmbeddingVector();
                         if (vec != null) {
-                            _centroidService.OnTagRemoved(picVm.Picture.Id, existingTag, vec);
+                            foreach (var tr in tagsToRemove) {
+                                _centroidService.OnTagRemoved(picVm.Picture.Id, tr, vec);
+                            }
                         }
                     }
                 }
@@ -1844,14 +1873,14 @@ public partial class GalleryViewModel : ViewModelBase,
         PopulateAlbumTagsForBulkDelete();
 
         var tagSummary = string.Join(", ", selectedTags);
-        Log.Information("Bulk deleted tags [{Tags}] from {Count} files in album '{AlbumName}'", tagSummary, affectedFiles, album.Name);
+        var albumName = (_currentNode as Album)?.Name ?? "Search Results";
+        Log.Information("Bulk deleted tags [{Tags}] from {Count} files in '{AlbumName}'", tagSummary, affectedFiles, albumName);
 
         MainWindow.ToastManager.CreateToast()
             .WithTitle("Tags Deleted")
-            .WithContent($"Successfully deleted tag(s) [{tagSummary}] from {affectedFiles} files in album '{album.Name}'.")
-            .Dismiss().After(TimeSpan.FromSeconds(4))
+            .WithContent($"Removed {tagSummary} from {affectedFiles} picture(s).")
+            .Dismiss().After(TimeSpan.FromSeconds(3))
             .Queue();
-
         await Task.CompletedTask;
     }
 
