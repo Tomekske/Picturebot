@@ -6,6 +6,7 @@
         xmlns:icons="using:Material.Icons"
         x:DataType="vm:SettingsDialogViewModel"
         x:Class="Picturebot.Views.SettingsDialog"
+        x:Name="RootSettingsWindow"
         Title="Settings"
         SystemDecorations="None"
         Background="Transparent"
@@ -1045,22 +1046,74 @@
 
                         <!-- View 7: Groups (Single-Panel 2-Level Expandable TreeView) -->
                         <Grid RowDefinitions="Auto,*">
-                            <!-- Clean Header Bar with Single '+ Add Group' Action Button -->
+                            <!-- Clean Header Bar with 'Import from Taxonomy' and '+ Add Group' Action Buttons -->
                             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,4,0,12">
                                 <TextBlock Grid.Column="0" Text="TAG GROUPS" Foreground="#888888" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
                                 
-                                <Button Grid.Column="1" 
-                                        Classes="secondary" 
-                                        Height="28" 
-                                        Padding="10,2" 
-                                        FontSize="11" 
-                                        Command="{Binding AddInlineGroupCommand}"
-                                        ToolTip.Tip="Add new group (Press Enter to commit)">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <material:MaterialIcon Kind="FolderPlusOutline" Width="13" Height="13" Foreground="#818CF8" />
-                                        <TextBlock Text="+ Add Group" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Button>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <!-- Import from Taxonomy Flyout Button -->
+                                    <Button Classes="secondary" 
+                                            Height="28" 
+                                            Padding="10,2" 
+                                            FontSize="11" 
+                                            ToolTip.Tip="Import existing branch from Taxonomy">
+                                        <Button.Flyout>
+                                            <Flyout Placement="BottomEdgeAlignedRight">
+                                                <Border Background="#1E1E22" BorderBrush="#323846" BorderThickness="1" CornerRadius="6" Padding="8" MinWidth="240" MaxWidth="320">
+                                                    <Grid RowDefinitions="Auto,*">
+                                                        <TextBlock Grid.Row="0" Text="IMPORT TAXONOMY BRANCH" FontSize="11" FontWeight="Bold" Foreground="#888888" Margin="4,2,4,8" LetterSpacing="0.5" />
+                                                        
+                                                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="260">
+                                                            <StackPanel Spacing="2">
+                                                                <TextBlock Text="No taxonomy branches available" 
+                                                                           FontSize="12" 
+                                                                           Foreground="#64748B" 
+                                                                           Margin="4,8" 
+                                                                           IsVisible="{Binding !HasTaxonomyBranches}" />
+
+                                                                <ItemsControl ItemsSource="{Binding AvailableTaxonomyBranches}" IsVisible="{Binding HasTaxonomyBranches}">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate DataType="vm:TaxonomyBranchItem">
+                                                                            <Button Classes="Basic" 
+                                                                                    HorizontalAlignment="Stretch" 
+                                                                                    HorizontalContentAlignment="Left"
+                                                                                    Padding="8,6"
+                                                                                    Margin="0,1"
+                                                                                    Command="{Binding #RootSettingsWindow.((vm:SettingsDialogViewModel)DataContext).ImportTaxonomyBranchCommand}"
+                                                                                    CommandParameter="{Binding}">
+                                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                                    <material:MaterialIcon Kind="FileTreeOutline" Width="14" Height="14" Foreground="#818CF8" VerticalAlignment="Center" />
+                                                                                    <TextBlock Text="{Binding DisplayPath}" FontSize="12" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                                                                                </StackPanel>
+                                                                            </Button>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </ScrollViewer>
+                                                    </Grid>
+                                                </Border>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <material:MaterialIcon Kind="FileTreeOutline" Width="13" Height="13" Foreground="#818CF8" />
+                                            <TextBlock Text="Import from Taxonomy" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Add Group Button -->
+                                    <Button Classes="secondary" 
+                                            Height="28" 
+                                            Padding="10,2" 
+                                            FontSize="11" 
+                                            Command="{Binding AddInlineGroupCommand}"
+                                            ToolTip.Tip="Add new group (Press Enter to commit)">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <material:MaterialIcon Kind="FolderPlusOutline" Width="13" Height="13" Foreground="#818CF8" />
+                                            <TextBlock Text="+ Add Group" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Clean TreeView Container -->
@@ -1139,7 +1192,9 @@
                                                                  BorderBrush="#4F46E5" 
                                                                  Foreground="#FFFFFF" 
                                                                  VerticalContentAlignment="Center"
-                                                                 Watermark="Group name...">
+                                                                 Watermark="Group name..."
+                                                                 AttachedToVisualTree="OnInlineTextBoxAttached"
+                                                                 KeyDown="OnInlineTextBoxKeyDown">
                                                             <TextBox.KeyBindings>
                                                                 <KeyBinding Gesture="Return" Command="{Binding CommitEditCommand}" />
                                                                 <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}" />
@@ -1199,7 +1254,8 @@
                                                                          MinimumPopulateDelay="00:00:00"
                                                                          GotFocus="OnInlineAutoCompleteGotFocus"
                                                                          AttachedToVisualTree="OnInlineAutoCompleteAttached"
-                                                                         Watermark="Select or type tag..."
+                                                                         KeyDown="OnInlineAutoCompleteKeyDown"
+                                                                         Watermark="Tag name..."
                                                                          Margin="2,0,0,0"
                                                                          VerticalAlignment="Center">
                                                             <AutoCompleteBox.ItemTemplate>

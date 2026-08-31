@@ -35,6 +35,59 @@ public partial class SettingsDialog : Window {
         }
     }
 
+    public void OnInlineAutoCompleteKeyDown(object? sender, KeyEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            if (e.Key == Key.Enter) {
+                if (acb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (acb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            } else if (e.Key == Key.Escape) {
+                if (acb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (acb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }
+        }
+    }
+
+    public void OnInlineTextBoxAttached(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        if (sender is TextBox tb) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                tb.Focus();
+                tb.SelectAll();
+            }, Avalonia.Threading.DispatcherPriority.Input);
+        }
+    }
+
+    public void OnInlineTextBoxKeyDown(object? sender, KeyEventArgs e) {
+        if (sender is TextBox tb) {
+            if (e.Key == Key.Enter) {
+                if (tb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (tb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            } else if (e.Key == Key.Escape) {
+                if (tb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (tb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }
+        }
+    }
+
     public void OnShortcutKeyDown(object? sender, KeyEventArgs e) {
         if (sender is TextBox textBox) {
             if (e.Key == Key.Back || e.Key == Key.Delete) {

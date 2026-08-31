@@ -281,8 +281,8 @@ public class SettingsDialogViewModelTests {
 
         var createdGroup = vm.TagGroups.FirstOrDefault(g => g.GroupName == "nature");
         Assert.That(createdGroup, Is.Not.Null);
-        // Pulled in nature, mountains, alps
-        Assert.That(createdGroup!.TagIds.Count, Is.EqualTo(3));
+        // Pulled in mountains, alps (excludes parent nature)
+        Assert.That(createdGroup!.TagIds.Count, Is.EqualTo(2));
         Assert.That(vm.SelectedTagGroup, Is.EqualTo(createdGroup));
         Assert.That(vm.SelectedTaxonomyBranch, Is.Null);
     }
@@ -309,7 +309,11 @@ public class SettingsDialogViewModelTests {
         Assert.That(vm.KeywordsSubTabIndex, Is.EqualTo(2));
         var group = vm.TagGroups.FirstOrDefault(g => g.GroupName == "nature");
         Assert.That(group, Is.Not.Null);
-        Assert.That(group!.TagIds.Count, Is.EqualTo(3));
+        Assert.That(group!.TagIds.Count, Is.EqualTo(2));
+        var groupTreeNode = vm.TagGroupTreeNodes.FirstOrDefault(g => g.Name == "nature");
+        Assert.That(groupTreeNode, Is.Not.Null);
+        Assert.That(groupTreeNode!.Children.Any(c => c.Name == "nature"), Is.False);
+        Assert.That(groupTreeNode.Children.Select(c => c.Name), Is.EquivalentTo(new[] { "alps", "mountains" }));
     }
 
     [Test]
@@ -595,6 +599,109 @@ public class SettingsDialogViewModelTests {
         // Delete group node
         vm.DeleteGroupTreeNodeCommand.Execute(groupNode);
         Assert.That(vm.TagGroupTreeNodes.Count, Is.EqualTo(initialGroupCount - 1));
+    }
+
+    [Test]
+    public void Groups_AddChildTag_ExpandsGroupAndAddsTag() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var groupNode = vm.TagGroupTreeNodes.First();
+        groupNode.IsExpanded = false;
+
+        groupNode.AddChildTagCommand.Execute(null);
+
+        Assert.That(groupNode.IsExpanded, Is.True);
+        Assert.That(groupNode.Children.Count, Is.GreaterThan(0));
+
+        var newChild = groupNode.Children.Last();
+        Assert.That(newChild.IsNewNode, Is.True);
+        Assert.That(newChild.IsEditing, Is.True);
+
+        newChild.EditingName = "forest";
+        newChild.CommitEditCommand.Execute(null);
+
+        Assert.That(newChild.IsEditing, Is.False);
+        Assert.That(newChild.Name, Is.EqualTo("forest"));
+        Assert.That(groupNode.Children.Any(c => c.Name == "forest"), Is.True);
+    }
+
+    [Test]
+    public void Groups_AddChildTag_RejectsDuplicateTagsInSameGroup() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var groupNode = vm.TagGroupTreeNodes.First();
+
+        vm.AddTagToGroupNodeCommand.Execute(groupNode);
+        var tag1 = groupNode.Children.Last();
+        tag1.EditingName = "duplicate_test";
+        tag1.CommitEditCommand.Execute(null);
+
+        var countBefore = groupNode.Children.Count;
+
+        // Try adding duplicate tag
+        vm.AddTagToGroupNodeCommand.Execute(groupNode);
+        var tag2 = groupNode.Children.Last();
+        tag2.EditingName = "DUPLICATE_TEST";
+        tag2.CommitEditCommand.Execute(null);
+
+        // Count should not increase
+        Assert.That(groupNode.Children.Count, Is.EqualTo(countBefore));
+        Assert.That(groupNode.Children.Count(c => c.Name.Equals("duplicate_test", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Groups_ImportTaxonomyBranch_CreatesGroupAndImportsTags() {
+        var vm = new SettingsDialogViewModel(_fakeService);
+        var initialGroupCount = vm.TagGroupTreeNodes.Count;
+
+        Assert.That(vm.HasTaxonomyBranches, Is.True);
+        var branch = vm.AvailableTaxonomyBranches.First(b => b.Node.Name.Equals("Nature", StringComparison.OrdinalIgnoreCase));
+
+        vm.ImportTaxonomyBranchCommand.Execute(branch);
+
+        Assert.That(vm.TagGroupTreeNodes.Count, Is.EqualTo(initialGroupCount + 1));
+        var importedGroup = vm.TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals("nature", StringComparison.OrdinalIgnoreCase));
+        Assert.That(importedGroup, Is.Not.Null);
+        Assert.That(importedGroup!.IsExpanded, Is.True);
+        Assert.That(importedGroup.Children.Count, Is.EqualTo(2));
+        Assert.That(importedGroup.Children.Any(c => c.Name == "nature"), Is.False);
+        Assert.That(importedGroup.Children.Select(c => c.Name), Is.EqualTo(new[] { "alps", "mountains" }));
+        Assert.That(vm.SelectedGroupTreeNode, Is.EqualTo(importedGroup));
+        Assert.That(vm.SelectedBreadcrumbPath, Is.EqualTo("nature"));
+    }
+
+    [Test]
+    public void Groups_ImportTaxonomyBranch_Faces_ExcludesParentAndSortsAlphabetically() {
+        var settingsService = new FakeSettingsService {
+            Current = new SettingsModel {
+                MasterTags = new List<Tag>(),
+                HierarchyNodes = new List<HierarchyNode> {
+                    new() {
+                        NodeId = Guid.NewGuid(),
+                        Name = "faces",
+                        Children = new ObservableCollection<HierarchyNode> {
+                            new() { NodeId = Guid.NewGuid(), Name = "robin" },
+                            new() { NodeId = Guid.NewGuid(), Name = "annie" },
+                            new() { NodeId = Guid.NewGuid(), Name = "katsiuska" }
+                        }
+                    }
+                }
+            }
+        };
+
+        var vm = new SettingsDialogViewModel(settingsService);
+        var branch = vm.AvailableTaxonomyBranches.First(b => b.Node.Name.Equals("faces", StringComparison.OrdinalIgnoreCase));
+
+        vm.ImportTaxonomyBranchCommand.Execute(branch);
+
+        var importedGroup = vm.TagGroupTreeNodes.FirstOrDefault(g => g.Name == "faces");
+        Assert.That(importedGroup, Is.Not.Null);
+        Assert.That(importedGroup!.IsExpanded, Is.True);
+        Assert.That(importedGroup.Children.Count, Is.EqualTo(3));
+        Assert.That(importedGroup.Children.Any(c => c.Name == "faces"), Is.False);
+
+        var childNames = importedGroup.Children.Select(c => c.Name).ToList();
+        Assert.That(childNames, Is.EqualTo(new[] { "annie", "katsiuska", "robin" }));
+        Assert.That(vm.SelectedGroupTreeNode, Is.EqualTo(importedGroup));
+        Assert.That(vm.SelectedBreadcrumbPath, Is.EqualTo("faces"));
     }
 }
 

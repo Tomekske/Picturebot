@@ -1290,37 +1290,25 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         }
     }
 
-    public void ImportTaxonomyBranchAsGroup(TaxonomyBranchItem branch) {
-        var name = branch.Node.Name.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        var existingNode = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-        if (existingNode != null) {
-            SelectedGroupTreeNode = existingNode;
-            SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
-            SelectedTaxonomyBranch = null;
-            return;
-        }
-
-        var tagIds = CollectTagIdsFromNode(branch.Node, true);
-        var model = new TagGroup {
-            GroupName = name,
-            TagIds = new ObservableCollection<Guid>(tagIds)
-        };
-
-        var groupNode = new GroupTreeNodeViewModel(model, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag);
-        foreach (var id in tagIds) {
-            var tag = Tags.FirstOrDefault(t => t.Id == id)?.Model ?? MasterTags.FirstOrDefault(t => t.Id == id);
-            if (tag != null) {
-                groupNode.Children.Add(new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete));
+    [RelayCommand]
+    public void ImportTaxonomyBranch(object? parameter) {
+        if (parameter is TaxonomyBranchItem branchItem) {
+            ImportTaxonomyBranchAsGroup(branchItem);
+        } else if (parameter is HierarchyNodeViewModel node) {
+            CreateGroupFromTaxonomyNode(node);
+        } else if (parameter is string branchName) {
+            var branch = AvailableTaxonomyBranches.FirstOrDefault(b => 
+                b.DisplayPath.Equals(branchName, StringComparison.OrdinalIgnoreCase) || 
+                b.Node.Name.Equals(branchName, StringComparison.OrdinalIgnoreCase));
+            if (branch != null) {
+                ImportTaxonomyBranchAsGroup(branch);
             }
         }
-        TagGroupTreeNodes.Add(groupNode);
-        SyncLegacyTagGroups();
-        SelectedGroupTreeNode = groupNode;
-        SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(name, StringComparison.OrdinalIgnoreCase));
-        SelectedTaxonomyBranch = null;
-        OnPropertyChanged(nameof(GroupsHeaderTitle));
+    }
+
+    public void ImportTaxonomyBranchAsGroup(TaxonomyBranchItem branch) {
+        if (branch?.Node == null) return;
+        ImportTaxonomyNodeAsGroup(branch.Node, branch.DisplayPath);
     }
 
     [RelayCommand]
@@ -1476,39 +1464,54 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     public void CreateGroupFromTaxonomyNode(HierarchyNodeViewModel? node) {
         var targetNode = node ?? SelectedHierarchyNode;
         if (targetNode == null) return;
+        ImportTaxonomyNodeAsGroup(targetNode);
+        SelectGroupsTab();
+    }
 
+    public void ImportTaxonomyNodeAsGroup(HierarchyNodeViewModel targetNode, string? displayPath = null) {
         var groupName = targetNode.Name.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(groupName)) return;
+
         var existingNode = TagGroupTreeNodes.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
         if (existingNode != null) {
+            existingNode.IsExpanded = true;
             SelectedGroupTreeNode = existingNode;
-            SelectGroupsTab();
+            SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+            SelectedTaxonomyBranch = null;
+            OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+            OnPropertyChanged(nameof(SelectedBreadcrumbPath));
             return;
         }
 
-        var tagIds = CollectTagIdsFromNode(targetNode, true);
+        var childTags = CollectChildTagsFromTaxonomyNode(targetNode);
         var model = new TagGroup {
             GroupName = groupName,
-            TagIds = new ObservableCollection<Guid>(tagIds)
+            TagIds = new ObservableCollection<Guid>(childTags.Select(t => t.Id))
         };
 
-        var groupNode = new GroupTreeNodeViewModel(model, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag);
-        foreach (var id in tagIds) {
-            var tag = Tags.FirstOrDefault(t => t.Id == id)?.Model ?? MasterTags.FirstOrDefault(t => t.Id == id);
-            if (tag != null) {
-                groupNode.Children.Add(new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete));
-            }
+        var groupNode = new GroupTreeNodeViewModel(model, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete, OnGroupTreeAddChildTag) {
+            IsExpanded = true
+        };
+        foreach (var tag in childTags) {
+            groupNode.Children.Add(new GroupTreeNodeViewModel(tag, groupNode, OnGroupTreeCommit, OnGroupTreeCancel, OnGroupTreeDelete));
         }
+
         TagGroupTreeNodes.Add(groupNode);
-        SelectedGroupTreeNode = groupNode;
         SyncLegacyTagGroups();
-        OnPropertyChanged(nameof(GroupsHeaderTitle));
+        SelectedGroupTreeNode = groupNode;
+        SelectedTagGroup = TagGroups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+        SelectedTaxonomyBranch = null;
         SelectGroupsTab();
+        OnPropertyChanged(nameof(GroupsHeaderTitle));
+        OnPropertyChanged(nameof(HasSelectedBreadcrumb));
+        OnPropertyChanged(nameof(SelectedBreadcrumbPath));
 
         try {
             if (Application.Current != null) {
+                var label = !string.IsNullOrEmpty(displayPath) ? displayPath : groupName;
                 MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Groups")
-                    .WithContent($"Group '{groupName}' created from taxonomy branch with {tagIds.Count} tag(s).")
+                    .WithTitle("Tag Groups")
+                    .WithContent($"Group '{groupName}' created from taxonomy branch with {childTags.Count} tag(s).")
                     .Dismiss().ByClicking()
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .Queue();
@@ -1518,21 +1521,31 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         }
     }
 
-    private List<Guid> CollectTagIdsFromNode(HierarchyNodeViewModel node, bool includeSubtree) {
-        var result = new HashSet<Guid>();
-        CollectNodeTagsRecursive(node, result, includeSubtree);
-        return result.ToList();
+    private List<Tag> CollectChildTagsFromTaxonomyNode(HierarchyNodeViewModel node) {
+        var parentName = node.Name.Trim().ToLowerInvariant();
+        var tagMap = new Dictionary<string, Tag>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var child in node.Children) {
+            CollectChildTagsRecursive(child, tagMap, parentName);
+        }
+
+        return tagMap.Values
+            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
-    private void CollectNodeTagsRecursive(HierarchyNodeViewModel node, HashSet<Guid> set, bool includeSubtree) {
-        var tag = EnsureTagInPool(node.Name);
-        set.Add(tag.Id);
-        node.TagId = tag.Id;
-
-        if (includeSubtree) {
-            foreach (var child in node.Children) {
-                CollectNodeTagsRecursive(child, set, true);
+    private void CollectChildTagsRecursive(HierarchyNodeViewModel node, Dictionary<string, Tag> tagMap, string excludedParentName) {
+        var tagName = node.Name.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(tagName) && !tagName.Equals(excludedParentName, StringComparison.OrdinalIgnoreCase)) {
+            var tag = EnsureTagInPool(tagName);
+            node.TagId = tag.Id;
+            if (!tagMap.ContainsKey(tagName)) {
+                tagMap[tagName] = tag;
             }
+        }
+
+        foreach (var child in node.Children) {
+            CollectChildTagsRecursive(child, tagMap, excludedParentName);
         }
     }
 
