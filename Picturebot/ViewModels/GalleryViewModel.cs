@@ -20,6 +20,7 @@ using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Services;
 using Domain.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Messages;
 using Picturebot.Services;
 using Picturebot.Views;
@@ -37,7 +38,8 @@ public partial class GalleryViewModel : ViewModelBase,
     IRecipient<ProcessingProgressMessage>,
     IRecipient<ProcessingCompletedMessage>,
     IRecipient<CurationCompletedMessage>,
-    IRecipient<PictureKeywordsChangedMessage> {
+    IRecipient<PictureKeywordsChangedMessage>,
+    IRecipient<GlobalSearchMessage> {
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly ICurationQueue _curationQueue;
@@ -51,6 +53,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly IPickedService _pickedService;
     private readonly IFewShotTagDiscoveryService? _tagDiscoveryService;
     private readonly IGlobalExemplarCentroidService? _centroidService;
+    private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? _scopeFactory;
     private CancellationTokenSource? _albumLoadCts;
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
@@ -60,6 +63,12 @@ public partial class GalleryViewModel : ViewModelBase,
 
     [ObservableProperty]
     private bool _isLoading;
+
+    [ObservableProperty]
+    private bool _isGlobalSearchActive;
+
+    [ObservableProperty]
+    private string _activeSearchQuery = string.Empty;
 
     [ObservableProperty]
     private FilterToolbarViewModel _filterToolbar;
@@ -88,6 +97,8 @@ public partial class GalleryViewModel : ViewModelBase,
     public bool IsBlueColorFilterActive { get => FilterColors.Contains(ColorLabel.Blue); set => ToggleColorFilter(ColorLabel.Blue, value); }
     public bool IsPinkColorFilterActive { get => FilterColors.Contains(ColorLabel.Pink); set => ToggleColorFilter(ColorLabel.Pink, value); }
     public bool IsPurpleColorFilterActive { get => FilterColors.Contains(ColorLabel.Purple); set => ToggleColorFilter(ColorLabel.Purple, value); }
+
+    public bool CanEditOrDeleteCurrentNode => !IsLibraryRoot && !IsGlobalSearchActive && _currentNode != null;
 
     [ObservableProperty]
     private ObservableCollection<Node> _albumItems = new();
@@ -152,7 +163,8 @@ public partial class GalleryViewModel : ViewModelBase,
         IAlbumService albumService, IFolderService folderService, ICopyService copyService,
         IXmpService xmpService, IPickedService pickedService,
         IFewShotTagDiscoveryService? tagDiscoveryService = null,
-        IGlobalExemplarCentroidService? centroidService = null) {
+        IGlobalExemplarCentroidService? centroidService = null,
+        Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? scopeFactory = null) {
         _nodeService = nodeService;
         _pathService = pathService;
         _groupingService = groupingService;
@@ -166,6 +178,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _pickedService = pickedService;
         _tagDiscoveryService = tagDiscoveryService;
         _centroidService = centroidService;
+        _scopeFactory = scopeFactory;
 
         _filterToolbar = new FilterToolbarViewModel(ApplyFilters);
 
@@ -290,11 +303,193 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     public async void Receive(NodeSelectedMessage message) {
+        if (IsGlobalSearchActive) {
+            IsGlobalSearchActive = false;
+            ActiveSearchQuery = string.Empty;
+        }
+
         if (message.Value is Album album) {
             await LoadAlbumAsync(album);
         } else {
             UpdateGallery(message.Value);
         }
+    }
+
+    public async void Receive(GlobalSearchMessage message) {
+        var query = message.Value?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(query)) {
+            if (IsGlobalSearchActive) {
+                IsGlobalSearchActive = false;
+                ActiveSearchQuery = string.Empty;
+                if (_currentNode is Album album) {
+                    await LoadAlbumAsync(album);
+                } else if (_currentNode != null) {
+                    UpdateGallery(_currentNode);
+                } else {
+                    await LoadInitialItemsAsync();
+                }
+            }
+            return;
+        }
+
+        await ExecuteGlobalSearchAsync(query);
+    }
+
+    public async Task ExecuteGlobalSearchAsync(string query) {
+        _albumLoadCts?.Cancel();
+        _albumLoadCts = new CancellationTokenSource();
+        var cancellationToken = _albumLoadCts.Token;
+
+        IsGlobalSearchActive = true;
+        ActiveSearchQuery = query;
+        IsShowingAlbum = true;
+        IsBurstViewEnabled = false;
+        IsLibraryRoot = false;
+
+        // Clear UI collections
+        Items.Clear();
+        FolderItems.Clear();
+        AlbumItems.Clear();
+
+        var oldPictures = _allPictures.ToList();
+        _allPictures.Clear();
+        PicturesList.Clear();
+        GroupedPictures.Clear();
+
+        _ = Task.Run(() => {
+            foreach (var picVm in oldPictures) {
+                picVm.PropertyChanged -= OnPictureItemPropertyChanged;
+                picVm.Dispose();
+            }
+        });
+
+        IsLoading = true;
+        CanPlayCarousel = false;
+
+        // Breadcrumb: Library > Search: "{query}"
+        Breadcrumbs.Clear();
+        Breadcrumbs.Add(new BreadcrumbItem("Library", null));
+        var searchBreadcrumb = new BreadcrumbItem($"Search: \"{query}\"", null) { IsLast = true };
+        Breadcrumbs.Add(searchBreadcrumb);
+
+        _ = Task.Run(async () => {
+            try {
+                cancellationToken.ThrowIfCancellationRequested();
+                using var scope = _scopeFactory?.CreateScope();
+                var nodeService = scope?.ServiceProvider.GetService<INodeService>() ?? _nodeService;
+                var pathService = scope?.ServiceProvider.GetService<IPathService>() ?? _pathService;
+                var xmpService = scope?.ServiceProvider.GetService<IXmpService>() ?? _xmpService;
+
+                var normalizedQuery = KeywordChipViewModel.NormalizePath(query);
+                var rawQuery = query.Trim();
+                Log.Information("Global search started for '{Query}' (normalized: '{Normalized}')...", rawQuery, normalizedQuery);
+
+                // 1. Fetch all nodes and pictures to ensure full library coverage
+                var allNodes = await nodeService.GetAllNodesAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var albumMap = allNodes.OfType<Album>().ToDictionary(a => a.Id);
+                var allPics = allNodes.OfType<Picture>().ToList();
+
+                foreach (var pic in allPics) {
+                    if (pic.Parent == null && pic.ParentId.HasValue && albumMap.TryGetValue(pic.ParentId.Value, out var parentAlbum)) {
+                        pic.Parent = parentAlbum;
+                    }
+                }
+                pathService.PopulatePaths(allPics);
+
+                // 2. Fetch SQLite DB matches
+                var dbPics = await nodeService.SearchPicturesGlobalAsync(normalizedQuery, cancellationToken);
+                var matchedPicsDict = new Dictionary<int, Picture>();
+                foreach (var p in dbPics) {
+                    matchedPicsDict[p.Id] = p;
+                }
+
+                // 3. For any pictures not matched via SQLite (e.g. unindexed KeywordsJson), check XMP files
+                var uncheckedPics = allPics.Where(p => !matchedPicsDict.ContainsKey(p.Id)).ToList();
+                await Parallel.ForEachAsync(uncheckedPics, new ParallelOptions {
+                    MaxDegreeOfParallelism = Math.Max(2, Math.Min(8, Environment.ProcessorCount)),
+                    CancellationToken = cancellationToken
+                }, async (pic, ct) => {
+                    await xmpService.LoadMetadataAsync(pic);
+                    bool isMatch = false;
+
+                    if (pic.Keywords != null && pic.Keywords.Any(k =>
+                        k.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) ||
+                        k.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                        KeywordChipViewModel.NormalizePath(k).Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(k.Trim(), rawQuery, StringComparison.OrdinalIgnoreCase))) {
+                        isMatch = true;
+                    } else if (!string.IsNullOrEmpty(pic.Name) && pic.Name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) {
+                        isMatch = true;
+                    } else if (pic.Parent != null && !string.IsNullOrEmpty(pic.Parent.Name) && pic.Parent.Name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) {
+                        isMatch = true;
+                    }
+
+                    if (isMatch) {
+                        lock (matchedPicsDict) {
+                            matchedPicsDict[pic.Id] = pic;
+                        }
+                    }
+                });
+
+                var finalPics = matchedPicsDict.Values.ToList();
+                Log.Information("Global search for '{Query}' found {Count} pictures across all albums.", rawQuery, finalPics.Count);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (finalPics.Count == 0) {
+                    Dispatcher.UIThread.Post(() => {
+                        if (IsGlobalSearchActive && ActiveSearchQuery == query) {
+                            _allPictures.Clear();
+                            PicturesList.Clear();
+                            GroupedPictures.Clear();
+                            IsLoading = false;
+                        }
+                    });
+                    return;
+                }
+
+                // Ensure XMP metadata is loaded for all final pictures
+                await Task.WhenAll(finalPics.Select(pic => xmpService.LoadMetadataAsync(pic)));
+
+                var picVms = finalPics.Select(p => new PictureItemViewModel(p)).ToList();
+                foreach (var picVm in picVms) {
+                    picVm.PropertyChanged += OnPictureItemPropertyChanged;
+                }
+
+                await Dispatcher.UIThread.InvokeAsync(() => {
+                    if (!IsGlobalSearchActive || ActiveSearchQuery != query) {
+                        return;
+                    }
+
+                    _allPictures.Clear();
+                    foreach (var vm in picVms) {
+                        _allPictures.Add(vm);
+                    }
+
+                    if (FilterToolbar != null) {
+                        FilterToolbar.ClearAll();
+                        FilterToolbar.UpdateAvailableTags(_allPictures);
+                    }
+
+                    ApplyFilters();
+                    IsLoading = false;
+                    CanPlayCarousel = PicturesList.Count > 0;
+                });
+
+                // Background thumbnail loading
+                foreach (var picVm in picVms) {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _ = picVm.LoadThumbnailAsync(320);
+                }
+            } catch (OperationCanceledException) {
+                // Cancelled
+            } catch (Exception ex) {
+                Log.Error(ex, "Error executing global search for '{Query}'", query);
+                Dispatcher.UIThread.Post(() => IsLoading = false);
+            }
+        }, cancellationToken);
     }
 
     public void Receive(PictureKeywordsChangedMessage message) {
@@ -373,7 +568,7 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private async Task RefreshGalleryGrouping() {
-        if (!IsShowingAlbum || _currentNode == null) {
+        if (!IsShowingAlbum || (_currentNode == null && !IsGlobalSearchActive)) {
             return;
         }
 
@@ -381,7 +576,7 @@ public partial class GalleryViewModel : ViewModelBase,
             pic.IsBest = false;
         }
 
-        if (IsBurstViewEnabled) {
+        if (IsBurstViewEnabled && !IsGlobalSearchActive) {
             await ApplyBurstGrouping();
         } else {
             ApplyDateGrouping();
@@ -792,7 +987,9 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private async Task LoadInitialItemsAsync() {
-        var roots = await _nodeService.LoadHydratedTreeAsync();
+        using var scope = _scopeFactory?.CreateScope();
+        var nodeService = scope?.ServiceProvider.GetService<INodeService>() ?? _nodeService;
+        var roots = await nodeService.LoadHydratedTreeAsync();
         UpdateGalleryItems(null, roots);
     }
 
@@ -985,7 +1182,7 @@ public partial class GalleryViewModel : ViewModelBase,
             }
         }
 
-        if (listChanged) {
+        if (listChanged || (GroupedPictures.Count == 0 && filteredList.Count > 0)) {
             PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
 
             if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
@@ -1260,7 +1457,13 @@ public partial class GalleryViewModel : ViewModelBase,
 
         // 2. Offload the entire load process (database query, Stage 1 loading, Stage 2 loading) to background
         _ = Task.Run(async () => {
-            var children = await _nodeService.FindChildrenAsync(album.Id);
+            using var scope = _scopeFactory?.CreateScope();
+            var nodeService = scope?.ServiceProvider.GetService<INodeService>() ?? _nodeService;
+            var pathService = scope?.ServiceProvider.GetService<IPathService>() ?? _pathService;
+            var xmpService = scope?.ServiceProvider.GetService<IXmpService>() ?? _xmpService;
+            var pickedService = scope?.ServiceProvider.GetService<IPickedService>() ?? _pickedService;
+
+            var children = await nodeService.FindChildrenAsync(album.Id);
             var pics = children.OfType<Picture>().ToList();
             Log.Information("Loading album '{AlbumName}' (Id={AlbumId}) with {Count} pictures...", album.Name, album.Id, pics.Count);
 
@@ -1283,21 +1486,21 @@ public partial class GalleryViewModel : ViewModelBase,
                     pic.Parent = album;
                 }
             }
-            _pathService.PopulatePaths(firstBatchPics);
+            pathService.PopulatePaths(firstBatchPics);
 
             // Load XMP metadata in parallel first
-            await Task.WhenAll(firstBatchPics.Select(pic => _xmpService.LoadMetadataAsync(pic)));
+            await Task.WhenAll(firstBatchPics.Select(pic => xmpService.LoadMetadataAsync(pic)));
 
             // Sync picked and highlight files if they are missing
             foreach (var pic in firstBatchPics) {
                 if (pic.CurationStatus == CurationStatus.Flagged) {
                     var pickedPath = pic.SubFolder?.Picked;
                     if (!string.IsNullOrEmpty(pickedPath) && !System.IO.File.Exists(pickedPath)) {
-                        await _pickedService.SyncToPickedAsync(pic);
+                        await pickedService.SyncToPickedAsync(pic);
                     }
                 }
                 if (pic.ColorLabel == ColorLabel.Blue) {
-                    var highlightsPath = _pathService.GetAlbumHighlightsPath(album);
+                    var highlightsPath = pathService.GetAlbumHighlightsPath(album);
                     if (!string.IsNullOrEmpty(highlightsPath)) {
                         var highlightFile = System.IO.Path.Combine(highlightsPath, pic.Name + ".jpg");
                         if (!System.IO.File.Exists(highlightFile)) {

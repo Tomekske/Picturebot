@@ -185,7 +185,7 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding !IsLibraryRoot}">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding CanEditOrDeleteCurrentNode}">
                     <Button Classes="Basic" ToolTip.Tip="Edit"
                             Command="{Binding EditCurrentNodeCommand}">
                         <icons:MaterialIcon Kind="PencilOutline" Width="20" Height="20" />

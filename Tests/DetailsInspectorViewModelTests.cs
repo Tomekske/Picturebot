@@ -27,6 +27,7 @@ public class DetailsInspectorViewModelTests {
         public Task<List<Node>> FindChildrenAsync(int parentId) => Task.FromResult(new List<Node>());
         public Task UpdateNodeAsync(Node node) => Task.CompletedTask;
         public Task DeleteNodeAsync(Node node) => Task.CompletedTask;
+        public Task<List<Picture>> SearchPicturesGlobalAsync(string query, CancellationToken cancellationToken = default) => Task.FromResult(new List<Picture>());
     }
 
     private class FakeCurationQueue : ICurationQueue {
