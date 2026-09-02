@@ -1137,34 +1137,60 @@
                                                 <!-- ================= LEVEL 1: GROUP (PARENT ROW) ================= -->
                                                 <Panel IsVisible="{Binding IsGroup}">
                                                     <!-- Normal Display Mode -->
-                                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
                                                         <!-- Group Icon -->
                                                         <material:MaterialIcon Grid.Column="0" Kind="BookmarkOutline" Width="15" Height="15" Foreground="#818CF8" VerticalAlignment="Center" Margin="0,0,6,0" />
 
-                                                        <!-- Group Name -->
-                                                        <TextBlock Grid.Column="1" 
-                                                                   Text="{Binding Name}" 
-                                                                   FontSize="13" 
-                                                                   Foreground="#E2E8F0" 
-                                                                   VerticalAlignment="Center">
-                                                            <TextBlock.ContextMenu>
-                                                                <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
-                                                                    <MenuItem Header="Add Tag" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddTagToGroupNodeCommand}" CommandParameter="{Binding}" />
-                                                                    <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
-                                                                    <Separator />
-                                                                    <MenuItem Header="Delete Group" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteGroupTreeNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
-                                                                </ContextMenu>
-                                                            </TextBlock.ContextMenu>
-                                                        </TextBlock>
+                                                        <!-- Group Name and Exclude Badge -->
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" 
+                                                                       FontSize="13" 
+                                                                       Foreground="#E2E8F0" 
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.ContextMenu>
+                                                                    <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
+                                                                        <MenuItem Header="Add Tag" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddTagToGroupNodeCommand}" CommandParameter="{Binding}" />
+                                                                        <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
+                                                                        <Separator />
+                                                                        <MenuItem Header="Delete Group" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteGroupTreeNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
+                                                                    </ContextMenu>
+                                                                </TextBlock.ContextMenu>
+                                                            </TextBlock>
+
+                                                            <!-- Excluded from Training Badge -->
+                                                            <Border Background="#33EF4444" 
+                                                                    BorderBrush="#EF4444" 
+                                                                    BorderThickness="1" 
+                                                                    CornerRadius="4" 
+                                                                    Padding="4,1" 
+                                                                    VerticalAlignment="Center"
+                                                                    IsVisible="{Binding ExcludeFromTraining}"
+                                                                    ToolTip.Tip="Images containing any tag from this group will be excluded from training datasets.">
+                                                                <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                                    <material:MaterialIcon Kind="Cancel" Width="11" Height="11" Foreground="#EF4444" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="No Training" FontSize="10" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </StackPanel>
+
+                                                        <!-- Exclude from Training Checkbox -->
+                                                        <CheckBox Grid.Column="2" 
+                                                                  IsChecked="{Binding ExcludeFromTraining, Mode=TwoWay}"
+                                                                  ToolTip.Tip="Images containing any tag from this group will be excluded from training datasets."
+                                                                  Margin="8,0,4,0"
+                                                                  VerticalAlignment="Center"
+                                                                  Content="Exclude from training"
+                                                                  FontSize="11"
+                                                                  Foreground="#94A3B8" />
 
                                                         <!-- Row Hover Action Buttons: Add Tag (+) and Delete Group (Trash) -->
-                                                        <StackPanel Grid.Column="2" 
+                                                        <StackPanel Grid.Column="3" 
                                                                     Classes="tree-row-actions" 
                                                                     Orientation="Horizontal" 
                                                                     Spacing="4" 
                                                                     HorizontalAlignment="Right" 
                                                                     VerticalAlignment="Center" 
-                                                                    Margin="8,0,4,0">
+                                                                    Margin="4,0,4,0">
                                                             <Button Classes="action-icon-btn" 
                                                                     Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).AddTagToGroupNodeCommand}" 
                                                                     CommandParameter="{Binding}" 
@@ -1210,20 +1236,28 @@
                                                         <!-- Tag Icon -->
                                                         <material:MaterialIcon Grid.Column="0" Kind="TagOutline" Width="14" Height="14" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
 
-                                                        <!-- Tag Name -->
-                                                        <TextBlock Grid.Column="1" 
-                                                                   Text="{Binding Name}" 
-                                                                   FontSize="13" 
-                                                                   Foreground="#CBD5E1" 
-                                                                   VerticalAlignment="Center">
-                                                            <TextBlock.ContextMenu>
-                                                                <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
-                                                                    <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
-                                                                    <Separator />
-                                                                    <MenuItem Header="Remove from Group" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteGroupTreeNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
-                                                                </ContextMenu>
-                                                            </TextBlock.ContextMenu>
-                                                        </TextBlock>
+                                                        <!-- Tag Name & Visual Indicator -->
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" 
+                                                                       FontSize="13" 
+                                                                       Foreground="#CBD5E1" 
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.ContextMenu>
+                                                                    <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
+                                                                        <MenuItem Header="Rename" Command="{Binding StartEditCommand}" InputGesture="F2" />
+                                                                        <Separator />
+                                                                        <MenuItem Header="Remove from Group" Command="{Binding $parent[TreeView].((vm:SettingsDialogViewModel)DataContext).DeleteGroupTreeNodeCommand}" CommandParameter="{Binding}" InputGesture="Delete" Foreground="#EF4444" />
+                                                                    </ContextMenu>
+                                                                </TextBlock.ContextMenu>
+                                                            </TextBlock>
+
+                                                            <material:MaterialIcon Kind="Cancel" 
+                                                                                   Width="12" Height="12" 
+                                                                                   Foreground="#EF4444" 
+                                                                                   VerticalAlignment="Center"
+                                                                                   IsVisible="{Binding IsExcludedFromTraining}"
+                                                                                   ToolTip.Tip="Excluded from training datasets (inherited from group)" />
+                                                        </StackPanel>
 
                                                         <!-- Row Hover Action Buttons: Only Remove Tag (No Plus on child tags) -->
                                                         <StackPanel Grid.Column="2" 

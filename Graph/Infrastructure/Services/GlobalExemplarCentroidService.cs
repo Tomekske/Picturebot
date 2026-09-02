@@ -1,33 +1,37 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Database.Domain.Entities;
+using Database.Domain.Interfaces;
 using Database.Infrastructure.Data;
+using Domain.Interfaces;
+using Domain.Models;
 using Graph.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PictureWorker.Domain.Interfaces;
+using Serilog;
 
 namespace Graph.Infrastructure.Services;
 
 public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, float[]>> _exemplarCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, float[]> _centroidCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public int MinimumExemplarThreshold { get; set; } = 10;
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, float[]>> _exemplarCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public GlobalExemplarCentroidService(IServiceScopeFactory scopeFactory) {
         _scopeFactory = scopeFactory;
     }
 
-    public async Task<Dictionary<string, float[]>> GetActiveLeafCentroidsAsync(CancellationToken cancellationToken = default) {
+    public int MinimumExemplarThreshold { get; set; } = 10;
+
+    public async Task<Dictionary<string, float[]>> GetActiveLeafCentroidsAsync(
+        CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
 
-        Serilog.Log.Information("Few-Shot Tag Discovery: Querying tagged pictures from database...");
+        Log.Information("Few-Shot Tag Discovery: Querying tagged pictures from database...");
         List<Picture> picturesData;
         using (var scope = _scopeFactory.CreateScope()) {
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -39,20 +43,34 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
                 .ToListAsync(cancellationToken);
         }
 
-        Serilog.Log.Information("Few-Shot Tag Discovery: Loaded {Count} tagged picture records from database.", picturesData.Count);
+        Log.Information("Few-Shot Tag Discovery: Loaded {Count} tagged picture records from database.",
+            picturesData.Count);
 
         using (var scope = _scopeFactory.CreateScope()) {
-            var embeddingService = scope.ServiceProvider.GetService<PictureWorker.Domain.Interfaces.IImageEmbeddingService>();
-            var pathService = scope.ServiceProvider.GetService<Domain.Interfaces.IPathService>();
+            var embeddingService = scope.ServiceProvider.GetService<IImageEmbeddingService>();
+            var pathService = scope.ServiceProvider.GetService<IPathService>();
+            var settingsService = scope.ServiceProvider.GetService<ISettingsService>();
 
-            int exemplarIndex = 0;
-            int totalExemplars = picturesData.Count;
+            var settings = settingsService?.Current;
+            if (settings == null) {
+                var settingsRepo = scope.ServiceProvider.GetService<ISettingsRepository>();
+                if (settingsRepo != null) {
+                    settings = await settingsRepo.LoadAsync();
+                }
+            }
+
+            var excludedTagNames = GetExcludedTagNames(settings);
+            var excludedPicturesCount = 0;
+
+            var exemplarIndex = 0;
+            var totalExemplars = picturesData.Count;
 
             foreach (var p in picturesData) {
                 cancellationToken.ThrowIfCancellationRequested();
                 exemplarIndex++;
                 if (exemplarIndex % 10 == 0 || exemplarIndex == totalExemplars || exemplarIndex == 1) {
-                    Serilog.Log.Information("CentroidService: Ingested exemplar {Index}/{Total} ({Name})...", exemplarIndex, totalExemplars, p.Name);
+                    Log.Information("CentroidService: Ingested exemplar {Index}/{Total} ({Name})...", exemplarIndex,
+                        totalExemplars, p.Name);
                 }
 
                 if (p.Parent != null && pathService != null) {
@@ -60,7 +78,15 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
                 }
 
                 var keywords = ParseKeywords(p.KeywordsJson);
-                if (keywords.Count == 0) continue;
+                if (keywords.Count == 0) {
+                    continue;
+                }
+
+                // Exclude pictures containing tags from excluded workflow tag groups
+                if (excludedTagNames.Count > 0 && ContainsExcludedTag(keywords, excludedTagNames)) {
+                    excludedPicturesCount++;
+                    continue;
+                }
 
                 // Ensure embedding vector is computed and loaded
                 float[]? vector = null;
@@ -69,32 +95,47 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
                 } else if (embeddingService != null) {
                     try {
                         vector = await embeddingService.GetOrComputeEmbeddingAsync(p, cancellationToken);
-                    } catch { }
+                    } catch {
+                    }
                 }
 
-                if (vector == null || vector.Length != 512) continue;
+                if (vector == null || vector.Length != 512) {
+                    continue;
+                }
 
                 foreach (var kw in keywords) {
-                    if (string.IsNullOrWhiteSpace(kw)) continue;
+                    if (string.IsNullOrWhiteSpace(kw)) {
+                        continue;
+                    }
+
                     var leafTag = ExtractLeafTag(kw);
-                    if (string.IsNullOrEmpty(leafTag)) continue;
+                    if (string.IsNullOrEmpty(leafTag)) {
+                        continue;
+                    }
 
                     var pictureMap = _exemplarCache.GetOrAdd(leafTag, _ => new ConcurrentDictionary<int, float[]>());
                     pictureMap[p.Id] = vector;
                 }
+            }
+
+            if (excludedPicturesCount > 0) {
+                Log.Information(
+                    "CentroidService: Excluded {Count} image(s) from training exemplars due to excluded workflow tag groups.",
+                    excludedPicturesCount);
             }
         }
 
         RecomputeAllCentroids();
 
         var result = new Dictionary<string, float[]>(StringComparer.OrdinalIgnoreCase);
-            foreach (var kvp in _centroidCache) {
-                if (_exemplarCache.TryGetValue(kvp.Key, out var map) && map.Count >= MinimumExemplarThreshold) {
-                    result[kvp.Key] = kvp.Value;
-                }
+        foreach (var kvp in _centroidCache) {
+            if (_exemplarCache.TryGetValue(kvp.Key, out var map) && map.Count >= MinimumExemplarThreshold) {
+                result[kvp.Key] = kvp.Value;
             }
+        }
 
-        Serilog.Log.Information("Few-Shot Tag Discovery: Found {Count} active leaf centroids (threshold N={Threshold}): [{Tags}]",
+        Log.Information(
+            "Few-Shot Tag Discovery: Found {Count} active leaf centroids (threshold N={Threshold}): [{Tags}]",
             result.Count, MinimumExemplarThreshold, string.Join(", ", result.Keys));
 
         return result;
@@ -106,7 +147,9 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
         }
 
         var leafTag = ExtractLeafTag(tag);
-        if (string.IsNullOrEmpty(leafTag)) return;
+        if (string.IsNullOrEmpty(leafTag)) {
+            return;
+        }
 
         var pictureMap = _exemplarCache.GetOrAdd(leafTag, _ => new ConcurrentDictionary<int, float[]>());
         pictureMap[pictureId] = embedding;
@@ -120,7 +163,9 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
         }
 
         var leafTag = ExtractLeafTag(tag);
-        if (string.IsNullOrEmpty(leafTag)) return;
+        if (string.IsNullOrEmpty(leafTag)) {
+            return;
+        }
 
         if (_exemplarCache.TryGetValue(leafTag, out var pictureMap)) {
             pictureMap.TryRemove(pictureId, out _);
@@ -143,24 +188,24 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
 
         var sum = new float[512];
         foreach (var vec in map.Values) {
-            for (int i = 0; i < 512; i++) {
+            for (var i = 0; i < 512; i++) {
                 sum[i] += vec[i];
             }
         }
 
-        double sumSq = 0.0;
-        for (int i = 0; i < 512; i++) {
+        var sumSq = 0.0;
+        for (var i = 0; i < 512; i++) {
             sumSq += sum[i] * sum[i];
         }
 
-        float norm = (float)Math.Sqrt(sumSq);
+        var norm = (float)Math.Sqrt(sumSq);
         if (norm < 1e-9f) {
             _centroidCache.TryRemove(tag, out _);
             return;
         }
 
         var normalized = new float[512];
-        for (int i = 0; i < 512; i++) {
+        for (var i = 0; i < 512; i++) {
             normalized[i] = sum[i] / norm;
         }
 
@@ -179,8 +224,66 @@ public class GlobalExemplarCentroidService : IGlobalExemplarCentroidService {
         }
     }
 
+    public static HashSet<string> GetExcludedTagNames(SettingsModel? settings) {
+        var excludedTagNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (settings == null) {
+            return excludedTagNames;
+        }
+
+        var excludedGroupTagIds = settings.TagGroups
+            .Where(g => g.ExcludeFromTraining)
+            .SelectMany(g => g.TagIds)
+            .ToHashSet();
+
+        if (excludedGroupTagIds.Count == 0) {
+            return excludedTagNames;
+        }
+
+        foreach (var tag in settings.MasterTags) {
+            if (excludedGroupTagIds.Contains(tag.Id) && !string.IsNullOrWhiteSpace(tag.Name)) {
+                excludedTagNames.Add(tag.Name.Trim());
+            }
+        }
+
+        return excludedTagNames;
+    }
+
+    public static bool ContainsExcludedTag(IEnumerable<string> keywords, HashSet<string> excludedTagNames) {
+        if (excludedTagNames == null || excludedTagNames.Count == 0) {
+            return false;
+        }
+
+        foreach (var kw in keywords) {
+            if (string.IsNullOrWhiteSpace(kw)) {
+                continue;
+            }
+
+            var trimmed = kw.Trim();
+            if (excludedTagNames.Contains(trimmed)) {
+                return true;
+            }
+
+            var leaf = ExtractLeafTag(trimmed);
+            if (excludedTagNames.Contains(leaf)) {
+                return true;
+            }
+
+            var normalized = trimmed.Replace(" › ", "|").Replace(" > ", "|").Replace('/', '|').Replace('\\', '|')
+                .Trim('|');
+            var segs = normalized.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (segs.Any(s => excludedTagNames.Contains(s))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string ExtractLeafTag(string tag) {
-        if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(tag)) {
+            return string.Empty;
+        }
+
         var parts = tag.Split('|', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length > 0 ? parts[^1].Trim() : tag.Trim();
     }

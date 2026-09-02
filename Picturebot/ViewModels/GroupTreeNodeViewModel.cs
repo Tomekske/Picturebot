@@ -42,6 +42,11 @@ public partial class GroupTreeNodeViewModel : ViewModelBase {
     [ObservableProperty]
     private string _editingName = string.Empty;
 
+    [ObservableProperty]
+    private bool _excludeFromTraining;
+
+    public bool IsExcludedFromTraining => ParentGroup?.ExcludeFromTraining ?? (IsGroup && ExcludeFromTraining);
+
     public bool IsNewUncommitted { get; set; }
 
     // Constructor for Group (Parent)
@@ -55,6 +60,7 @@ public partial class GroupTreeNodeViewModel : ViewModelBase {
         GroupModel = groupModel;
         _name = groupModel.GroupName;
         _editingName = groupModel.GroupName;
+        _excludeFromTraining = groupModel.ExcludeFromTraining;
         _onCommit = onCommit;
         _onCancel = onCancel;
         _onDelete = onDelete;
@@ -106,6 +112,16 @@ public partial class GroupTreeNodeViewModel : ViewModelBase {
             GroupModel.GroupName = value;
         } else if (IsTag && TagModel != null) {
             TagModel.Name = value;
+        }
+    }
+
+    partial void OnExcludeFromTrainingChanged(bool value) {
+        if (IsGroup && GroupModel != null) {
+            GroupModel.ExcludeFromTraining = value;
+        }
+        OnPropertyChanged(nameof(IsExcludedFromTraining));
+        foreach (var child in Children) {
+            child.OnPropertyChanged(nameof(IsExcludedFromTraining));
         }
     }
 

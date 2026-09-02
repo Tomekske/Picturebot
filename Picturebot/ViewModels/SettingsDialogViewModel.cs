@@ -43,6 +43,9 @@ public partial class TagGroupItemViewModel : ViewModelBase {
     [ObservableProperty]
     private string _editingName = string.Empty;
 
+    [ObservableProperty]
+    private bool _excludeFromTraining;
+
     public bool IsNewUncommitted { get; set; }
     public bool IsNewNode { get; set; }
 
@@ -60,6 +63,11 @@ public partial class TagGroupItemViewModel : ViewModelBase {
         _cancelAction = cancelAction;
         _groupName = model.GroupName;
         _editingName = model.GroupName;
+        _excludeFromTraining = model.ExcludeFromTraining;
+    }
+
+    partial void OnExcludeFromTrainingChanged(bool value) {
+        Model.ExcludeFromTraining = value;
     }
 
     public void NotifyTagCountChanged() {
@@ -661,6 +669,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             TagGroups = TagGroupTreeNodes.Select(g => new TagGroup {
                 GroupId = g.GroupModel?.GroupId ?? Guid.NewGuid(),
                 GroupName = g.Name,
+                ExcludeFromTraining = g.ExcludeFromTraining,
                 TagIds = new ObservableCollection<Guid>(g.Children.Where(c => c.TagId.HasValue).Select(c => c.TagId!.Value))
             }).ToList(),
             ActiveTagGroupId = (SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode.GroupModel?.GroupId : SelectedGroupTreeNode?.ParentGroup?.GroupModel?.GroupId) ?? TagGroupTreeNodes.FirstOrDefault()?.GroupModel?.GroupId,
@@ -1272,6 +1281,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             var model = gNode.GroupModel ?? new TagGroup { GroupName = gNode.Name, TagIds = tagIds };
             model.GroupName = gNode.Name;
             model.TagIds = tagIds;
+            model.ExcludeFromTraining = gNode.ExcludeFromTraining;
             gNode.GroupModel = model;
             TagGroups.Add(new TagGroupItemViewModel(model, DeleteTagGroupItem, RenameTagGroupItem, CancelTagGroupItem));
         }
