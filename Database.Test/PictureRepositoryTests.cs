@@ -92,6 +92,15 @@ public class PictureRepositoryTests : IDisposable {
         // Act 4: Search by Album Name "Studio"
         var studioResults = await _repository.SearchGlobalAsync("Studio");
         Assert.That(studioResults.Count, Is.EqualTo(2));
+
+        // Act 5: Search with formatted delimiter "faces › robin"
+        var formattedResults = await _repository.SearchGlobalAsync("faces › robin");
+        Assert.That(formattedResults.Count, Is.EqualTo(2));
+
+        // Act 6: Search with alternative delimiter "Nature > Mountains"
+        var altDelimResults = await _repository.SearchGlobalAsync("Nature > Mountains");
+        Assert.That(altDelimResults.Count, Is.EqualTo(1));
+        Assert.That(altDelimResults[0].Name, Is.EqualTo("Landscape_001.JPG"));
     }
 
     public void Dispose() {

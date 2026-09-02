@@ -379,6 +379,7 @@ public partial class GalleryViewModel : ViewModelBase,
                 var nodeService = scope?.ServiceProvider.GetService<INodeService>() ?? _nodeService;
                 var pathService = scope?.ServiceProvider.GetService<IPathService>() ?? _pathService;
                 var xmpService = scope?.ServiceProvider.GetService<IXmpService>() ?? _xmpService;
+                var taxonomyService = scope?.ServiceProvider.GetService<ITaxonomyService>();
 
                 var normalizedQuery = KeywordChipViewModel.NormalizePath(query);
                 var rawQuery = query.Trim();
@@ -398,11 +399,36 @@ public partial class GalleryViewModel : ViewModelBase,
                 }
                 pathService.PopulatePaths(allPics);
 
+                var allPicsMap = allPics.ToDictionary(p => p.Id);
+                var matchedPicsDict = new Dictionary<int, Picture>();
+
                 // 2. Fetch SQLite DB matches
                 var dbPics = await nodeService.SearchPicturesGlobalAsync(normalizedQuery, cancellationToken);
-                var matchedPicsDict = new Dictionary<int, Picture>();
                 foreach (var p in dbPics) {
-                    matchedPicsDict[p.Id] = p;
+                    if (allPicsMap.TryGetValue(p.Id, out var hydratedPic)) {
+                        matchedPicsDict[hydratedPic.Id] = hydratedPic;
+                    }
+                }
+
+                if (!string.Equals(rawQuery, normalizedQuery, StringComparison.OrdinalIgnoreCase)) {
+                    var rawDbPics = await nodeService.SearchPicturesGlobalAsync(rawQuery, cancellationToken);
+                    foreach (var p in rawDbPics) {
+                        if (allPicsMap.TryGetValue(p.Id, out var hydratedPic)) {
+                            matchedPicsDict[hydratedPic.Id] = hydratedPic;
+                        }
+                    }
+                }
+
+                if (taxonomyService != null) {
+                    var fullHierarchy = taxonomyService.GetFullHierarchicalPath(rawQuery);
+                    if (!string.IsNullOrEmpty(fullHierarchy) && !string.Equals(fullHierarchy, normalizedQuery, StringComparison.OrdinalIgnoreCase)) {
+                        var taxDbPics = await nodeService.SearchPicturesGlobalAsync(fullHierarchy, cancellationToken);
+                        foreach (var p in taxDbPics) {
+                            if (allPicsMap.TryGetValue(p.Id, out var hydratedPic)) {
+                                matchedPicsDict[hydratedPic.Id] = hydratedPic;
+                            }
+                        }
+                    }
                 }
 
                 // 3. For any pictures not matched via SQLite (e.g. unindexed KeywordsJson), check XMP files
@@ -414,15 +440,52 @@ public partial class GalleryViewModel : ViewModelBase,
                     await xmpService.LoadMetadataAsync(pic);
                     bool isMatch = false;
 
-                    if (pic.Keywords != null && pic.Keywords.Any(k =>
-                        k.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) ||
-                        k.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
-                        KeywordChipViewModel.NormalizePath(k).Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(k.Trim(), rawQuery, StringComparison.OrdinalIgnoreCase))) {
+                    if (pic.Keywords != null && pic.Keywords.Count > 0) {
+                        isMatch = pic.Keywords.Any(k => {
+                            if (string.Equals(k.Trim(), rawQuery, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(k.Trim(), normalizedQuery, StringComparison.OrdinalIgnoreCase)) {
+                                return true;
+                            }
+
+                            if (k.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) ||
+                                k.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase)) {
+                                return true;
+                            }
+
+                            var normK = KeywordChipViewModel.NormalizePath(k);
+                            if (normK.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(normK, normalizedQuery, StringComparison.OrdinalIgnoreCase)) {
+                                return true;
+                            }
+
+                            var segs = normK.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                            if (segs.Any(s => string.Equals(s, rawQuery, StringComparison.OrdinalIgnoreCase) ||
+                                             string.Equals(s, normalizedQuery, StringComparison.OrdinalIgnoreCase))) {
+                                return true;
+                            }
+
+                            if (taxonomyService != null) {
+                                var chain = taxonomyService.ResolveTaxonomySubjectChain(k);
+                                if (chain.Any(c => string.Equals(c, rawQuery, StringComparison.OrdinalIgnoreCase) ||
+                                                   string.Equals(c, normalizedQuery, StringComparison.OrdinalIgnoreCase))) {
+                                    return true;
+                                }
+
+                                var fullPath = taxonomyService.GetFullHierarchicalPath(k);
+                                if (!string.IsNullOrEmpty(fullPath) &&
+                                    (fullPath.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(fullPath, normalizedQuery, StringComparison.OrdinalIgnoreCase))) {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        });
+                    }
+
+                    if (!isMatch && !string.IsNullOrEmpty(pic.Name) && pic.Name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) {
                         isMatch = true;
-                    } else if (!string.IsNullOrEmpty(pic.Name) && pic.Name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) {
-                        isMatch = true;
-                    } else if (pic.Parent != null && !string.IsNullOrEmpty(pic.Parent.Name) && pic.Parent.Name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) {
+                    } else if (!isMatch && pic.Parent != null && !string.IsNullOrEmpty(pic.Parent.Name) && pic.Parent.Name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) {
                         isMatch = true;
                     }
 

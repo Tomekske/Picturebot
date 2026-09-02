@@ -27,10 +27,21 @@ public class PictureRepository(ApplicationDbContext context) : NodeRepository(co
         }
 
         var trimmed = query.Trim();
+        var normalized = trimmed.Replace(" › ", "|")
+                                .Replace(" > ", "|")
+                                .Replace("›", "|")
+                                .Replace(">", "|")
+                                .Replace('/', '|')
+                                .Replace('\\', '|')
+                                .Trim('|')
+                                .Trim();
+
         var likePattern = $"%{trimmed}%";
+        var normPattern = $"%{normalized}%";
+
         return await queryable
-            .Where(p => (p.KeywordsJson != null && (EF.Functions.Like(p.KeywordsJson, likePattern) || p.KeywordsJson.ToLower().Contains(trimmed.ToLower())))
-                     || (p.Name != null && (EF.Functions.Like(p.Name, likePattern) || p.Name.ToLower().Contains(trimmed.ToLower())))
+            .Where(p => (p.KeywordsJson != null && (EF.Functions.Like(p.KeywordsJson, likePattern) || EF.Functions.Like(p.KeywordsJson, normPattern) || p.KeywordsJson.ToLower().Contains(trimmed.ToLower()) || p.KeywordsJson.ToLower().Contains(normalized.ToLower())))
+                     || (p.Name != null && (EF.Functions.Like(p.Name, likePattern) || EF.Functions.Like(p.Name, normPattern) || p.Name.ToLower().Contains(trimmed.ToLower())))
                      || (p.Parent != null && p.Parent.Name != null && (EF.Functions.Like(p.Parent.Name, likePattern) || p.Parent.Name.ToLower().Contains(trimmed.ToLower()))))
             .ToListAsync(cancellationToken);
     }
