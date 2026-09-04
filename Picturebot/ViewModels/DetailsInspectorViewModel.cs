@@ -150,6 +150,9 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             foreach (var pic in message.Value) {
                 SelectedPictures.Add(pic);
             }
+            if (SelectedPicture == null || !SelectedPictures.Contains(SelectedPicture)) {
+                SelectedPicture = SelectedPictures.FirstOrDefault();
+            }
             UpdateActiveKeywords();
             UpdateQuickTagStates();
             OnPropertyChanged(nameof(ActiveMode));
@@ -419,7 +422,12 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             }
         }
         if (!paths.Any()) {
-            paths.Add(tag.Name);
+            var pathByName = FindHierarchicalPathForTagInSettings(tag.Name);
+            if (!string.IsNullOrEmpty(pathByName)) {
+                paths.Add(pathByName);
+            } else {
+                paths.Add(tag.Name);
+            }
         }
         return paths;
     }
@@ -489,50 +497,60 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     [RelayCommand]
     private async Task SetCurationStatus(CurationStatus status) {
-        var pictureVm = SelectedPicture;
-        if (pictureVm == null) {
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : (SelectedPicture != null ? new List<PictureItemViewModel> { SelectedPicture } : new List<PictureItemViewModel>());
+        if (!targetVms.Any()) {
             return;
         }
 
-        try {
-            pictureVm.CurationStatus = status;
-            _curationQueue.Enqueue(pictureVm.Picture);
-            await Task.CompletedTask;
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to update curation status for {Name}", pictureVm.Name);
+        foreach (var pictureVm in targetVms) {
+            try {
+                pictureVm.CurationStatus = status;
+                _curationQueue.Enqueue(pictureVm.Picture);
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to update curation status for {Name}", pictureVm.Name);
+            }
         }
+        await Task.CompletedTask;
     }
 
     [RelayCommand]
     private async Task SetColorLabel(ColorLabel label) {
-        var pictureVm = SelectedPicture;
-        if (pictureVm == null) {
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : (SelectedPicture != null ? new List<PictureItemViewModel> { SelectedPicture } : new List<PictureItemViewModel>());
+        if (!targetVms.Any()) {
             return;
         }
 
-        try {
-            pictureVm.ColorLabel = label;
-            _curationQueue.Enqueue(pictureVm.Picture);
-            await Task.CompletedTask;
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to update color label for {Name}", pictureVm.Name);
+        foreach (var pictureVm in targetVms) {
+            try {
+                pictureVm.ColorLabel = label;
+                _curationQueue.Enqueue(pictureVm.Picture);
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to update color label for {Name}", pictureVm.Name);
+            }
         }
+        await Task.CompletedTask;
     }
 
     [RelayCommand]
     private async Task SetRating(string ratingStr) {
-        var pictureVm = SelectedPicture;
-        if (pictureVm == null || !int.TryParse(ratingStr, out var rating)) {
+        if (!int.TryParse(ratingStr, out var rating)) {
             return;
         }
 
-        try {
-            pictureVm.Rating = rating;
-            _curationQueue.Enqueue(pictureVm.Picture);
-            await Task.CompletedTask;
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to update rating for {Name}", pictureVm.Name);
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : (SelectedPicture != null ? new List<PictureItemViewModel> { SelectedPicture } : new List<PictureItemViewModel>());
+        if (!targetVms.Any()) {
+            return;
         }
+
+        foreach (var pictureVm in targetVms) {
+            try {
+                pictureVm.Rating = rating;
+                _curationQueue.Enqueue(pictureVm.Picture);
+            } catch (Exception ex) {
+                Log.Error(ex, "Failed to update rating for {Name}", pictureVm.Name);
+            }
+        }
+        await Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -590,6 +608,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             targetVms.Add(SelectedPicture);
         }
 
+        if (!targetVms.Any()) return;
+
         string? resolvedHierarchicalPath = null;
         List<string> flatSegmentsToAdd = new();
 
@@ -617,23 +637,26 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             }
         }
 
-        bool changed = false;
+        bool anyChanged = false;
         foreach (var picVm in targetVms) {
+            bool picChanged = false;
+
             if (!string.IsNullOrEmpty(resolvedHierarchicalPath)) {
                 if (!picVm.Keywords.Contains(resolvedHierarchicalPath, StringComparer.OrdinalIgnoreCase)) {
                     picVm.AddKeyword(resolvedHierarchicalPath);
-                    changed = true;
+                    picChanged = true;
                 }
             }
 
             foreach (var seg in flatSegmentsToAdd) {
                 if (!picVm.Keywords.Contains(seg, StringComparer.OrdinalIgnoreCase)) {
                     picVm.AddKeyword(seg);
-                    changed = true;
+                    picChanged = true;
                 }
             }
 
-            if (changed) {
+            if (picChanged) {
+                anyChanged = true;
                 _curationQueue.Enqueue(picVm.Picture);
                 if (_centroidService != null && _embeddingService != null) {
                     _ = Task.Run(async () => {
@@ -644,7 +667,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             }
         }
 
-        if (changed) {
+        if (anyChanged) {
             Log.Information("Manually added tag '{Keyword}' to {Count} picture(s): [{PictureNames}]",
                 input, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
@@ -678,8 +701,12 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             targetVms.Add(SelectedPicture);
         }
 
-        bool changed = false;
+        if (!targetVms.Any()) return;
+
+        bool anyChanged = false;
         foreach (var picVm in targetVms) {
+            bool picChanged = false;
+
             if (normalized.Contains('|')) {
                 // 1. Remove the matching hierarchical path(s)
                 var matchingPaths = picVm.Keywords
@@ -687,7 +714,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
                     .ToList();
                 foreach (var mp in matchingPaths) {
                     picVm.RemoveKeyword(mp);
-                    changed = true;
+                    picChanged = true;
                 }
 
                 // 2. Remove associated segments if they are not used in any remaining hierarchical path
@@ -706,7 +733,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
                         var flatMatch = picVm.Keywords.FirstOrDefault(k => k.Equals(seg, StringComparison.OrdinalIgnoreCase));
                         if (flatMatch != null) {
                             picVm.RemoveKeyword(flatMatch);
-                            changed = true;
+                            picChanged = true;
                         }
                     }
                 }
@@ -717,11 +744,12 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
                     k.Equals(keyword.Trim(), StringComparison.OrdinalIgnoreCase));
                 if (existing != null) {
                     picVm.RemoveKeyword(existing);
-                    changed = true;
+                    picChanged = true;
                 }
             }
 
-            if (changed) {
+            if (picChanged) {
+                anyChanged = true;
                 _curationQueue.Enqueue(picVm.Picture);
                 if (_centroidService != null && _embeddingService != null) {
                     _ = Task.Run(async () => {
@@ -732,7 +760,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             }
         }
 
-        if (changed) {
+        if (anyChanged) {
             Log.Information("Manually removed tag '{Keyword}' from {Count} picture(s): [{PictureNames}]",
                 keyword, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
             UpdateActiveKeywords();
@@ -760,27 +788,18 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             targetVms.Add(SelectedPicture);
         }
 
-        bool changed = false;
-        foreach (var picVm in targetVms) {
-            bool hasAny = paths.Any(p => picVm.Keywords.Contains(p, StringComparer.OrdinalIgnoreCase));
-            if (hasAny) {
-                foreach (var p in paths) {
-                    RemoveKeyword(p);
-                }
-            } else {
-                foreach (var p in paths) {
-                    AddKeyword(p);
-                }
-            }
-            changed = true;
-        }
+        if (!targetVms.Any()) return;
 
-        if (changed) {
-            Log.Information("Toggled quick tag '{TagName}' on {Count} picture(s): [{PictureNames}]",
-                tag.Name, targetVms.Count, string.Join(", ", targetVms.Select(p => p.Name)));
-            UpdateActiveKeywords();
-            UpdateQuickTagStates();
-            WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(targetVms));
+        bool allHaveTag = targetVms.All(pic => paths.Any(p => pic.Keywords.Contains(p, StringComparer.OrdinalIgnoreCase)));
+
+        if (allHaveTag) {
+            foreach (var p in paths) {
+                RemoveKeyword(p);
+            }
+        } else {
+            foreach (var p in paths) {
+                AddKeyword(p);
+            }
         }
     }
 
