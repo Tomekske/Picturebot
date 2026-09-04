@@ -65,6 +65,23 @@ public class FilterToolbarViewModelTests {
     }
 
     [Test]
+    public void SelectAllTags_ChecksAllNodesAndActivatesFilter() {
+        var vm = new FilterToolbarViewModel();
+        vm.UpdateAvailableTags(CreateSamplePictures());
+
+        Assert.That(vm.IsTagFilterActive, Is.False);
+
+        vm.SelectAllTagsCommand.Execute(null);
+
+        Assert.That(vm.IsTagFilterActive, Is.True);
+        Assert.That(vm.RootNodes.All(r => r.IsChecked == true), Is.True);
+        Assert.That(vm.VisibleFlatNodes.All(n => n.IsChecked == true), Is.True);
+        Assert.That(vm.GetSelectedFilterPaths(), Contains.Item("faces|katsiuska"));
+        Assert.That(vm.GetSelectedFilterPaths(), Contains.Item("faces|robin"));
+        Assert.That(vm.GetSelectedFilterPaths(), Contains.Item("landscape"));
+    }
+
+    [Test]
     public void ClearTagFilters_ResetsTreeAndToolbar() {
         var vm = new FilterToolbarViewModel();
         vm.UpdateAvailableTags(CreateSamplePictures());

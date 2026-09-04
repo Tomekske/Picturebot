@@ -10,7 +10,7 @@ namespace Picturebot.ViewModels;
 
 public partial class TagFilterItemViewModel : ViewModelBase
 {
-    private readonly Action _onToggled;
+    private readonly Action<bool>? _onToggled;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -21,7 +21,7 @@ public partial class TagFilterItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSelected;
 
-    public TagFilterItemViewModel(string name, int count, bool isSelected, Action onToggled)
+    public TagFilterItemViewModel(string name, int count, bool isSelected, Action<bool>? onToggled = null)
     {
         _name = name;
         _count = count;
@@ -31,7 +31,7 @@ public partial class TagFilterItemViewModel : ViewModelBase
 
     partial void OnIsSelectedChanged(bool value)
     {
-        _onToggled();
+        _onToggled?.Invoke(value);
     }
 }
 
@@ -400,10 +400,12 @@ public partial class FilterToolbarViewModel : ViewModelBase
             foreach (var node in RootNodes.SelectMany(r => r.GetAllLeaves()))
             {
                 var isSel = node.IsChecked == true;
-                AllTags.Add(new TagFilterItemViewModel(node.FullPath, node.Count, isSel, () =>
+                AllTags.Add(new TagFilterItemViewModel(node.FullPath, node.Count, isSel, isChecked =>
                 {
-                    node.IsChecked = !node.IsChecked;
-                    UpdateCollectionsAndNotify();
+                    if (node.IsChecked != isChecked)
+                    {
+                        node.IsChecked = isChecked;
+                    }
                 }));
             }
         }
@@ -487,6 +489,28 @@ public partial class FilterToolbarViewModel : ViewModelBase
         foreach (var child in node.VisibleChildren)
         {
             AddVisibleNodeHierarchy(child, target);
+        }
+    }
+
+    [RelayCommand]
+    public void SelectAllTags()
+    {
+        _isUpdating = true;
+        try
+        {
+            foreach (var root in RootNodes)
+            {
+                root.SetCheckedRecursive(true);
+            }
+            foreach (var tag in AllTags)
+            {
+                tag.IsSelected = true;
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
+            UpdateCollectionsAndNotify();
         }
     }
 

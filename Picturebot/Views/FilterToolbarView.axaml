@@ -396,8 +396,11 @@
                                 </Panel>
                             </Border>
 
-                            <!-- Clear button inside flyout -->
-                            <Button Content="Clear Filter" Command="{Binding ClearTagFiltersCommand}" HorizontalAlignment="Stretch" Height="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Classes="secondary" FontSize="11"/>
+                            <!-- Actions inside flyout -->
+                            <Grid ColumnDefinitions="*,8,*">
+                                <Button Grid.Column="0" Content="Select All" Command="{Binding SelectAllTagsCommand}" HorizontalAlignment="Stretch" Height="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Classes="secondary" FontSize="11"/>
+                                <Button Grid.Column="2" Content="Clear Filter" Command="{Binding ClearTagFiltersCommand}" HorizontalAlignment="Stretch" Height="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Classes="secondary" FontSize="11"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </Flyout>
