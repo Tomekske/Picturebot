@@ -364,6 +364,17 @@
         <StackPanel Grid.Row="2" Spacing="10" Margin="15,20,15,15"
                     IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
             <Button Classes="Primary"
+                    Command="{Binding OpenInDxoCommand}"
+                    HorizontalAlignment="Stretch"
+                    Height="40"
+                    ToolTip.Tip="Open selected image in DxO PhotoLab 9">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <icons:MaterialIcon Kind="OpenInApp" Width="18" Height="18" />
+                    <TextBlock Text="Open in DxO" FontWeight="SemiBold" />
+                </StackPanel>
+            </Button>
+
+            <Button Classes="Basic"
                     Command="{Binding EditMetadataCommand}"
                     HorizontalAlignment="Stretch"
                     Height="40">

@@ -110,6 +110,7 @@ public partial class GalleryViewModel : ViewModelBase,
     [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
     [NotifyCanExecuteChangedFor(nameof(GroupSimilarPicturesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInExplorerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenInDxoCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyToEditCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyToPrintCommand))]
     private bool _canPlayCarousel;
@@ -816,6 +817,86 @@ public partial class GalleryViewModel : ViewModelBase,
             MainWindow.ToastManager.CreateToast()
                 .WithTitle("Error")
                 .WithContent("Failed to open File Explorer.")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteOpenInExplorer))]
+    private void OpenInDxo() {
+        var targetVms = GetSelectedPicturesOrActive();
+        if (!targetVms.Any()) {
+            var firstPic = _allPictures.FirstOrDefault() ?? PicturesList.FirstOrDefault();
+            if (firstPic != null) {
+                targetVms = new List<PictureItemViewModel> { firstPic };
+            }
+        }
+
+        if (!targetVms.Any()) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("No Picture Found")
+                .WithContent("No pictures in the current album to open in DxO PhotoLab.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        var exePath = DetailsInspectorViewModel.GetDxoExecutablePath();
+        if (!File.Exists(exePath)) {
+            Log.Warning("DxO PhotoLab executable not found at {Path}", exePath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("DxO PhotoLab Not Found")
+                .WithContent($"Could not find DxO PhotoLab executable at:\n{exePath}")
+                .Dismiss().ByClicking()
+                .Dismiss().After(TimeSpan.FromSeconds(5))
+                .Queue();
+            return;
+        }
+
+        var libraryPath = _settingsService.Current.LibraryPath;
+        var validPaths = new List<string>();
+
+        foreach (var picVm in targetVms) {
+            var filePath = DetailsInspectorViewModel.ResolveRawOrImagePath(picVm.Picture, libraryPath);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath)) {
+                validPaths.Add(filePath);
+            } else {
+                Log.Warning("Could not find image or RAW file for picture {Name}", picVm.Name);
+            }
+        }
+
+        if (!validPaths.Any()) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("File Not Found")
+                .WithContent("Could not locate RAW image file(s) for the selected picture(s).")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        try {
+            var arguments = string.Join(" ", validPaths.Select(p => $"\"{p}\""));
+            Log.Information("Opening in DxO PhotoLab: {Exe} {Args}", exePath, arguments);
+
+            var startInfo = new ProcessStartInfo {
+                FileName = exePath,
+                Arguments = arguments,
+                WorkingDirectory = Path.GetDirectoryName(validPaths.First()),
+                UseShellExecute = true
+            };
+            Process.Start(startInfo);
+
+            var countText = validPaths.Count == 1 ? Path.GetFileName(validPaths[0]) : $"{validPaths.Count} pictures";
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Opening in DxO PhotoLab")
+                .WithContent($"Opened {countText} in DxO PhotoLab 9.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to launch DxO PhotoLab at {Exe}", exePath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent($"Failed to launch DxO PhotoLab: {ex.Message}")
                 .Dismiss().ByClicking()
                 .Queue();
         }

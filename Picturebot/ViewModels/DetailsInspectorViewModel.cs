@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Database.Domain.Entities;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -551,6 +553,125 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             }
         }
         await Task.CompletedTask;
+    }
+
+    public static string GetDxoExecutablePath() {
+        var candidatePaths = new[] {
+            @"C:\Program Files\DxO\DxO PhotoLab 9\DxO.PhotoLab.exe",
+            @"C:\Program Files\DxO\DxO PhotoLab 8\DxO.PhotoLab.exe",
+            @"C:\Program Files\DxO\DxO PhotoLab 7\DxO.PhotoLab.exe",
+            @"C:\Program Files\DxO\DxO PhotoLab 6\DxO.PhotoLab.exe"
+        };
+
+        foreach (var path in candidatePaths) {
+            if (File.Exists(path)) {
+                return path;
+            }
+        }
+
+        return @"C:\Program Files\DxO\DxO PhotoLab 9\DxO.PhotoLab.exe";
+    }
+
+    public static string? ResolveRawOrImagePath(Picture picture, string? libraryPath = null) {
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Raw) && File.Exists(picture.SubFolder.Raw)) {
+            return picture.SubFolder.Raw;
+        }
+
+        if (picture.Parent is Album album && !string.IsNullOrEmpty(album.Uuid) && !string.IsNullOrEmpty(libraryPath)) {
+            var rawsDir = Path.Combine(libraryPath, album.Uuid, "RAWs");
+            if (Directory.Exists(rawsDir)) {
+                var rawExt = picture.Extension;
+                if (!string.IsNullOrEmpty(rawExt)) {
+                    var specificPath = Path.Combine(rawsDir, picture.Name + rawExt);
+                    if (File.Exists(specificPath)) return specificPath;
+                }
+
+                var matches = Directory.GetFiles(rawsDir, picture.Name + ".*");
+                var nonXmp = matches.FirstOrDefault(m => !m.EndsWith(".xmp", StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(nonXmp) && File.Exists(nonXmp)) {
+                    return nonXmp;
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Raw)) return picture.SubFolder.Raw;
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Preview) && File.Exists(picture.SubFolder.Preview)) return picture.SubFolder.Preview;
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Thumbnail) && File.Exists(picture.SubFolder.Thumbnail)) return picture.SubFolder.Thumbnail;
+
+        return null;
+    }
+
+    [RelayCommand]
+    public void OpenInDxo() {
+        var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : (SelectedPicture != null ? new List<PictureItemViewModel> { SelectedPicture } : new List<PictureItemViewModel>());
+        if (!targetVms.Any()) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("No Picture Selected")
+                .WithContent("Please select a picture to open in DxO PhotoLab.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        var exePath = GetDxoExecutablePath();
+        if (!File.Exists(exePath)) {
+            Log.Warning("DxO PhotoLab executable not found at {Path}", exePath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("DxO PhotoLab Not Found")
+                .WithContent($"Could not find DxO PhotoLab executable at:\n{exePath}")
+                .Dismiss().ByClicking()
+                .Dismiss().After(TimeSpan.FromSeconds(5))
+                .Queue();
+            return;
+        }
+
+        var libraryPath = _settingsService.Current?.LibraryPath;
+        var validPaths = new List<string>();
+
+        foreach (var picVm in targetVms) {
+            var filePath = ResolveRawOrImagePath(picVm.Picture, libraryPath);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath)) {
+                validPaths.Add(filePath);
+            } else {
+                Log.Warning("Could not find image or RAW file for picture {Name}", picVm.Name);
+            }
+        }
+
+        if (!validPaths.Any()) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("File Not Found")
+                .WithContent("Could not locate RAW image file(s) for the selected picture(s).")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        try {
+            var arguments = string.Join(" ", validPaths.Select(p => $"\"{p}\""));
+            Log.Information("Opening in DxO PhotoLab: {Exe} {Args}", exePath, arguments);
+
+            var startInfo = new ProcessStartInfo {
+                FileName = exePath,
+                Arguments = arguments,
+                WorkingDirectory = Path.GetDirectoryName(validPaths.First()),
+                UseShellExecute = true
+            };
+            Process.Start(startInfo);
+
+            var countText = validPaths.Count == 1 ? Path.GetFileName(validPaths[0]) : $"{validPaths.Count} pictures";
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Opening in DxO PhotoLab")
+                .WithContent($"Opened {countText} in DxO PhotoLab 9.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to launch DxO PhotoLab at {Exe}", exePath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent($"Failed to launch DxO PhotoLab: {ex.Message}")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
     }
 
     [RelayCommand]

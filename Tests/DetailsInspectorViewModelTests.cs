@@ -397,5 +397,28 @@ public class DetailsInspectorViewModelTests {
         Assert.That(vm1.Keywords, Does.Not.Contain("Vehicles|Car"));
         Assert.That(vm2.Keywords, Does.Not.Contain("Vehicles|Car"));
     }
+
+    [Test]
+    public void GetDxoExecutablePath_ReturnsValidExecutableString() {
+        var exePath = DetailsInspectorViewModel.GetDxoExecutablePath();
+        Assert.That(exePath, Is.Not.Null.And.Not.Empty);
+        Assert.That(exePath, Does.EndWith("DxO.PhotoLab.exe"));
+    }
+
+    [Test]
+    public void ResolveRawOrImagePath_WhenSubFolderRawIsSet_ReturnsRawPath() {
+        var pic = new Picture {
+            Name = "RAW_001",
+            Extension = ".ARW",
+            SubFolder = new SubFolder {
+                Raw = @"D:\Photos\RAW_001.ARW",
+                Preview = @"D:\Photos\RAW_001.jpg"
+            }
+        };
+
+        var resolved = DetailsInspectorViewModel.ResolveRawOrImagePath(pic);
+        Assert.That(resolved, Is.EqualTo(@"D:\Photos\RAW_001.ARW"));
+    }
 }
+
 
