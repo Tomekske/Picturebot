@@ -310,4 +310,92 @@ public class DetailsInspectorViewModelTests {
         Assert.That(_viewModel.ActiveKeywordGroups[0].Title, Is.EqualTo("Keywords"));
         Assert.That(_viewModel.ActiveKeywordGroups[0].Chips[0].LeafName, Is.EqualTo("Hero"));
     }
+
+    [Test]
+    public void AddKeyword_WhenMultiplePicturesSelected_AppliesTagToAllSelectedPictures() {
+        var pic1 = new Picture { Name = "pic1.jpg", Keywords = new List<string>() };
+        var pic2 = new Picture { Name = "pic2.jpg", Keywords = new List<string> { "Hero" } };
+        var vm1 = new PictureItemViewModel(pic1);
+        var vm2 = new PictureItemViewModel(pic2);
+
+        _viewModel.SelectedPictures.Add(vm1);
+        _viewModel.SelectedPictures.Add(vm2);
+        _viewModel.SelectedPicture = vm1;
+
+        _viewModel.AddKeyword("Car");
+
+        Assert.That(vm1.Keywords, Contains.Item("Vehicles|Car"));
+        Assert.That(vm1.Keywords, Contains.Item("Vehicles"));
+        Assert.That(vm1.Keywords, Contains.Item("Car"));
+
+        Assert.That(vm2.Keywords, Contains.Item("Vehicles|Car"));
+        Assert.That(vm2.Keywords, Contains.Item("Vehicles"));
+        Assert.That(vm2.Keywords, Contains.Item("Car"));
+        Assert.That(vm2.Keywords, Contains.Item("Hero"));
+
+        Assert.That(_curationQueue.EnqueuedPictures, Contains.Item(pic1));
+        Assert.That(_curationQueue.EnqueuedPictures, Contains.Item(pic2));
+    }
+
+    [Test]
+    public void RemoveKeywordChip_WhenMultiplePicturesSelected_RemovesTagFromAllSelectedPictures() {
+        var pic1 = new Picture { Name = "pic1.jpg", Keywords = new List<string> { "Vehicles|Car", "Vehicles", "Car", "Hero" } };
+        var pic2 = new Picture { Name = "pic2.jpg", Keywords = new List<string> { "Vehicles|Car", "Vehicles", "Car" } };
+        var vm1 = new PictureItemViewModel(pic1);
+        var vm2 = new PictureItemViewModel(pic2);
+
+        _viewModel.SelectedPictures.Add(vm1);
+        _viewModel.SelectedPictures.Add(vm2);
+        _viewModel.SelectedPicture = vm1;
+
+        var carChip = _viewModel.ActiveKeywordChips.First(c => c.RawValue == "Vehicles|Car");
+        _viewModel.RemoveKeywordChip(carChip);
+
+        Assert.That(vm1.Keywords, Does.Not.Contain("Vehicles|Car"));
+        Assert.That(vm1.Keywords, Does.Not.Contain("Vehicles"));
+        Assert.That(vm1.Keywords, Does.Not.Contain("Car"));
+        Assert.That(vm1.Keywords, Contains.Item("Hero"));
+
+        Assert.That(vm2.Keywords, Does.Not.Contain("Vehicles|Car"));
+        Assert.That(vm2.Keywords, Does.Not.Contain("Vehicles"));
+        Assert.That(vm2.Keywords, Does.Not.Contain("Car"));
+    }
+
+    [Test]
+    public void ToggleQuickTag_WhenMultiplePicturesSelected_AddsTagToAllIfAnyMissing_AndRemovesIfAllPresent() {
+        var carTag = _settingsService.Current.MasterTags.First(t => t.Name == "Car");
+        _settingsService.Current.TagGroups = new List<TagGroup> {
+            new() { GroupId = Guid.NewGuid(), GroupName = "Quick", TagIds = new ObservableCollection<Guid> { carTag.Id } }
+        };
+        _settingsService.Current.ActiveTagGroupId = _settingsService.Current.TagGroups[0].GroupId;
+
+        // Force rebuild quick tags
+        _viewModel.ActiveTagGroup = _settingsService.Current.TagGroups[0];
+
+        var pic1 = new Picture { Name = "pic1.jpg", Keywords = new List<string> { "Vehicles|Car", "Vehicles", "Car" } };
+        var pic2 = new Picture { Name = "pic2.jpg", Keywords = new List<string>() };
+        var vm1 = new PictureItemViewModel(pic1);
+        var vm2 = new PictureItemViewModel(pic2);
+
+        _viewModel.SelectedPictures.Add(vm1);
+        _viewModel.SelectedPictures.Add(vm2);
+        _viewModel.SelectedPicture = vm1;
+
+        var quickBtn = _viewModel.QuickTagButtons.First(b => b.Tag.Id == carTag.Id);
+
+        // State: pic1 has tag, pic2 does not (not all have it) -> toggling should add to all (pic2 gets it)
+        _viewModel.ToggleQuickTagCommand.Execute(quickBtn);
+
+        Assert.That(vm1.Keywords, Contains.Item("Vehicles|Car"));
+        Assert.That(vm2.Keywords, Contains.Item("Vehicles|Car"));
+        Assert.That(vm2.Keywords, Contains.Item("Vehicles"));
+        Assert.That(vm2.Keywords, Contains.Item("Car"));
+
+        // State: both have tag -> toggling should remove from all
+        _viewModel.ToggleQuickTagCommand.Execute(quickBtn);
+
+        Assert.That(vm1.Keywords, Does.Not.Contain("Vehicles|Car"));
+        Assert.That(vm2.Keywords, Does.Not.Contain("Vehicles|Car"));
+    }
 }
+
