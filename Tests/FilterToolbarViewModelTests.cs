@@ -82,20 +82,49 @@ public class FilterToolbarViewModelTests {
     }
 
     [Test]
-    public void ClearTagFilters_ResetsTreeAndToolbar() {
+    public void ClearTagFilters_ResetsTreeAndToolbar_AndDefaultsMatchModeToAny() {
         var vm = new FilterToolbarViewModel();
         vm.UpdateAvailableTags(CreateSamplePictures());
 
         var facesNode = vm.RootNodes.First(n => n.Name == "faces");
         facesNode.IsChecked = true;
+        vm.IsMatchNot = true; // Switch to NOT (EXCLUDE)
 
         Assert.That(vm.IsTagFilterActive, Is.True);
+        Assert.That(vm.IsMatchNot, Is.True);
+        Assert.That(vm.IsMatchAny, Is.False);
 
         vm.ClearTagFiltersCommand.Execute(null);
 
         Assert.That(vm.IsTagFilterActive, Is.False);
         Assert.That(facesNode.IsChecked, Is.EqualTo(false));
         Assert.That(facesNode.Children.All(c => c.IsChecked == false), Is.True);
+        Assert.That(vm.IsMatchAny, Is.True, "ClearTagFilters must default back to 'Any' option.");
+        Assert.That(vm.IsMatchNot, Is.False);
+        Assert.That(vm.IsMatchAll, Is.False);
+    }
+
+    [Test]
+    public void ToggleAllTags_WhenAllChecked_SwitchesButtonTextToUncheckAllTags_AndUnchecksAll() {
+        var vm = new FilterToolbarViewModel();
+        vm.UpdateAvailableTags(CreateSamplePictures());
+
+        Assert.That(vm.AreAllTagsSelected, Is.False);
+        Assert.That(vm.SelectAllButtonText, Is.EqualTo("Select All"));
+
+        // Toggle when not all checked -> checks all
+        vm.ToggleAllTagsCommand.Execute(null);
+
+        Assert.That(vm.AreAllTagsSelected, Is.True);
+        Assert.That(vm.SelectAllButtonText, Is.EqualTo("Uncheck All Tags"));
+        Assert.That(vm.RootNodes.All(r => r.IsChecked == true), Is.True);
+
+        // Toggle when all are checked -> unchecks all
+        vm.ToggleAllTagsCommand.Execute(null);
+
+        Assert.That(vm.AreAllTagsSelected, Is.False);
+        Assert.That(vm.SelectAllButtonText, Is.EqualTo("Select All"));
+        Assert.That(vm.RootNodes.All(r => r.IsChecked == false), Is.True);
     }
 
     [Test]
