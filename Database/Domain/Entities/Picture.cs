@@ -88,4 +88,15 @@ public class Picture : Node {
     /// </summary>
     [NotMapped]
     public SubFolder? SubFolder { get; set; }
+
+    /// <summary>
+    ///     The keywords (tags) serialized as JSON for SQLite database indexing and querying.
+    /// </summary>
+    public string? KeywordsJson { get; set; }
+
+    /// <summary>
+    ///     The keywords (tags) associated with the picture, loaded from and saved to XMP.
+    /// </summary>
+    [NotMapped]
+    public List<string> Keywords { get; set; } = new();
 }

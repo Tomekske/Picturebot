@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Picturebot.ViewModels;
@@ -17,6 +18,74 @@ public partial class SettingsDialog : Window {
 
     private void Header_PointerPressed(object? sender, PointerPressedEventArgs e) {
         BeginMoveDrag(e);
+    }
+
+    public void OnInlineAutoCompleteGotFocus(object? sender, GotFocusEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            acb.IsDropDownOpen = true;
+        }
+    }
+
+    public void OnInlineAutoCompleteAttached(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                acb.Focus();
+                acb.IsDropDownOpen = true;
+            }, Avalonia.Threading.DispatcherPriority.Input);
+        }
+    }
+
+    public void OnInlineAutoCompleteKeyDown(object? sender, KeyEventArgs e) {
+        if (sender is AutoCompleteBox acb) {
+            if (e.Key == Key.Enter) {
+                if (acb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (acb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            } else if (e.Key == Key.Escape) {
+                if (acb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (acb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }
+        }
+    }
+
+    public void OnInlineTextBoxAttached(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        if (sender is TextBox tb) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                tb.Focus();
+                tb.SelectAll();
+            }, Avalonia.Threading.DispatcherPriority.Input);
+        }
+    }
+
+    public void OnInlineTextBoxKeyDown(object? sender, KeyEventArgs e) {
+        if (sender is TextBox tb) {
+            if (e.Key == Key.Enter) {
+                if (tb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (tb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CommitEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            } else if (e.Key == Key.Escape) {
+                if (tb.DataContext is GroupTreeNodeViewModel groupNode) {
+                    groupNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                } else if (tb.DataContext is HierarchyNodeViewModel hierNode) {
+                    hierNode.CancelEditCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }
+        }
     }
 
     public void OnShortcutKeyDown(object? sender, KeyEventArgs e) {

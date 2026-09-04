@@ -22,6 +22,9 @@ namespace Database.Migrations
                     b.Property<int>("PictureId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<byte[]>("Embedding")
+                        .HasColumnType("BLOB");
+
                     b.Property<long?>("PHash")
                         .HasColumnType("INTEGER");
 
@@ -67,6 +70,9 @@ namespace Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ActiveTagGroupId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BlueLabelName")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -109,6 +115,10 @@ namespace Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("GlobalKeywordTaxonomy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("GreenLabelName")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -120,10 +130,18 @@ namespace Database.Migrations
                     b.Property<int>("GroupingThreshold")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("HierarchyNodesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("LaunchMaximized")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("LibraryPath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MasterTagsJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -163,6 +181,10 @@ namespace Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("QuickTagPresets")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Rating0Shortcut")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -192,6 +214,10 @@ namespace Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RedLabelShortcut")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TagGroupsJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -225,11 +251,14 @@ namespace Database.Migrations
                             CurationRejectedShortcut = "X",
                             EditFolderPath = "",
                             FullscreenShortcut = "F",
+                            GlobalKeywordTaxonomy = "",
                             GreenLabelName = "Green",
                             GreenLabelShortcut = "Ctrl+NumPad4",
                             GroupingThreshold = 8,
+                            HierarchyNodesJson = "[]",
                             LaunchMaximized = false,
                             LibraryPath = "",
+                            MasterTagsJson = "[]",
                             NoneLabelShortcut = "Ctrl+NumPad0",
                             OpenInExplorerShortcut = "O",
                             OrangeLabelName = "Orange",
@@ -239,6 +268,7 @@ namespace Database.Migrations
                             PrintFolderPath = "",
                             PurpleLabelName = "Purple",
                             PurpleLabelShortcut = "Ctrl+NumPad7",
+                            QuickTagPresets = "",
                             Rating0Shortcut = "NumPad0",
                             Rating1Shortcut = "NumPad1",
                             Rating2Shortcut = "NumPad2",
@@ -247,6 +277,7 @@ namespace Database.Migrations
                             Rating5Shortcut = "NumPad5",
                             RedLabelName = "Red",
                             RedLabelShortcut = "Ctrl+NumPad1",
+                            TagGroupsJson = "[]",
                             ThemeMode = 0,
                             YellowLabelName = "Yellow",
                             YellowLabelShortcut = "Ctrl+NumPad3"
@@ -286,6 +317,9 @@ namespace Database.Migrations
 
                     b.Property<int>("Height")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("KeywordsJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LastErrorMessage")
                         .HasColumnType("TEXT");

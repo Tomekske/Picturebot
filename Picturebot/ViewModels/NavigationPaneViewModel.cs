@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Database.Domain.Entities;
 using Domain.Interfaces;
+using Domain.Models;
 using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Commands;
@@ -35,6 +36,16 @@ public partial class NavigationPaneViewModel : ViewModelBase,
     [ObservableProperty]
     private ObservableCollection<NavigationNodeViewModel> _folders = new();
 
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSearchActive;
+
+    public ObservableCollection<string> KeywordSuggestions { get; } = new();
+
+    private readonly DispatcherTimer _searchDebounceTimer;
+
     public NavigationPaneViewModel(
         INodeService nodeService,
         IFolderService folderService,
@@ -51,6 +62,23 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         _importCommand = importCommand;
         _scopeFactory = scopeFactory;
         _ = LoadFoldersAsync();
+        RefreshKeywordSuggestions();
+
+        _searchDebounceTimer = new DispatcherTimer {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _searchDebounceTimer.Tick += (s, e) => {
+            _searchDebounceTimer.Stop();
+            if (!string.IsNullOrWhiteSpace(SearchQuery)) {
+                ExecuteSearch(SearchQuery);
+            }
+        };
+
+        _settingsService.PropertyChanged += (s, e) => {
+            if (e.PropertyName == nameof(ISettingsService.Current)) {
+                RefreshKeywordSuggestions();
+            }
+        };
 
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
@@ -160,5 +188,84 @@ public partial class NavigationPaneViewModel : ViewModelBase,
                 }
             }
         });
+    }
+
+    [RelayCommand]
+    public void ExecuteSearch(string? query = null) {
+        _searchDebounceTimer.Stop();
+        var searchTerm = (query ?? SearchQuery)?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(searchTerm)) {
+            ClearSearch();
+            return;
+        }
+
+        IsSearchActive = true;
+        if (!string.Equals(SearchQuery, searchTerm, StringComparison.Ordinal)) {
+            SearchQuery = searchTerm;
+        }
+        WeakReferenceMessenger.Default.Send(new GlobalSearchMessage(searchTerm));
+    }
+
+    [RelayCommand]
+    public void ClearSearch() {
+        _searchDebounceTimer.Stop();
+        SearchQuery = string.Empty;
+        IsSearchActive = false;
+        WeakReferenceMessenger.Default.Send(new GlobalSearchMessage(string.Empty));
+    }
+
+    partial void OnSearchQueryChanged(string value) {
+        _searchDebounceTimer.Stop();
+        if (string.IsNullOrWhiteSpace(value)) {
+            if (IsSearchActive) {
+                ClearSearch();
+            }
+        } else {
+            _searchDebounceTimer.Start();
+        }
+    }
+
+    public void RefreshKeywordSuggestions() {
+        KeywordSuggestions.Clear();
+        var set = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var settings = _settingsService.Current;
+        if (settings == null) return;
+
+        // 1. Master Tags
+        foreach (var t in settings.MasterTags) {
+            if (!string.IsNullOrWhiteSpace(t.Name)) {
+                set.Add(t.Name);
+            }
+        }
+
+        // 2. Hierarchy node paths
+        foreach (var node in settings.HierarchyNodes) {
+            CollectHierarchySuggestions(node, "", set);
+        }
+
+        // 3. Tag groups
+        foreach (var group in settings.TagGroups) {
+            if (!string.IsNullOrWhiteSpace(group.GroupName)) {
+                set.Add(group.GroupName);
+            }
+        }
+
+        foreach (var item in set.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)) {
+            KeywordSuggestions.Add(item);
+        }
+    }
+
+    private static void CollectHierarchySuggestions(HierarchyNode node, string parentPath, System.Collections.Generic.HashSet<string> set) {
+        var currentPath = string.IsNullOrEmpty(parentPath) ? node.Name : $"{parentPath} › {node.Name}";
+        if (!string.IsNullOrWhiteSpace(node.Name)) {
+            set.Add(node.Name);
+        }
+        if (!string.IsNullOrEmpty(currentPath) && currentPath.Contains('›')) {
+            set.Add(currentPath);
+        }
+        foreach (var child in node.Children) {
+            CollectHierarchySuggestions(child, currentPath, set);
+        }
     }
 }

@@ -59,4 +59,12 @@ public class SettingsModel {
 
     public string? EditFolderPath { get; set; }
     public string? PrintFolderPath { get; set; }
+
+    public string QuickTagPresets { get; set; } = string.Empty;
+    public string GlobalKeywordTaxonomy { get; set; } = string.Empty;
+
+    public List<Tag> MasterTags { get; set; } = new();
+    public List<HierarchyNode> HierarchyNodes { get; set; } = new();
+    public List<TagGroup> TagGroups { get; set; } = new();
+    public Guid? ActiveTagGroupId { get; set; }
 }

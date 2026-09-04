@@ -12,4 +12,12 @@ public interface IPictureRepository : INodeRepository {
     /// <param name="hierarchyId">The unique identifier of the parent node.</param>
     /// <returns>A task that represents the asynchronous operation, containing the list of pictures.</returns>
     Task<List<Picture>> FindByHierarchyIdAsync(int hierarchyId);
+
+    /// <summary>
+    ///     Searches for pictures across all albums matching the specified query in keywords, picture name, or album name.
+    /// </summary>
+    /// <param name="query">The search term or keyword.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that represents the asynchronous operation, containing the list of matching pictures.</returns>
+    Task<List<Picture>> SearchGlobalAsync(string query, CancellationToken cancellationToken = default);
 }

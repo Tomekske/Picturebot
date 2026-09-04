@@ -26,7 +26,35 @@ public class Metrics {
     public ulong? PHash { get; set; }
 
     /// <summary>
+    ///     A 512-dimensional float vector embedding represented as a byte array for database storage.
+    /// </summary>
+    public byte[]? Embedding { get; set; }
+
+    /// <summary>
     ///     The picture these metrics belong to.
     /// </summary>
     public Picture? Picture { get; set; }
+
+    /// <summary>
+    ///     Gets the 512-dimensional float vector embedding from the raw byte array.
+    /// </summary>
+    public float[]? GetEmbeddingVector() {
+        if (Embedding == null || Embedding.Length == 0) return null;
+        var floats = new float[Embedding.Length / sizeof(float)];
+        Buffer.BlockCopy(Embedding, 0, floats, 0, Embedding.Length);
+        return floats;
+    }
+
+    /// <summary>
+    ///     Sets the raw byte array from a 512-dimensional float vector embedding.
+    /// </summary>
+    public void SetEmbeddingVector(float[]? vector) {
+        if (vector == null || vector.Length == 0) {
+            Embedding = null;
+            return;
+        }
+        var bytes = new byte[vector.Length * sizeof(float)];
+        Buffer.BlockCopy(vector, 0, bytes, 0, bytes.Length);
+        Embedding = bytes;
+    }
 }

@@ -87,4 +87,15 @@ public class Settings {
     ///     The destination folder for files copied for printing.
     /// </summary>
     public string PrintFolderPath { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The semicolon-separated list of quick tag presets.
+    /// </summary>
+    public string QuickTagPresets { get; set; } = string.Empty;
+    public string GlobalKeywordTaxonomy { get; set; } = string.Empty;
+
+    public string MasterTagsJson { get; set; } = "[]";
+    public string HierarchyNodesJson { get; set; } = "[]";
+    public string TagGroupsJson { get; set; } = "[]";
+    public string? ActiveTagGroupId { get; set; }
 }

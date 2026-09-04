@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Picturebot.Views.NavigationPaneView"
              x:DataType="vm:NavigationPaneViewModel">
-    <Grid RowDefinitions="Auto, *" Margin="0,40,0,0">
+    <Grid RowDefinitions="Auto, Auto, *" Margin="0,40,0,0">
         <Grid ColumnDefinitions="*, Auto" Margin="15,10">
             <TextBlock Text="Library"
                        Classes="h3"
@@ -44,7 +44,60 @@
             </StackPanel>
         </Grid>
 
-        <TreeView Grid.Row="1"
+        <!-- Global Search Bar across all albums -->
+        <Border Grid.Row="1"
+                Margin="15,0,15,12"
+                Background="#1E222A"
+                BorderBrush="#334155"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="8,4">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Search Icon -->
+                <icons:MaterialIcon Grid.Column="0"
+                                    Kind="Magnify"
+                                    Width="18" Height="18"
+                                    Foreground="#94A3B8"
+                                    VerticalAlignment="Center"
+                                    Margin="2,0,6,0" />
+
+                <!-- AutoCompleteBox Input -->
+                <AutoCompleteBox Grid.Column="1"
+                                 ItemsSource="{Binding KeywordSuggestions}"
+                                 Text="{Binding SearchQuery, Mode=TwoWay}"
+                                 Watermark="Search all albums..."
+                                 FilterMode="ContainsOrdinal"
+                                 MinimumPrefixLength="0"
+                                 MinimumPopulateDelay="00:00:00"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Height="30"
+                                 VerticalAlignment="Center"
+                                 SelectionChanged="SearchInput_SelectionChanged"
+                                 KeyDown="SearchInput_KeyDown">
+                    <AutoCompleteBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}" FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </AutoCompleteBox.ItemTemplate>
+                </AutoCompleteBox>
+
+                <!-- Clear button (Visible when SearchQuery is not empty) -->
+                <Button Grid.Column="2"
+                        Classes="Basic"
+                        Command="{Binding ClearSearchCommand}"
+                        IsVisible="{Binding IsSearchActive}"
+                        Padding="2"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Clear search">
+                    <icons:MaterialIcon Kind="CloseCircle" Width="16" Height="16" Foreground="#94A3B8" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <TreeView Grid.Row="2"
                   ItemsSource="{Binding Folders}"
                   Background="Transparent"
                   BorderThickness="0">

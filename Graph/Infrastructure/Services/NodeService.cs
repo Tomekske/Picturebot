@@ -8,7 +8,8 @@ namespace Graph.Infrastructure.Services;
 
 public class NodeService(
     INodeRepository nodeRepository,
-    NodeStrategyFactory strategyFactory) : INodeService {
+    NodeStrategyFactory strategyFactory,
+    IPictureRepository? pictureRepository = null) : INodeService {
     public async Task CreateNodeAsync(Node node) {
         var strategy = strategyFactory.GetStrategy(node.Type);
 
@@ -69,5 +70,15 @@ public class NodeService(
 
     public async Task DeleteNodeAsync(Node node) {
         await nodeRepository.DeleteAsync(node);
+    }
+
+    public async Task<List<Picture>> SearchPicturesGlobalAsync(string query, CancellationToken cancellationToken = default) {
+        if (pictureRepository != null) {
+            return await pictureRepository.SearchGlobalAsync(query, cancellationToken);
+        }
+        if (nodeRepository is IPictureRepository pr) {
+            return await pr.SearchGlobalAsync(query, cancellationToken);
+        }
+        return new List<Picture>();
     }
 }

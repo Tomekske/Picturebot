@@ -6,6 +6,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:converters="using:Picturebot.Converters"
+             xmlns:models="using:Domain.Models"
              xmlns:enums="using:Domain.Enums"
              mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="800"
              x:Class="Picturebot.Views.DetailsInspectorView"
@@ -175,6 +176,186 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+                </StackPanel>
+
+                <!-- Keywords Section -->
+                <StackPanel Spacing="12" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0"
+                                   Text="Keywords"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SukiText}" />
+
+                        <Button Grid.Column="2"
+                                Classes="Basic"
+                                Command="{Binding AutoTagPictureCommand}"
+                                ToolTip.Tip="AI Auto-Tag picture (Overrides existing tags)"
+                                Padding="4"
+                                VerticalAlignment="Center">
+                            <icons:MaterialIcon Kind="AutoFix" Width="20" Height="20" Foreground="{DynamicResource SukiPrimaryColor}" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Grouped Keywords Sections (Taxonomy Parent as Title, Children as Pills) -->
+                    <ItemsControl ItemsSource="{Binding ActiveKeywordGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:KeywordGroupViewModel">
+                                <StackPanel Spacing="6" Margin="0,0,0,10">
+                                    <!-- Taxonomy Parent Header Row -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                                        <!-- Header Title & Expand/Collapse Toggle -->
+                                        <Button Grid.Column="0"
+                                                Classes="Basic"
+                                                Command="{Binding ToggleExpandCommand}"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Cursor="Hand">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                <icons:MaterialIcon Kind="{Binding ChevronIconKind}"
+                                                                    Width="14"
+                                                                    Height="14"
+                                                                    Foreground="#FFFFFF"
+                                                                    VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontSize="13"
+                                                           FontWeight="Bold"
+                                                           Foreground="#FFFFFF"
+                                                           VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- Group Options (⋮) -->
+                                        <Button Grid.Column="2"
+                                                Classes="Basic"
+                                                Padding="4,2"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="Group options">
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem Header="Remove all in group"
+                                                              Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordGroupCommand}"
+                                                              CommandParameter="{Binding}">
+                                                        <MenuItem.Icon>
+                                                            <icons:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15" Foreground="#EF4444" />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                            <icons:MaterialIcon Kind="DotsVertical"
+                                                                Width="16"
+                                                                Height="16"
+                                                                Foreground="#94A3B8" />
+                                        </Button>
+                                    </Grid>
+
+                                    <!-- Child Tag Pills -->
+                                    <ItemsControl ItemsSource="{Binding Chips}" IsVisible="{Binding IsExpanded}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="vm:KeywordChipViewModel">
+                                                <Border Background="#262930"
+                                                        BorderBrush="#383E4D"
+                                                        BorderThickness="1"
+                                                        CornerRadius="13"
+                                                        Margin="0,0,6,6"
+                                                        Padding="10,4,6,4"
+                                                        ToolTip.Tip="{Binding Tooltip}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <!-- Leaf Tag Text -->
+                                                        <TextBlock Text="{Binding LeafName}"
+                                                                   Foreground="#D1D5DB"
+                                                                   FontSize="12"
+                                                                   FontWeight="Medium"
+                                                                   VerticalAlignment="Center" />
+
+                                                        <!-- Remove Chip Action Button (✕) -->
+                                                        <Button Classes="Basic"
+                                                                Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordChipCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                Padding="2"
+                                                                MinWidth="14"
+                                                                MinHeight="14"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip.Tip="Remove tag">
+                                                            <icons:MaterialIcon Kind="Close"
+                                                                                Width="11"
+                                                                                Height="11"
+                                                                                Foreground="#94A3B8" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Add Keyword AutoCompleteBox -->
+                    <AutoCompleteBox Name="TagInput"
+                                     ItemsSource="{Binding AvailableKeywordSuggestions}"
+                                     Text="{Binding NewTagText, Mode=TwoWay}"
+                                     Watermark="Add keyword (e.g. Vehicles › Car or Hero)..."
+                                     FilterMode="ContainsOrdinal"
+                                     MinimumPrefixLength="0"
+                                     MinimumPopulateDelay="00:00:00"
+                                     GotFocus="TagInput_GotFocus"
+                                     Height="36"
+                                     KeyDown="TagInput_KeyDown">
+                        <AutoCompleteBox.ItemTemplate>
+                            <DataTemplate DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </AutoCompleteBox.ItemTemplate>
+                    </AutoCompleteBox>
+
+                    <!-- Quick Tags Bar -->
+                    <StackPanel Spacing="6" Margin="0,4,0,0">
+                        <TextBlock Text="Quick Tags"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SukiLowText}" />
+
+                        <ComboBox ItemsSource="{Binding AvailableTagGroups}"
+                                  SelectedItem="{Binding ActiveTagGroup, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  PlaceholderText="Select Tag Group...">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="models:TagGroup">
+                                    <TextBlock Text="{Binding GroupName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <ItemsControl ItemsSource="{Binding QuickTagButtons}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel HorizontalAlignment="Left" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:QuickTagButtonViewModel">
+                                    <ToggleButton Content="{Binding Name}"
+                                                  IsChecked="{Binding IsActive}"
+                                                  Command="{Binding $parent[ItemsControl].((vm:DetailsInspectorViewModel)DataContext).ToggleQuickTagCommand}"
+                                                  CommandParameter="{Binding}"
+                                                  Margin="0,0,6,6" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

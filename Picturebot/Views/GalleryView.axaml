@@ -10,6 +10,7 @@
              xmlns:controls="using:Picturebot.Controls"
              xmlns:enums="using:Domain.Enums"
              xmlns:labs="clr-namespace:Avalonia.Labs.Panels;assembly=Avalonia.Labs.Panels"
+             xmlns:views="using:Picturebot.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Picturebot.Views.GalleryView"
              x:DataType="vm:GalleryViewModel">
@@ -107,228 +108,7 @@
                                             Foreground="{DynamicResource SukiPrimaryColor}" />
                     </Button>
 
-                    <Button Classes="Basic" ToolTip.Tip="Filter">
-                        <icons:MaterialIcon Kind="Filter" Width="20" Height="20" />
-                        <Button.Flyout>
-                            <Flyout Placement="BottomEdgeAlignedLeft">
-                                <Border Background="{DynamicResource SukiCardBackground}"
-                                        BorderBrush="{DynamicResource SukiBorderBrush}"
-                                        BorderThickness="1" CornerRadius="8" Padding="8">
-                                    <Border.KeyBindings>
-                                        <KeyBinding Gesture="Shift+P" Command="{Binding ShowPickedOnlyCommand}" />
-                                        <KeyBinding Gesture="Shift+R" Command="{Binding ClearAllFiltersCommand}" />
-                                    </Border.KeyBindings>
-                                    <ScrollViewer MaxHeight="500">
-                                        <StackPanel Spacing="4" Width="220">
-                                            
-                                            <!-- Reset Filters -->
-                                            <Button Classes="Basic" Command="{Binding ClearAllFiltersCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="8,4" Margin="0,0,0,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="FilterRemoveOutline" Width="18" Height="18" Foreground="{DynamicResource SukiLowText}"/>
-                                                    <TextBlock Text="Reset Filters" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                                </StackPanel>
-                                            </Button>
-
-                                            <!-- Section 1: Curation Status -->
-                                            <TextBlock Text="Curation Status" FontSize="11" FontWeight="Bold"
-                                                       Margin="8,4" Foreground="{DynamicResource SukiLowText}" />
-
-                                            <CheckBox IsChecked="{Binding IsFlaggedFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Flag" Foreground="#4CAF50" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Picked images" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <CheckBox IsChecked="{Binding IsUnflaggedFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="CircleOutline" Foreground="Gray"
-                                                                        Width="18" Height="18" />
-                                                    <TextBlock Text="Untagged images" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <CheckBox IsChecked="{Binding IsRejectedFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="CloseCircle" Foreground="#F44336"
-                                                                        Width="18" Height="18" />
-                                                    <TextBlock Text="Rejected images" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <Separator Height="1" Background="{DynamicResource SukiBorderBrush}"
-                                                       Margin="0,4" />
-
-                                            <!-- Section 2: Star Ratings -->
-                                            <TextBlock Text="Star Ratings" FontSize="11" FontWeight="Bold" Margin="8,4"
-                                                       Foreground="{DynamicResource SukiLowText}" />
-
-                                            <!-- 5 Stars -->
-                                            <CheckBox IsChecked="{Binding IsFiveStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- 4 Stars -->
-                                            <CheckBox IsChecked="{Binding IsFourStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- 3 Stars -->
-                                            <CheckBox IsChecked="{Binding IsThreeStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- 2 Stars -->
-                                            <CheckBox IsChecked="{Binding IsTwoStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- 1 Star -->
-                                            <CheckBox IsChecked="{Binding IsOneStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <icons:MaterialIcon Kind="Star" Foreground="Gold" Width="14"
-                                                                        Height="14" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- 0 Stars (Unrated) -->
-                                            <CheckBox IsChecked="{Binding IsZeroStarFilterActive, Mode=TwoWay}" HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <icons:MaterialIcon Kind="StarOffOutline" Foreground="{DynamicResource SukiLowText}" Width="14"
-                                                                        Height="14" />
-                                                    <TextBlock Text="Unrated" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <Separator Height="1" Background="{DynamicResource SukiBorderBrush}"
-                                                       Margin="0,4" />
-
-                                            <!-- Section 3: Color Labels -->
-                                            <TextBlock Text="Color Labels" FontSize="11" FontWeight="Bold" Margin="8,4"
-                                                       Foreground="{DynamicResource SukiLowText}" />
-
-                                            <!-- None -->
-                                            <CheckBox IsChecked="{Binding IsNoneColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="CircleOutline"
-                                                                        Foreground="{DynamicResource SukiLowText}"
-                                                                        Width="18" Height="18" />
-                                                    <TextBlock Text="None" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Red -->
-                                            <CheckBox IsChecked="{Binding IsRedColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#B71C1C" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Red" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Orange -->
-                                            <CheckBox IsChecked="{Binding IsOrangeColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#E67E22" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Orange" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Yellow -->
-                                            <CheckBox IsChecked="{Binding IsYellowColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#CCCC33" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Yellow" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Green -->
-                                            <CheckBox IsChecked="{Binding IsGreenColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#33CC33" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Green" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Blue -->
-                                            <CheckBox IsChecked="{Binding IsBlueColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#3333CC" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Blue" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Pink -->
-                                            <CheckBox IsChecked="{Binding IsPinkColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#F06292" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Pink" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-
-                                            <!-- Purple -->
-                                            <CheckBox IsChecked="{Binding IsPurpleColorFilterActive, Mode=TwoWay}"
-                                                      HorizontalAlignment="Stretch" Padding="8,4">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <icons:MaterialIcon Kind="Circle" Foreground="#CC33CC" Width="18"
-                                                                        Height="18" />
-                                                    <TextBlock Text="Purple" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </CheckBox>
-                                        </StackPanel>
-                                    </ScrollViewer>
-                                </Border>
-                            </Flyout>
-                        </Button.Flyout>
-                    </Button>
+                    <views:FilterToolbarView DataContext="{Binding FilterToolbar}" VerticalAlignment="Center" Margin="4,0" />
                     <Button Classes="Basic" ToolTip.Tip="Sort">
                         <icons:MaterialIcon Kind="SortVariant" Width="20" Height="20" />
                     </Button>
@@ -361,9 +141,51 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
+
+                    <!-- Bulk Delete Tag Action -->
+                    <Button Classes="Basic" ToolTip.Tip="Bulk Delete Tag from Album" IsVisible="{Binding IsShowingAlbum}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <icons:MaterialIcon Kind="TagMinus" Width="20" Height="20" Foreground="#FF5555" />
+                            <icons:MaterialIcon Kind="ChevronDown" Width="14" Height="14" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft" Opened="BulkDeleteFlyout_Opened">
+                                <Border Width="260" Padding="12" Background="{DynamicResource SukiCardBackground}" CornerRadius="8">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Bulk Delete Tag" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource SukiText}" />
+                                        <TextBlock Text="Select tag(s) to remove from all XMP files in this album:" FontSize="11" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap" />
+
+                                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding AlbumTagsForBulkDelete}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:BulkDeleteTagItemViewModel">
+                                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <TextBlock Text="{Binding TagName}" FontWeight="SemiBold" Foreground="{DynamicResource SukiText}" />
+                                                                <TextBlock Text="{Binding Count, StringFormat='({0})'}" Foreground="{DynamicResource SukiLowText}" FontSize="11" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </CheckBox>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                        <TextBlock Text="No tags found in this album" IsVisible="{Binding !AlbumTagsForBulkDelete.Count}" Foreground="{DynamicResource SukiLowText}" FontStyle="Italic" FontSize="12" />
+
+                                        <Button Classes="Accent" Command="{Binding ExecuteBulkDeleteTagsCommand}" IsEnabled="{Binding AlbumTagsForBulkDelete.Count}" HorizontalAlignment="Stretch" Height="34" Background="#CC3333">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                                <icons:MaterialIcon Kind="Delete" Width="16" Height="16" />
+                                                <TextBlock Text="Delete Selected Tags" FontWeight="SemiBold" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding !IsLibraryRoot}">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding CanEditOrDeleteCurrentNode}">
                     <Button Classes="Basic" ToolTip.Tip="Edit"
                             Command="{Binding EditCurrentNodeCommand}">
                         <icons:MaterialIcon Kind="PencilOutline" Width="20" Height="20" />
@@ -537,211 +359,178 @@
                                                Foreground="{DynamicResource SukiText}" />
                                 </StackPanel>
 
-                                <ListBox ItemsSource="{Binding Pictures}"
-                                         SelectedItem="{Binding $parent[UserControl].((vm:GalleryViewModel)DataContext).SelectedPicture, Mode=OneWay}"
-                                         SelectionChanged="OnSelectionChanged"
-                                         Background="Transparent"
-                                         BorderThickness="0"
-                                         Padding="0"
-                                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                     <ListBox.ItemsPanel>
-                                         <ItemsPanelTemplate>
-                                             <WrapPanel />
-                                         </ItemsPanelTemplate>
-                                     </ListBox.ItemsPanel>
-                                     <ListBox.Styles>
-                                           <Style Selector="ScrollViewer">
-                                               <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
-                                               <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
-                                           </Style>
+                                <ItemsControl x:Name="GroupPicturesItemsControl"
+                                              ItemsSource="{Binding Pictures}"
+                                              Background="Transparent">
+                                    <ItemsControl.Styles>
+                                        <Style Selector="Border.selected">
+                                            <Setter Property="BorderBrush" Value="#0078FF" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                        </Style>
+                                    </ItemsControl.Styles>
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PictureItemViewModel">
+                                            <controls:AspectRatioPanel Width="320" Ratio="0.85" Margin="8">
+                                                <!-- The 'Matted Print' Border -->
+                                                <Border Name="PART_AspectBorder"
+                                                        Classes.selected="{Binding IsSelected}"
+                                                        Background="#1C232E"
+                                                        BorderBrush="#3A4454"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        ClipToBounds="True">
+                                                    <Grid RowDefinitions="*,Auto">
+                                                        <!-- Color Label Background Overlay -->
+                                                        <Border Grid.RowSpan="2"
+                                                                Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
+                                                                Opacity="0.18" />
 
-                                           <Style Selector="ScrollViewer /template/ ScrollBar">
-                                               <Setter Property="IsVisible" Value="False" />
-                                               <Setter Property="Width" Value="0" />
-                                               <Setter Property="Height" Value="0" />
-                                               <Setter Property="Opacity" Value="0" />
-                                           </Style>
+                                                        <Panel Grid.Row="0" Margin="8">
+                                                            <!-- Placeholder Fallback Border/Icon -->
+                                                            <Border Background="#1A222D"
+                                                                    BorderBrush="#2C3545"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}">
+                                                                <icons:MaterialIcon Kind="ImageOutline"
+                                                                                    Width="48"
+                                                                                    Height="48"
+                                                                                    Foreground="#3E4B5E"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center" />
+                                                            </Border>
 
-                                           <Style Selector="ScrollViewer /template/ Grid">
-                                               <Setter Property="ShowGridLines" Value="False" />
-                                           </Style>
+                                                            <Image Source="{Binding Thumbnail}"
+                                                                   Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                   Stretch="Uniform"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   EffectiveViewportChanged="OnImageEffectiveViewportChanged"
+                                                                   DataContextChanged="OnImageDataContextChanged">
+                                                                <Image.Transitions>
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
+                                                                    </Transitions>
+                                                                </Image.Transitions>
+                                                                <Image.Styles>
+                                                                    <Style Selector="Image">
+                                                                        <Setter Property="Opacity" Value="0" />
+                                                                    </Style>
+                                                                    <Style Selector="Image.loaded">
+                                                                        <Setter Property="Opacity" Value="1" />
+                                                                    </Style>
+                                                                </Image.Styles>
+                                                            </Image>
 
-                                           <Style Selector="ScrollViewer /template/ Border">
-                                               <Setter Property="BorderThickness" Value="0" />
-                                               <Setter Property="Background" Value="Transparent" />
-                                           </Style>
-                                          <Style Selector="ListBoxItem" x:DataType="vm:PictureItemViewModel">
-                                              <Setter Property="Padding" Value="0" />
-                                              <Setter Property="Margin" Value="0" />
-                                              <Setter Property="BorderThickness" Value="0" />
-                                              <Setter Property="BorderBrush" Value="Transparent" />
-                                              <Setter Property="Background" Value="Transparent" />
-                                              <Setter Property="Width" Value="320" />
-                                              <Setter Property="HorizontalAlignment" Value="Left" />
-                                              <Setter Property="VerticalAlignment" Value="Top" />
-                                             <Style.Animations>
-                                                 <Animation Duration="0:0:0.4" Easing="CubicEaseOut">
-                                                     <KeyFrame KeyTime="0:0:0">
-                                                         <Setter Property="Opacity" Value="0" />
-                                                     </KeyFrame>
-                                                     <KeyFrame KeyTime="0:0:0.4">
-                                                         <Setter Property="Opacity" Value="1" />
-                                                     </KeyFrame>
-                                                 </Animation>
-                                             </Style.Animations>
-                                             <Setter Property="Template">
-                                                 <ControlTemplate>
-                                                     <controls:AspectRatioPanel Ratio="0.85" Margin="8">
-                                                         <!-- The 'Matted Print' Border -->
-                                                         <Border Name="PART_AspectBorder"
-                                                                 Background="#1C232E"
-                                                                 BorderBrush="#3A4454"
-                                                                 BorderThickness="1"
-                                                                 CornerRadius="4"
-                                                                 ClipToBounds="True">
-                                                             <Grid RowDefinitions="*,Auto">
-                                                                 <!-- Color Label Background Overlay -->
-                                                                 <Border Grid.RowSpan="2"
-                                                                         Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
-                                                                         Opacity="0.18" />
+                                                            <!-- Top Left: Flagged Indicator -->
+                                                            <Border VerticalAlignment="Top"
+                                                                    HorizontalAlignment="Left"
+                                                                    Margin="4"
+                                                                    Padding="4"
+                                                                    CornerRadius="4"
+                                                                    Background="#80000000"
+                                                                    IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}">
+                                                                <icons:MaterialIcon Kind="Flag"
+                                                                        Width="16" Height="16"
+                                                                        Foreground="#4CAF50" />
+                                                            </Border>
+                                                        </Panel>
 
-                                                                 <Panel Grid.Row="0" Margin="8">
-                                                                     <!-- Placeholder Fallback Border/Icon -->
-                                                                     <Border Background="#1A222D"
-                                                                             BorderBrush="#2C3545"
-                                                                             BorderThickness="1"
-                                                                             CornerRadius="4"
-                                                                             IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}">
-                                                                         <icons:MaterialIcon Kind="ImageOutline"
-                                                                                             Width="48"
-                                                                                             Height="48"
-                                                                                             Foreground="#3E4B5E"
-                                                                                             HorizontalAlignment="Center"
-                                                                                             VerticalAlignment="Center" />
-                                                                     </Border>
+                                                        <!-- Metadata Section with CheckBox -->
+                                                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="8,4,8,8" VerticalAlignment="Center">
+                                                            <!-- Bottom-Left CheckBox -->
+                                                            <CheckBox Grid.Column="0"
+                                                                      VerticalAlignment="Center"
+                                                                      HorizontalAlignment="Left"
+                                                                      Margin="0,0,6,0"
+                                                                      Padding="0"
+                                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                      IsHitTestVisible="True"
+                                                                      Focusable="False"
+                                                                      Cursor="Hand" />
 
-                                                                     <Image Source="{Binding Thumbnail}"
-                                                                            Classes.loaded="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                                                            Stretch="Uniform"
-                                                                            HorizontalAlignment="Center"
-                                                                            VerticalAlignment="Center"
-                                                                            EffectiveViewportChanged="OnImageEffectiveViewportChanged"
-                                                                            DataContextChanged="OnImageDataContextChanged">
-                                                                         <Image.Transitions>
-                                                                             <Transitions>
-                                                                                 <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
-                                                                             </Transitions>
-                                                                         </Image.Transitions>
-                                                                         <Image.Styles>
-                                                                             <Style Selector="Image">
-                                                                                 <Setter Property="Opacity" Value="0" />
-                                                                             </Style>
-                                                                             <Style Selector="Image.loaded">
-                                                                                 <Setter Property="Opacity" Value="1" />
-                                                                             </Style>
-                                                                         </Image.Styles>
-                                                                     </Image>
-
-                                                                    <!-- Top Left: Flagged Indicator -->
-                                                                    <Border VerticalAlignment="Top"
-                                                                            HorizontalAlignment="Left"
-                                                                            Margin="4"
-                                                                            Padding="4"
-                                                                            CornerRadius="4"
-                                                                            Background="#80000000"
-                                                                            IsVisible="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Flagged}">
-                                                                        <icons:MaterialIcon Kind="Flag"
-                                                                                Width="16" Height="16"
-                                                                                Foreground="#4CAF50" />
-                                                                    </Border>
-                                                                </Panel>
-
-                                                                <!-- Metadata Section -->
-                                                                <StackPanel Grid.Row="1" Spacing="4" Margin="8,0,8,8">
-                                                                    <!-- Rating Indicator -->
-                                                                    <StackPanel HorizontalAlignment="Center"
-                                                                            Orientation="Horizontal"
-                                                                            Spacing="1">
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!1}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!2}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=2}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!3}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=3}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!4}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=4}" />
-                                                                        </Panel>
-                                                                        <Panel>
-                                                                            <icons:MaterialIcon Kind="StarOutline"
-                                                                                    Width="10" Height="10"
-                                                                                    Foreground="Gray" Opacity="0.5"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!5}" />
-                                                                            <icons:MaterialIcon Kind="Star" Width="10"
-                                                                                    Height="10" Foreground="Gold"
-                                                                                    IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=5}" />
-                                                                        </Panel>
-                                                                    </StackPanel>
-
-                                                                    <TextBlock Text="{Binding Name}"
-                                                                               FontSize="11"
-                                                                               FontWeight="SemiBold"
-                                                                               Foreground="White"
-                                                                               TextAlignment="Center"
-                                                                               TextWrapping="NoWrap"
-                                                                               TextTrimming="CharacterEllipsis" />
+                                                            <!-- Centered Stars + Filename -->
+                                                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                                                <!-- Rating Indicator -->
+                                                                <StackPanel HorizontalAlignment="Center"
+                                                                        Orientation="Horizontal"
+                                                                        Spacing="1">
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!1}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=1}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!2}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=2}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!3}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=3}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!4}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=4}" />
+                                                                    </Panel>
+                                                                    <Panel>
+                                                                        <icons:MaterialIcon Kind="StarOutline"
+                                                                                Width="10" Height="10"
+                                                                                Foreground="Gray" Opacity="0.5"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=!5}" />
+                                                                        <icons:MaterialIcon Kind="Star" Width="10"
+                                                                                Height="10" Foreground="Gold"
+                                                                                IsVisible="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, ConverterParameter=5}" />
+                                                                    </Panel>
                                                                 </StackPanel>
-                                                            </Grid>
-                                                        </Border>
 
-                                                        <!-- Selection Indicator overlay (Blue) -->
-                                                        <Border Name="SelectionIndicator"
-                                                                BorderBrush="#0078FF"
-                                                                BorderThickness="2"
-                                                                CornerRadius="4"
-                                                                IsHitTestVisible="False"
-                                                                IsVisible="False" />
-                                                    </controls:AspectRatioPanel>
-                                                </ControlTemplate>
-                                            </Setter>
-                                        </Style>
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           FontSize="11"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="White"
+                                                                           TextAlignment="Center"
+                                                                           TextWrapping="NoWrap"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
 
-                                        <Style Selector="ListBoxItem:pointerover /template/ Border#PART_AspectBorder">
-                                            <Setter Property="Background" Value="#252E3B" />
-                                        </Style>
-
-                                        <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
-                                            <Setter Property="IsVisible" Value="True" />
-                                        </Style>
-                                    </ListBox.Styles>
-                                </ListBox>
+                                                <!-- Selection Indicator overlay (Blue) -->
+                                                <Border Name="SelectionIndicator"
+                                                        BorderBrush="#0078FF"
+                                                        BorderThickness="2"
+                                                        CornerRadius="4"
+                                                        IsHitTestVisible="False"
+                                                        IsVisible="{Binding IsSelected}"
+                                                        ZIndex="10" />
+                                            </controls:AspectRatioPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

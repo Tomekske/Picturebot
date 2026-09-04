@@ -196,4 +196,64 @@ public class AlbumServiceTests {
             Assert.That(_mockFileSystem.File.Exists(strayPath), Is.False);
         });
     }
+
+    [Test]
+    public async Task DeletePictureAsync_ShouldMoveRawJpgAndXmpToDeletedDirectoryAndCallDeleteNode() {
+        // Arrange
+        var albumUuid = Guid.NewGuid().ToString();
+        var album = new Album { Id = 10, Uuid = albumUuid, Name = "Test Album" };
+        var libraryPath = @"C:\Photos";
+        var albumPath = Path.Combine(libraryPath, albumUuid);
+        var rawsPath = Path.Combine(albumPath, "RAWs");
+        var jpgsPath = Path.Combine(albumPath, "JPGs");
+        var thumbnailsPath = Path.Combine(albumPath, "Thumbnails");
+        var deletedPath = Path.Combine(albumPath, "Deleted");
+
+        _mockFileSystem.AddDirectory(rawsPath);
+        _mockFileSystem.AddDirectory(jpgsPath);
+        _mockFileSystem.AddDirectory(thumbnailsPath);
+
+        var rawFile = Path.Combine(rawsPath, "IMG_0001.ARW");
+        var xmpFile = Path.Combine(rawsPath, "IMG_0001.xmp");
+        var jpgFile = Path.Combine(jpgsPath, "IMG_0001.jpg");
+        var thumbFile = Path.Combine(thumbnailsPath, "IMG_0001.jpg");
+
+        _mockFileSystem.AddFile(rawFile, new MockFileData("raw content"));
+        _mockFileSystem.AddFile(xmpFile, new MockFileData("xmp content"));
+        _mockFileSystem.AddFile(jpgFile, new MockFileData("jpg content"));
+        _mockFileSystem.AddFile(thumbFile, new MockFileData("thumb content"));
+
+        var picture = new Picture {
+            Id = 50,
+            Name = "IMG_0001",
+            Extension = ".ARW",
+            ParentId = album.Id,
+            Parent = album,
+            SubFolder = new SubFolder {
+                Raw = rawFile,
+                Preview = jpgFile,
+                Thumbnail = thumbFile
+            }
+        };
+
+        _mockPathService.Setup(p => p.GetAlbumDeletedPath(album)).Returns(deletedPath);
+
+        // Act
+        await _albumService.DeletePictureAsync(picture);
+
+        // Assert
+        Assert.Multiple(() => {
+            Assert.That(_mockFileSystem.File.Exists(rawFile), Is.False, "Original RAW file should be moved.");
+            Assert.That(_mockFileSystem.File.Exists(xmpFile), Is.False, "Original XMP file should be moved.");
+            Assert.That(_mockFileSystem.File.Exists(jpgFile), Is.False, "Original JPG file should be moved.");
+            Assert.That(_mockFileSystem.File.Exists(thumbFile), Is.False, "Thumbnail should be deleted.");
+
+            Assert.That(_mockFileSystem.Directory.Exists(deletedPath), Is.True, "Deleted folder should be created.");
+            Assert.That(_mockFileSystem.File.Exists(Path.Combine(deletedPath, "IMG_0001.ARW")), Is.True, "RAW file should exist in Deleted folder.");
+            Assert.That(_mockFileSystem.File.Exists(Path.Combine(deletedPath, "IMG_0001.xmp")), Is.True, "XMP file should exist in Deleted folder.");
+            Assert.That(_mockFileSystem.File.Exists(Path.Combine(deletedPath, "IMG_0001.jpg")), Is.True, "JPG file should exist in Deleted folder.");
+
+            _mockNodeService.Verify(s => s.DeleteNodeAsync(picture), Times.Once);
+        });
+    }
 }

@@ -360,4 +360,89 @@ public class XmpServiceTests : IDisposable {
         Assert.That(desc.Attribute(xmp + "Rating")?.Value, Is.EqualTo("5"));
         Assert.That(desc.Attribute(xmp + "Label")?.Value, Is.EqualTo("Red"));
     }
+
+    [Test]
+    public async Task SaveAndLoad_Keywords_ShouldPreserveFlatAndHierarchicalStructure() {
+        // Arrange
+        var rawPath = @"C:\RAWs\PicKeywords.NEF";
+        var xmpPath = @"C:\RAWs\PicKeywords.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+
+        var picture = new Picture {
+            Name = "PicKeywords",
+            Keywords = new List<string> { "vacation", "subject/animal/horse", "subject|nature|forest" },
+            SubFolder = new SubFolder {
+                Raw = rawPath
+            }
+        };
+
+        // Act
+        await _xmpService.SaveMetadataAsync(picture);
+
+        // Assert XMP contents directly
+        var savedXml = _mockFileSystem.File.ReadAllText(xmpPath);
+        var doc = XDocument.Parse(savedXml);
+        var desc = doc.Descendants().First(e => e.Name.LocalName == "Description");
+
+        var rdf = XNamespace.Get("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+        var dcNamespace = XNamespace.Get("http://purl.org/dc/elements/1.1/");
+        var lrNamespace = XNamespace.Get("http://ns.adobe.com/lightroom/1.0/");
+
+        var dcSubject = desc.Element(dcNamespace + "subject");
+        Assert.That(dcSubject, Is.Not.Null);
+        var dcLis = dcSubject.Element(rdf + "Bag").Elements(rdf + "li").Select(l => l.Value).ToList();
+        
+        // Flattened segments
+        Assert.That(dcLis, Contains.Item("vacation"));
+        Assert.That(dcLis, Contains.Item("subject"));
+        Assert.That(dcLis, Contains.Item("animal"));
+        Assert.That(dcLis, Contains.Item("horse"));
+        Assert.That(dcLis, Contains.Item("nature"));
+        Assert.That(dcLis, Contains.Item("forest"));
+
+        var lrHierarchical = desc.Element(lrNamespace + "hierarchicalSubject");
+        Assert.That(lrHierarchical, Is.Not.Null);
+        var lrLis = lrHierarchical.Element(rdf + "Bag").Elements(rdf + "li").Select(l => l.Value).ToList();
+        
+        // Normalized hierarchical paths
+        Assert.That(lrLis, Contains.Item("vacation"));
+        Assert.That(lrLis, Contains.Item("subject|animal|horse"));
+        Assert.That(lrLis, Contains.Item("subject|nature|forest"));
+
+        // Test loading back
+        var pictureLoad = new Picture {
+            Name = "PicKeywords",
+            SubFolder = new SubFolder {
+                Raw = rawPath
+            }
+        };
+
+        await _xmpService.LoadMetadataAsync(pictureLoad);
+        Assert.That(pictureLoad.Keywords, Contains.Item("vacation"));
+        Assert.That(pictureLoad.Keywords, Contains.Item("subject|animal|horse"));
+        Assert.That(pictureLoad.Keywords, Contains.Item("subject|nature|forest"));
+    }
+
+    [Test]
+    public void KeywordsFiltering_ShouldMatchCorrectlyBasedOnAnyAndAllOperators() {
+        // Arrange
+        var pic1 = new Picture { Keywords = new List<string> { "landscape", "summer" } };
+        var pic2 = new Picture { Keywords = new List<string> { "portrait", "summer", "black|white" } };
+        var pic3 = new Picture { Keywords = new List<string> { "portrait", "winter" } };
+
+        var pictures = new List<Picture> { pic1, pic2, pic3 };
+
+        // Test case 1: OR (ANY) matching "summer" and "portrait" -> should match pic1, pic2, pic3
+        var filterTagsAny = new List<string> { "summer", "portrait" };
+        var matchedAny = pictures.Where(p => filterTagsAny.Any(tag => p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase))).ToList();
+        Assert.That(matchedAny, Has.Count.EqualTo(3));
+
+        // Test case 2: AND (ALL) matching "summer" and "portrait" -> should only match pic2
+        var filterTagsAll = new List<string> { "summer", "portrait" };
+        var matchedAll = pictures.Where(p => filterTagsAll.All(tag => p.Keywords.Contains(tag, StringComparer.OrdinalIgnoreCase))).ToList();
+        Assert.Multiple(() => {
+            Assert.That(matchedAll, Has.Count.EqualTo(1));
+            Assert.That(matchedAll[0].Keywords, Contains.Item("black|white"));
+        });
+    }
 }

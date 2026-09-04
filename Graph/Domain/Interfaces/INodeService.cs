@@ -54,4 +54,12 @@ public interface INodeService {
     /// <param name="node">The node entity to delete.</param>
     /// <returns>A Task representing the asynchronous deletion operation.</returns>
     Task DeleteNodeAsync(Node node);
+
+    /// <summary>
+    ///     Searches for pictures across all albums matching the query keyword or string.
+    /// </summary>
+    /// <param name="query">The keyword or query term.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of matching pictures across all albums.</returns>
+    Task<List<Picture>> SearchPicturesGlobalAsync(string query, CancellationToken cancellationToken = default);
 }

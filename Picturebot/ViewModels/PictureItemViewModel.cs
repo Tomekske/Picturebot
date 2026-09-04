@@ -6,6 +6,9 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Database.Domain.Entities;
 using Domain.Enums;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using Picturebot.Utilities;
 using Picturebot.Services;
 using Serilog;
@@ -48,12 +51,16 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private int _burstTotal;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _keywords = new();
+
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;
         _colorLabel = picture.ColorLabel;
         _rating = picture.Rating;
         _processingState = picture.ProcessingState;
+        _keywords = new ObservableCollection<string>(picture.Keywords ?? new List<string>());
     }
 
     public Picture Picture { get; }
@@ -61,6 +68,35 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     public bool IsVisible { get; set; }
 
     public string Name => Picture.Name;
+
+    public void AddKeyword(string keyword) {
+        if (!string.IsNullOrWhiteSpace(keyword)) {
+            var trimmed = keyword.Trim();
+            if (!Keywords.Contains(trimmed, StringComparer.OrdinalIgnoreCase)) {
+                Keywords.Add(trimmed);
+                Picture.Keywords = Keywords.ToList();
+                Picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(Picture.Keywords);
+                OnPropertyChanged(nameof(Keywords));
+            }
+        }
+    }
+
+    public void RemoveKeyword(string keyword) {
+        if (!string.IsNullOrWhiteSpace(keyword)) {
+            var trimmed = keyword.Trim();
+            var existing = Keywords.FirstOrDefault(k => k.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+            if (existing != null) {
+                Keywords.Remove(existing);
+                Picture.Keywords = Keywords.ToList();
+                Picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(Picture.Keywords);
+                OnPropertyChanged(nameof(Keywords));
+            }
+        }
+    }
+
+    public void NotifyKeywordsChanged() {
+        OnPropertyChanged(nameof(Keywords));
+    }
 
     public void CancelLoading() {
         _cts?.Cancel();
@@ -124,5 +160,21 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load thumbnail for {Name} via registry", Name);
         }
+    }
+
+    partial void OnRatingChanged(int value) {
+        Picture.Rating = value;
+    }
+
+    partial void OnCurationStatusChanged(CurationStatus value) {
+        Picture.CurationStatus = value;
+    }
+
+    partial void OnColorLabelChanged(ColorLabel value) {
+        Picture.ColorLabel = value;
+    }
+
+    partial void OnProcessingStateChanged(ProcessingState value) {
+        Picture.ProcessingState = value;
     }
 }
