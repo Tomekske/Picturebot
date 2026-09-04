@@ -1215,7 +1215,7 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         if (FilterToolbar.IsTagFilterActive) {
-            var selectedTagNames = FilterToolbar.AllTags.Where(t => t.IsSelected).Select(t => t.Name).ToList();
+            var selectedTagNames = FilterToolbar.GetSelectedFilterPaths();
             if (selectedTagNames.Any()) {
                 bool MatchesTag(PictureItemViewModel pic, string tag) {
                     if (pic.Keywords == null || pic.Keywords.Count == 0) return false;

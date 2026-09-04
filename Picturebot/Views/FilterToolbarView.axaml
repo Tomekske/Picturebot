@@ -358,21 +358,51 @@
                                 <RadioButton Content="NOT (EXCLUDE)" IsChecked="{Binding IsMatchNot, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
                             </StackPanel>
 
-                            <!-- Checklist of tags -->
-                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding VisibleTags}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:TagFilterItemViewModel">
-                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2" HorizontalAlignment="Stretch">
-                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <TextBlock Text="{Binding Name}" FontSize="12" Foreground="White" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Count, StringFormat='({0})'}" FontSize="10" Foreground="#888888" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </CheckBox>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <!-- Hierarchical Taxonomy Tree -->
+                            <Border Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="4" MaxHeight="240">
+                                <Panel>
+                                    <!-- Empty State -->
+                                    <TextBlock Text="No tags found" 
+                                               Foreground="#6B7280" 
+                                               FontSize="11" 
+                                               HorizontalAlignment="Center" 
+                                               VerticalAlignment="Center"
+                                               Margin="0,12" 
+                                               IsVisible="{Binding !VisibleRootNodes.Count}" />
+
+                                    <TreeView ItemsSource="{Binding VisibleRootNodes}"
+                                              Background="Transparent"
+                                              BorderThickness="0"
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <TreeView.Styles>
+                                            <Style Selector="TreeViewItem" x:DataType="vm:TagFilterNodeViewModel">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                                <Setter Property="MinHeight" Value="24" />
+                                                <Setter Property="Padding" Value="0" />
+                                            </Style>
+                                        </TreeView.Styles>
+                                        <TreeView.ItemTemplate>
+                                            <TreeDataTemplate DataType="vm:TagFilterNodeViewModel" ItemsSource="{Binding VisibleChildren}">
+                                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" 
+                                                          IsThreeState="{Binding HasChildren}"
+                                                          Margin="0,1" 
+                                                          HorizontalAlignment="Stretch">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" 
+                                                                   FontSize="12" 
+                                                                   Foreground="White" 
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Count, StringFormat='({0})'}" 
+                                                                   FontSize="10" 
+                                                                   Foreground="#888888" 
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </CheckBox>
+                                            </TreeDataTemplate>
+                                        </TreeView.ItemTemplate>
+                                    </TreeView>
+                                </Panel>
+                            </Border>
 
                             <!-- Clear button inside flyout -->
                             <Button Content="Clear Filter" Command="{Binding ClearTagFiltersCommand}" HorizontalAlignment="Stretch" Height="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Classes="secondary" FontSize="11"/>

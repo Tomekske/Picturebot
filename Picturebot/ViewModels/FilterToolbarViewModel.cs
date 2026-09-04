@@ -44,6 +44,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
     public ObservableCollection<int> FilterRatings { get; } = new();
     public ObservableCollection<ColorLabel> FilterColors { get; } = new();
 
+    public ObservableCollection<TagFilterNodeViewModel> RootNodes { get; } = new();
+    public ObservableCollection<TagFilterNodeViewModel> VisibleRootNodes { get; } = new();
+
     public ObservableCollection<TagFilterItemViewModel> AllTags { get; } = new();
     public ObservableCollection<TagFilterItemViewModel> VisibleTags { get; } = new();
 
@@ -243,6 +246,11 @@ public partial class FilterToolbarViewModel : ViewModelBase
             IsStar4Active = false;
             IsStar5Active = false;
 
+            foreach (var root in RootNodes)
+            {
+                root.SetCheckedRecursive(false);
+            }
+
             foreach (var tag in AllTags)
             {
                 tag.IsSelected = false;
@@ -255,10 +263,21 @@ public partial class FilterToolbarViewModel : ViewModelBase
         }
     }
 
-    public bool IsTagFilterActive => AllTags.Any(t => t.IsSelected);
+    public bool IsTagFilterActive =>
+        RootNodes.Any(r => r.IsChecked != false) || AllTags.Any(t => t.IsSelected);
 
-    public string ActiveTagFiltersCountText =>
-        AllTags.Any(t => t.IsSelected) ? $" ({AllTags.Count(t => t.IsSelected)})" : "";
+    public string ActiveTagFiltersCountText
+    {
+        get
+        {
+            var selectedLeaves = RootNodes.SelectMany(r => r.GetAllNodes()).Count(n => n.IsChecked == true && !n.HasChildren);
+            if (selectedLeaves > 0)
+                return $" ({selectedLeaves})";
+
+            var flatCount = AllTags.Count(t => t.IsSelected);
+            return flatCount > 0 ? $" ({flatCount})" : string.Empty;
+        }
+    }
 
     partial void OnTagSearchTextChanged(string value) => RefreshVisibleTags();
 
@@ -298,35 +317,93 @@ public partial class FilterToolbarViewModel : ViewModelBase
         UpdateCollectionsAndNotify();
     }
 
+    public List<string> GetSelectedFilterPaths()
+    {
+        var selected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in RootNodes)
+        {
+            root.CollectSelectedPaths(selected);
+        }
+
+        foreach (var tag in AllTags.Where(t => t.IsSelected))
+        {
+            selected.Add(tag.Name);
+        }
+
+        return selected.ToList();
+    }
+
     public void UpdateAvailableTags(IEnumerable<PictureItemViewModel> pictures)
     {
-        var tagCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var pathToPictures = new Dictionary<string, HashSet<PictureItemViewModel>>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var pic in pictures)
         {
-            if (pic.Keywords != null && pic.Keywords.Count > 0)
+            if (pic.Keywords == null || pic.Keywords.Count == 0) continue;
+
+            var chips = DetailsInspectorViewModel.DeduplicateAndFormatKeywords(pic.Keywords);
+            var picPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var chip in chips)
             {
-                var chips = DetailsInspectorViewModel.DeduplicateAndFormatKeywords(pic.Keywords);
-                foreach (var chip in chips)
+                var normalized = KeywordChipViewModel.NormalizePath(chip.RawValue);
+                if (string.IsNullOrWhiteSpace(normalized)) continue;
+
+                var segments = normalized.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                for (int i = 1; i <= segments.Length; i++)
                 {
-                    var key = chip.DisplayText;
-                    if (tagCounts.ContainsKey(key))
-                        tagCounts[key]++;
-                    else
-                        tagCounts[key] = 1;
+                    var prefix = string.Join("|", segments.Take(i));
+                    picPaths.Add(prefix);
                 }
+            }
+
+            foreach (var path in picPaths)
+            {
+                if (!pathToPictures.TryGetValue(path, out var set))
+                {
+                    set = new HashSet<PictureItemViewModel>();
+                    pathToPictures[path] = set;
+                }
+                set.Add(pic);
             }
         }
 
-        var selectedTags = AllTags.Where(t => t.IsSelected).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var previouslySelected = GetSelectedFilterPaths().ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allNormalizedPaths = pathToPictures.Keys.ToList();
+        var rootSegments = allNormalizedPaths
+            .Select(p => p.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var builtRoots = new List<TagFilterNodeViewModel>();
+        foreach (var rootName in rootSegments)
+        {
+            var rootNode = BuildTreeNode(rootName, rootName, pathToPictures, allNormalizedPaths, null, previouslySelected);
+            builtRoots.Add(rootNode);
+        }
 
         _isUpdating = true;
         try
         {
-            AllTags.Clear();
-            foreach (var kvp in tagCounts.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+            RootNodes.Clear();
+            foreach (var root in builtRoots)
             {
-                var isSel = selectedTags.Contains(kvp.Key);
-                AllTags.Add(new TagFilterItemViewModel(kvp.Key, kvp.Value, isSel, UpdateCollectionsAndNotify));
+                root.RecalculateStateFromChildren();
+                RootNodes.Add(root);
+            }
+
+            // Keep AllTags synchronized with leaf nodes for backwards compatibility
+            AllTags.Clear();
+            foreach (var node in RootNodes.SelectMany(r => r.GetAllLeaves()))
+            {
+                var isSel = node.IsChecked == true;
+                AllTags.Add(new TagFilterItemViewModel(node.FullPath, node.Count, isSel, () =>
+                {
+                    node.IsChecked = !node.IsChecked;
+                    UpdateCollectionsAndNotify();
+                }));
             }
         }
         finally
@@ -339,10 +416,58 @@ public partial class FilterToolbarViewModel : ViewModelBase
         OnPropertyChanged(nameof(ActiveTagFiltersCountText));
     }
 
+    private TagFilterNodeViewModel BuildTreeNode(
+        string segmentName,
+        string fullPath,
+        Dictionary<string, HashSet<PictureItemViewModel>> pathToPictures,
+        List<string> allPaths,
+        TagFilterNodeViewModel? parent,
+        HashSet<string> previouslySelected)
+    {
+        var count = pathToPictures.TryGetValue(fullPath, out var pics) ? pics.Count : 0;
+        bool? isChecked = previouslySelected.Contains(fullPath) || previouslySelected.Contains(segmentName);
+
+        var node = new TagFilterNodeViewModel(
+            segmentName,
+            fullPath,
+            count,
+            isChecked,
+            parent,
+            UpdateCollectionsAndNotify
+        );
+
+        var prefix = fullPath + "|";
+        var directChildNames = allPaths
+            .Where(p => p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(p => p.Substring(prefix.Length).Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var childName in directChildNames)
+        {
+            var childFullPath = $"{fullPath}|{childName}";
+            var childNode = BuildTreeNode(childName, childFullPath, pathToPictures, allPaths, node, previouslySelected);
+            node.Children.Add(childNode);
+            node.VisibleChildren.Add(childNode);
+        }
+
+        return node;
+    }
+
     public void RefreshVisibleTags()
     {
-        VisibleTags.Clear();
+        VisibleRootNodes.Clear();
         var search = TagSearchText?.Trim();
+        foreach (var root in RootNodes)
+        {
+            if (root.FilterSearch(search))
+            {
+                VisibleRootNodes.Add(root);
+            }
+        }
+
+        VisibleTags.Clear();
         foreach (var tag in AllTags)
         {
             if (string.IsNullOrEmpty(search) || tag.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
@@ -358,6 +483,10 @@ public partial class FilterToolbarViewModel : ViewModelBase
         _isUpdating = true;
         try
         {
+            foreach (var root in RootNodes)
+            {
+                root.SetCheckedRecursive(false);
+            }
             foreach (var tag in AllTags)
             {
                 tag.IsSelected = false;
