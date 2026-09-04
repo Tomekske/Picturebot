@@ -201,5 +201,23 @@ public class FilterToolbarViewModelTests {
         Assert.That(landNode, Is.Not.Null);
         Assert.That(landNode!.HasChildren, Is.False);
         Assert.That(landNode.Count, Is.EqualTo(5));
+
+        // Verify VisibleFlatNodes has roots and children in hierarchical sequence without chevrons
+        Assert.That(vm.VisibleFlatNodes.Count, Is.EqualTo(4));
+        Assert.That(vm.VisibleFlatNodes[0].Name, Is.EqualTo("faces"));
+        Assert.That(vm.VisibleFlatNodes[0].Level, Is.EqualTo(0));
+        Assert.That(vm.VisibleFlatNodes[0].IndentMargin.Left, Is.EqualTo(0));
+
+        Assert.That(vm.VisibleFlatNodes[1].Name, Is.EqualTo("katsiuska"));
+        Assert.That(vm.VisibleFlatNodes[1].Level, Is.EqualTo(1));
+        Assert.That(vm.VisibleFlatNodes[1].IndentMargin.Left, Is.EqualTo(18));
+
+        Assert.That(vm.VisibleFlatNodes[2].Name, Is.EqualTo("robin"));
+        Assert.That(vm.VisibleFlatNodes[2].Level, Is.EqualTo(1));
+        Assert.That(vm.VisibleFlatNodes[2].IndentMargin.Left, Is.EqualTo(18));
+
+        Assert.That(vm.VisibleFlatNodes[3].Name, Is.EqualTo("landscape"));
+        Assert.That(vm.VisibleFlatNodes[3].Level, Is.EqualTo(0));
+        Assert.That(vm.VisibleFlatNodes[3].IndentMargin.Left, Is.EqualTo(0));
     }
 }

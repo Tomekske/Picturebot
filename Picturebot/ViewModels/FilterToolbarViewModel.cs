@@ -46,6 +46,7 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
     public ObservableCollection<TagFilterNodeViewModel> RootNodes { get; } = new();
     public ObservableCollection<TagFilterNodeViewModel> VisibleRootNodes { get; } = new();
+    public ObservableCollection<TagFilterNodeViewModel> VisibleFlatNodes { get; } = new();
 
     public ObservableCollection<TagFilterItemViewModel> AllTags { get; } = new();
     public ObservableCollection<TagFilterItemViewModel> VisibleTags { get; } = new();
@@ -458,12 +459,15 @@ public partial class FilterToolbarViewModel : ViewModelBase
     public void RefreshVisibleTags()
     {
         VisibleRootNodes.Clear();
+        VisibleFlatNodes.Clear();
         var search = TagSearchText?.Trim();
+
         foreach (var root in RootNodes)
         {
             if (root.FilterSearch(search))
             {
                 VisibleRootNodes.Add(root);
+                AddVisibleNodeHierarchy(root, VisibleFlatNodes);
             }
         }
 
@@ -474,6 +478,15 @@ public partial class FilterToolbarViewModel : ViewModelBase
             {
                 VisibleTags.Add(tag);
             }
+        }
+    }
+
+    private static void AddVisibleNodeHierarchy(TagFilterNodeViewModel node, ObservableCollection<TagFilterNodeViewModel> target)
+    {
+        target.Add(node);
+        foreach (var child in node.VisibleChildren)
+        {
+            AddVisibleNodeHierarchy(child, target);
         }
     }
 

@@ -44,6 +44,8 @@ public partial class TagFilterNodeViewModel : ViewModelBase {
     public ObservableCollection<TagFilterNodeViewModel> VisibleChildren { get; } = new();
 
     public bool HasChildren => Children.Count > 0;
+    public int Level => Parent == null ? 0 : Parent.Level + 1;
+    public Avalonia.Thickness IndentMargin => new(Level * 18, 1, 0, 1);
 
     partial void OnIsCheckedChanged(bool? value) {
         if (_isUpdatingState) {
