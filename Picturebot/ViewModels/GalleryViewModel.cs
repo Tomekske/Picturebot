@@ -303,7 +303,20 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    public void ClearSelection() {
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = false;
+        }
+        SelectedPictures.Clear();
+        SelectedPicture = null;
+        UpdateActiveMode();
+        WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(null));
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+    }
+
     public async void Receive(NodeSelectedMessage message) {
+        ClearSelection();
+
         if (IsGlobalSearchActive) {
             IsGlobalSearchActive = false;
             ActiveSearchQuery = string.Empty;
@@ -346,6 +359,8 @@ public partial class GalleryViewModel : ViewModelBase,
         IsShowingAlbum = true;
         IsBurstViewEnabled = false;
         IsLibraryRoot = false;
+
+        ClearSelection();
 
         // Clear UI collections
         Items.Clear();
@@ -822,15 +837,49 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    public static List<PictureItemViewModel> ResolvePicturesForDxo(
+        IEnumerable<PictureItemViewModel> allPictures,
+        IEnumerable<PictureItemViewModel> picturesList,
+        IEnumerable<PictureItemViewModel> selectedPictures,
+        PictureItemViewModel? selectedPicture) {
+        var explicitlySelected = allPictures.Where(p => p.IsSelected).ToList();
+        if (!explicitlySelected.Any()) {
+            explicitlySelected = selectedPictures.Where(p => p != null && p.IsSelected).ToList();
+        }
+
+        if (explicitlySelected.Any()) {
+            return explicitlySelected;
+        }
+
+        if (selectedPicture != null && selectedPicture.IsSelected) {
+            return new List<PictureItemViewModel> { selectedPicture };
+        }
+
+        // Priority when no pictures are explicitly selected:
+        // 1. First picked (Flagged) picture in album
+        // 2. First picture in album
+        var fallbackPic = picturesList.FirstOrDefault(p => p.CurationStatus == Domain.Enums.CurationStatus.Flagged)
+            ?? allPictures.FirstOrDefault(p => p.CurationStatus == Domain.Enums.CurationStatus.Flagged)
+            ?? picturesList.FirstOrDefault()
+            ?? allPictures.FirstOrDefault();
+
+        if (fallbackPic != null) {
+            return new List<PictureItemViewModel> { fallbackPic };
+        }
+
+        if (selectedPicture != null) {
+            return new List<PictureItemViewModel> { selectedPicture };
+        }
+
+        return new List<PictureItemViewModel>();
+    }
+
+    public List<PictureItemViewModel> ResolvePicturesForDxo() =>
+        ResolvePicturesForDxo(_allPictures, PicturesList, SelectedPictures, SelectedPicture);
+
     [RelayCommand(CanExecute = nameof(CanExecuteOpenInExplorer))]
     private void OpenInDxo() {
-        var targetVms = GetSelectedPicturesOrActive();
-        if (!targetVms.Any()) {
-            var firstPic = _allPictures.FirstOrDefault() ?? PicturesList.FirstOrDefault();
-            if (firstPic != null) {
-                targetVms = new List<PictureItemViewModel> { firstPic };
-            }
-        }
+        var targetVms = ResolvePicturesForDxo();
 
         if (!targetVms.Any()) {
             MainWindow.ToastManager.CreateToast()
@@ -1155,6 +1204,8 @@ public partial class GalleryViewModel : ViewModelBase,
         _currentNode = currentNode;
         IsBurstViewEnabled = false;
         IsLibraryRoot = currentNode == null;
+
+        ClearSelection();
 
         // Clear collections to prevent ghosting
         Items.Clear();
@@ -1589,6 +1640,8 @@ public partial class GalleryViewModel : ViewModelBase,
         _currentNode = album;
         IsBurstViewEnabled = false;
         IsLibraryRoot = false;
+
+        ClearSelection();
 
         // Clear UI collections immediately to indicate loading
         Items.Clear();

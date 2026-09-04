@@ -141,6 +141,17 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     public void Receive(PictureSelectedMessage message) {
         SelectedPicture = message.Value;
+        if (message.Value == null) {
+            SelectedPictures.Clear();
+            SelectedColorLabelOption = null;
+            ActiveKeywordChips.Clear();
+            ActiveKeywords.Clear();
+            ActiveKeywordGroups.Clear();
+            UpdateQuickTagStates();
+            OnPropertyChanged(nameof(ActiveMode));
+            OnPropertyChanged(nameof(IsMultiMode));
+            OnPropertyChanged(nameof(IsSingleMode));
+        }
     }
 
     private bool _isUpdatingFromSelectionChanged;
@@ -179,8 +190,13 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
         if (value == null) {
             SelectedColorLabelOption = null;
-            UpdateActiveKeywords();
+            ActiveKeywordChips.Clear();
+            ActiveKeywords.Clear();
+            ActiveKeywordGroups.Clear();
             UpdateQuickTagStates();
+            OnPropertyChanged(nameof(ActiveMode));
+            OnPropertyChanged(nameof(IsMultiMode));
+            OnPropertyChanged(nameof(IsSingleMode));
             return;
         }
 

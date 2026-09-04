@@ -406,6 +406,68 @@ public class DetailsInspectorViewModelTests {
     }
 
     [Test]
+    public void ResolvePicturesForDxo_WhenPicturesExplicitlySelected_ReturnsSelected() {
+        var pic1 = new PictureItemViewModel(new Picture { Name = "Pic1" }) { IsSelected = false };
+        var pic2 = new PictureItemViewModel(new Picture { Name = "Pic2" }) { IsSelected = true };
+        var pic3 = new PictureItemViewModel(new Picture { Name = "Pic3", CurationStatus = Domain.Enums.CurationStatus.Flagged }) { IsSelected = false };
+
+        var list = new List<PictureItemViewModel> { pic1, pic2, pic3 };
+        var resolved = GalleryViewModel.ResolvePicturesForDxo(list, list, new List<PictureItemViewModel> { pic2 }, pic2);
+
+        Assert.That(resolved.Count, Is.EqualTo(1));
+        Assert.That(resolved[0].Name, Is.EqualTo("Pic2"));
+    }
+
+    [Test]
+    public void ResolvePicturesForDxo_WhenNoSelectionAndHasPicked_ReturnsFirstPicked() {
+        var pic1 = new PictureItemViewModel(new Picture { Name = "Pic1", CurationStatus = Domain.Enums.CurationStatus.Unflagged });
+        var pic2 = new PictureItemViewModel(new Picture { Name = "Pic2", CurationStatus = Domain.Enums.CurationStatus.Flagged });
+        var pic3 = new PictureItemViewModel(new Picture { Name = "Pic3", CurationStatus = Domain.Enums.CurationStatus.Flagged });
+
+        var list = new List<PictureItemViewModel> { pic1, pic2, pic3 };
+        var resolved = GalleryViewModel.ResolvePicturesForDxo(list, list, new List<PictureItemViewModel>(), null);
+
+        Assert.That(resolved.Count, Is.EqualTo(1));
+        Assert.That(resolved[0].Name, Is.EqualTo("Pic2"));
+    }
+
+    [Test]
+    public void ResolvePicturesForDxo_WhenNoSelectionAndNoPicked_ReturnsFirstPicture() {
+        var pic1 = new PictureItemViewModel(new Picture { Name = "Pic1", CurationStatus = Domain.Enums.CurationStatus.Unflagged });
+        var pic2 = new PictureItemViewModel(new Picture { Name = "Pic2", CurationStatus = Domain.Enums.CurationStatus.Unflagged });
+
+        var list = new List<PictureItemViewModel> { pic1, pic2 };
+        var resolved = GalleryViewModel.ResolvePicturesForDxo(list, list, new List<PictureItemViewModel>(), null);
+
+        Assert.That(resolved.Count, Is.EqualTo(1));
+        Assert.That(resolved[0].Name, Is.EqualTo("Pic1"));
+    }
+
+    [Test]
+    public void ResolvePicturesForDxo_WhenEmptyAlbum_ReturnsEmpty() {
+        var list = new List<PictureItemViewModel>();
+        var resolved = GalleryViewModel.ResolvePicturesForDxo(list, list, new List<PictureItemViewModel>(), null);
+
+        Assert.That(resolved, Is.Empty);
+    }
+
+    [Test]
+    public void Receive_WhenNullPictureSelectedMessageReceived_ClearsSelectedPicturesAndMode() {
+        var pic1 = new PictureItemViewModel(new Picture { Name = "Pic1", Keywords = new List<string> { "Tag1" } });
+        _viewModel.SelectedPictures.Add(pic1);
+        _viewModel.SelectedPicture = pic1;
+
+        Assert.That(_viewModel.SelectedPictures.Count, Is.EqualTo(1));
+        Assert.That(_viewModel.SelectedPicture, Is.Not.Null);
+
+        _viewModel.Receive(new Picturebot.Messages.PictureSelectedMessage(null));
+
+        Assert.That(_viewModel.SelectedPicture, Is.Null);
+        Assert.That(_viewModel.SelectedPictures, Is.Empty);
+        Assert.That(_viewModel.ActiveKeywordChips, Is.Empty);
+    }
+
+    [Test]
     public void ResolveRawOrImagePath_WhenSubFolderRawIsSet_ReturnsRawPath() {
         var pic = new Picture {
             Name = "RAW_001",
