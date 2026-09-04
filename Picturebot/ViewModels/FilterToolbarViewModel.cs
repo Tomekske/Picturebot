@@ -190,6 +190,8 @@ public partial class FilterToolbarViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsTagFilterActive));
         OnPropertyChanged(nameof(ActiveTagFiltersCountText));
         OnPropertyChanged(nameof(IsAnyFilterActive));
+        OnPropertyChanged(nameof(AreAllTagsSelected));
+        OnPropertyChanged(nameof(SelectAllButtonText));
         _onFilterChanged?.Invoke();
     }
 
@@ -229,6 +231,10 @@ public partial class FilterToolbarViewModel : ViewModelBase
         _isUpdating = true;
         try
         {
+            IsMatchAny = true;
+            IsMatchAll = false;
+            IsMatchNot = false;
+
             IsFlaggedActive = false;
             IsNeutralActive = false;
             IsRejectedActive = false;
@@ -266,6 +272,12 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
     public bool IsTagFilterActive =>
         RootNodes.Any(r => r.IsChecked != false) || AllTags.Any(t => t.IsSelected);
+
+    public bool AreAllTagsSelected =>
+        (RootNodes.Count > 0 && RootNodes.All(r => r.IsChecked == true)) ||
+        (RootNodes.Count == 0 && AllTags.Count > 0 && AllTags.All(t => t.IsSelected));
+
+    public string SelectAllButtonText => AreAllTagsSelected ? "Uncheck All Tags" : "Select All";
 
     public string ActiveTagFiltersCountText
     {
@@ -417,6 +429,8 @@ public partial class FilterToolbarViewModel : ViewModelBase
         RefreshVisibleTags();
         OnPropertyChanged(nameof(IsTagFilterActive));
         OnPropertyChanged(nameof(ActiveTagFiltersCountText));
+        OnPropertyChanged(nameof(AreAllTagsSelected));
+        OnPropertyChanged(nameof(SelectAllButtonText));
     }
 
     private TagFilterNodeViewModel BuildTreeNode(
@@ -493,6 +507,35 @@ public partial class FilterToolbarViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public void ToggleAllTags()
+    {
+        if (AreAllTagsSelected)
+        {
+            _isUpdating = true;
+            try
+            {
+                foreach (var root in RootNodes)
+                {
+                    root.SetCheckedRecursive(false);
+                }
+                foreach (var tag in AllTags)
+                {
+                    tag.IsSelected = false;
+                }
+            }
+            finally
+            {
+                _isUpdating = false;
+                UpdateCollectionsAndNotify();
+            }
+        }
+        else
+        {
+            SelectAllTags();
+        }
+    }
+
+    [RelayCommand]
     public void SelectAllTags()
     {
         _isUpdating = true;
@@ -520,6 +563,10 @@ public partial class FilterToolbarViewModel : ViewModelBase
         _isUpdating = true;
         try
         {
+            IsMatchAny = true;
+            IsMatchAll = false;
+            IsMatchNot = false;
+
             foreach (var root in RootNodes)
             {
                 root.SetCheckedRecursive(false);
