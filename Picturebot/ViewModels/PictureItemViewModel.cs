@@ -28,6 +28,9 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     private int _rating;
 
     [ObservableProperty]
+    private Orientation _orientation;
+
+    [ObservableProperty]
     private ProcessingState _processingState;
 
     [ObservableProperty]
@@ -59,6 +62,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         _curationStatus = picture.CurationStatus;
         _colorLabel = picture.ColorLabel;
         _rating = picture.Rating;
+        _orientation = picture.Orientation;
         _processingState = picture.ProcessingState;
         _keywords = new ObservableCollection<string>(picture.Keywords ?? new List<string>());
     }
@@ -164,6 +168,10 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     partial void OnRatingChanged(int value) {
         Picture.Rating = value;
+    }
+
+    partial void OnOrientationChanged(Orientation value) {
+        Picture.Orientation = value;
     }
 
     partial void OnCurationStatusChanged(CurationStatus value) {

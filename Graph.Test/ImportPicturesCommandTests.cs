@@ -181,4 +181,46 @@ public class ImportPicturesCommandTests {
         Assert.That(resultAlbum.Children.Count, Is.EqualTo(1), "Only the valid top-level photo should be imported.");
         Assert.That(resultAlbum.Children.First().Name, Is.EqualTo(capturedDate.ToString("yyyy-MM-dd_HH-mm-ss")));
     }
+
+    [Test]
+    public async Task ExecuteAsync_ShouldCalculateOrientationAndSaveToXmp() {
+        // Arrange
+        var parentId = 1;
+        var albumName = "Orientation Album";
+        var libraryPath = @"C:\Library";
+        var sourcePath = @"C:\Source";
+        var albumUuid = "album-ori";
+        var albumPath = _mockFileSystem.Path.Combine(libraryPath, albumUuid);
+
+        var album = new Album { Id = 15, Uuid = albumUuid, Name = albumName };
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+            .ReturnsAsync(album);
+
+        _mockFileSystem.AddDirectory(sourcePath);
+        _mockFileSystem.AddDirectory(albumPath);
+        _mockFileSystem.AddDirectory(_mockFileSystem.Path.Combine(albumPath, "RAWs"));
+        _mockFileSystem.AddDirectory(_mockFileSystem.Path.Combine(albumPath, "JPGs"));
+        _mockFileSystem.AddDirectory(_mockFileSystem.Path.Combine(albumPath, "Thumbnails"));
+
+        var capturedDate = new DateTime(2026, 4, 1, 12, 0, 0);
+        var portraitPhotoPath = _mockFileSystem.Path.Combine(sourcePath, "portrait.jpg");
+        _mockFileSystem.AddFile(portraitPhotoPath, new MockFileData("portrait content"));
+
+        _mockPictureAnalyzer.Setup(a => a.ExtractTimestamp(portraitPhotoPath))
+            .ReturnsAsync(capturedDate);
+        _mockPictureAnalyzer.Setup(a => a.GetDimensionsAsync(portraitPhotoPath))
+            .ReturnsAsync((1080, 1920)); // Height > Width -> Portrait
+
+        // Act
+        var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+
+        // Assert
+        _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p =>
+            p.Orientation == Orientation.Portrait &&
+            p.Width == 1080 &&
+            p.Height == 1920)), Times.Once);
+
+        _mockXmpService.Verify(x => x.SaveMetadataAsync(It.Is<Picture>(p =>
+            p.Orientation == Orientation.Portrait)), Times.Once);
+    }
 }

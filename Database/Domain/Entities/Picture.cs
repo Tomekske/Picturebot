@@ -64,6 +64,12 @@ public class Picture : Node {
     public int Rating { get; set; }
 
     /// <summary>
+    ///     The orientation of the picture (Landscape or Portrait), loaded from and saved to XMP.
+    /// </summary>
+    [NotMapped]
+    public Orientation Orientation { get; set; } = Orientation.Unknown;
+
+    /// <summary>
     ///     The extension of the raw picture file (e.g., .ARW, .CR2).
     /// </summary>
     public string? Extension { get; set; }

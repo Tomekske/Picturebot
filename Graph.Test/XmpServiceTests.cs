@@ -445,4 +445,68 @@ public class XmpServiceTests : IDisposable {
             Assert.That(matchedAll[0].Keywords, Contains.Item("black|white"));
         });
     }
+
+    [Test]
+    public async Task SaveAndLoad_Orientation_ShouldSaveTiffOrientationAndLoadCorrectly() {
+        // Arrange
+        var rawPath = @"C:\RAWs\PicOri.NEF";
+        var xmpPath = @"C:\RAWs\PicOri.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+
+        var picPortrait = new Picture {
+            Name = "PicOri",
+            Orientation = Orientation.Portrait,
+            SubFolder = new SubFolder { Raw = rawPath }
+        };
+
+        // Act - Save Portrait
+        await _xmpService.SaveMetadataAsync(picPortrait);
+
+        var xml = _mockFileSystem.File.ReadAllText(xmpPath);
+        var doc = XDocument.Parse(xml);
+        var desc = doc.Descendants().First(e => e.Name.LocalName == "Description");
+        var tiff = XNamespace.Get("http://ns.adobe.com/tiff/1.0/");
+
+        Assert.That(desc.Attribute(tiff + "Orientation")?.Value, Is.EqualTo("6"));
+
+        // Load into new picture
+        var loadedPortrait = new Picture { Name = "PicOri", SubFolder = new SubFolder { Raw = rawPath } };
+        await _xmpService.LoadMetadataAsync(loadedPortrait);
+        Assert.That(loadedPortrait.Orientation, Is.EqualTo(Orientation.Portrait));
+
+        // Act - Change to Landscape and Save
+        loadedPortrait.Orientation = Orientation.Landscape;
+        await _xmpService.SaveMetadataAsync(loadedPortrait);
+
+        var xmlLandscape = _mockFileSystem.File.ReadAllText(xmpPath);
+        var docLandscape = XDocument.Parse(xmlLandscape);
+        var descLandscape = docLandscape.Descendants().First(e => e.Name.LocalName == "Description");
+        Assert.That(descLandscape.Attribute(tiff + "Orientation")?.Value, Is.EqualTo("1"));
+
+        var loadedLandscape = new Picture { Name = "PicOri", SubFolder = new SubFolder { Raw = rawPath } };
+        await _xmpService.LoadMetadataAsync(loadedLandscape);
+        Assert.That(loadedLandscape.Orientation, Is.EqualTo(Orientation.Landscape));
+    }
+
+    [TestCase("1", Orientation.Landscape)]
+    [TestCase("3", Orientation.Landscape)]
+    [TestCase("Landscape", Orientation.Landscape)]
+    [TestCase("Horizontal", Orientation.Landscape)]
+    [TestCase("6", Orientation.Portrait)]
+    [TestCase("8", Orientation.Portrait)]
+    [TestCase("Portrait", Orientation.Portrait)]
+    [TestCase("Vertical", Orientation.Portrait)]
+    public async Task LoadMetadataAsync_DifferentOrientationFormats_ShouldParseCorrectly(string rawVal, Orientation expected) {
+        var tiff = XNamespace.Get("http://ns.adobe.com/tiff/1.0/");
+        var xmpPath = $@"C:\RAWs\TestOri_{rawVal}.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+
+        var xml = $@"<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'><rdf:Description rdf:about='' xmlns:tiff='{tiff.NamespaceName}' tiff:Orientation='{rawVal}'/></rdf:RDF></x:xmpmeta>";
+        _mockFileSystem.AddFile(xmpPath, xml);
+
+        var pic = new Picture { SubFolder = new SubFolder { Raw = $@"C:\RAWs\TestOri_{rawVal}.NEF" } };
+        await _xmpService.LoadMetadataAsync(pic);
+
+        Assert.That(pic.Orientation, Is.EqualTo(expected));
+    }
 }

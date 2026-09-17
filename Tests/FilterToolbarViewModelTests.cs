@@ -65,6 +65,56 @@ public class FilterToolbarViewModelTests {
     }
 
     [Test]
+    public void ClearAll_ResetsOrientations() {
+        var vm = new FilterToolbarViewModel();
+        vm.IsLandscapeActive = true;
+        vm.IsPortraitActive = true;
+
+        Assert.That(vm.IsAnyFilterActive, Is.True);
+        Assert.That(vm.FilterOrientations, Contains.Item(Domain.Enums.Orientation.Landscape));
+        Assert.That(vm.FilterOrientations, Contains.Item(Domain.Enums.Orientation.Portrait));
+
+        vm.ClearAllCommand.Execute(null);
+
+        Assert.That(vm.IsLandscapeActive, Is.False);
+        Assert.That(vm.IsPortraitActive, Is.False);
+        Assert.That(vm.FilterOrientations, Is.Empty);
+        Assert.That(vm.IsAnyFilterActive, Is.False);
+    }
+
+    [Test]
+    public void SetFlaggedOnly_ResetsOrientations() {
+        var vm = new FilterToolbarViewModel();
+        vm.IsLandscapeActive = true;
+
+        vm.SetFlaggedOnly();
+
+        Assert.That(vm.IsLandscapeActive, Is.False);
+        Assert.That(vm.IsPortraitActive, Is.False);
+        Assert.That(vm.IsFlaggedActive, Is.True);
+        Assert.That(vm.FilterOrientations, Is.Empty);
+    }
+
+    [Test]
+    public void TogglingOrientation_UpdatesFilterOrientationsCollection() {
+        var vm = new FilterToolbarViewModel();
+
+        vm.IsLandscapeActive = true;
+        Assert.That(vm.FilterOrientations, Contains.Item(Domain.Enums.Orientation.Landscape));
+        Assert.That(vm.FilterOrientations, Has.Count.EqualTo(1));
+
+        vm.IsPortraitActive = true;
+        Assert.That(vm.FilterOrientations, Contains.Item(Domain.Enums.Orientation.Landscape));
+        Assert.That(vm.FilterOrientations, Contains.Item(Domain.Enums.Orientation.Portrait));
+        Assert.That(vm.FilterOrientations, Has.Count.EqualTo(2));
+
+        vm.IsLandscapeActive = false;
+        Assert.That(vm.FilterOrientations, Does.Not.Contain(Domain.Enums.Orientation.Landscape));
+        Assert.That(vm.FilterOrientations, Contains.Item(Domain.Enums.Orientation.Portrait));
+        Assert.That(vm.FilterOrientations, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public void SelectAllTags_ChecksAllNodesAndActivatesFilter() {
         var vm = new FilterToolbarViewModel();
         vm.UpdateAvailableTags(CreateSamplePictures());
