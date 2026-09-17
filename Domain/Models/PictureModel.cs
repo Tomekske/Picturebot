@@ -15,5 +15,7 @@ public class PictureModel : NodeModel {
 
     public int Rating { get; set; } = 0;
 
+    public Orientation Orientation { get; set; } = Orientation.Unknown;
+
     public SubFolderModel? SubFolder { get; set; }
 }

@@ -82,13 +82,17 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 ? timeResult.Value
                 : _fileSystem.File.GetCreationTime(fileToInspect);
 
+            var dimResult = await _pictureAnalyzer.GetDimensionsAsync(fileToInspect);
+            var width = dimResult is { IsError: false } ? dimResult.Value.Width : 0;
+            var height = dimResult is { IsError: false } ? dimResult.Value.Height : 0;
+
             foreach (var file in pair) {
                 cachedDataList.Add(new CachedPictureData {
                     FilePath = file,
                     PrimaryDate = primaryDate,
                     PHash = 0, // Will be calculated by Background Worker
-                    Width = 0, // Will be calculated by Background Worker
-                    Height = 0 // Will be calculated by Background Worker
+                    Width = width,
+                    Height = height
                 });
             }
         }
@@ -144,6 +148,10 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 _fileSystem.File.Copy(jpgFile.FilePath, importedJpgPath);
             }
 
+            var orientation = (cachedData.Width > 0 && cachedData.Height > 0 && cachedData.Width < cachedData.Height)
+                ? Orientation.Portrait
+                : Orientation.Landscape;
+
             // Persist to Database as PENDING
             var pictureNode = new Picture {
                 Name = finalFileName,
@@ -151,7 +159,10 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 Type = NodeType.Picture,
                 CapturedAt = cachedData.PrimaryDate,
                 ProcessingState = ProcessingState.Pending,
-                Extension = rawExtension
+                Extension = rawExtension,
+                Width = cachedData.Width,
+                Height = cachedData.Height,
+                Orientation = orientation
             };
 
             await _nodeService.CreateNodeAsync(pictureNode);

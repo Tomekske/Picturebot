@@ -43,6 +43,7 @@ public partial class FilterToolbarViewModel : ViewModelBase
     public ObservableCollection<CurationStatus> FilterStatuses { get; } = new();
     public ObservableCollection<int> FilterRatings { get; } = new();
     public ObservableCollection<ColorLabel> FilterColors { get; } = new();
+    public ObservableCollection<Orientation> FilterOrientations { get; } = new();
 
     public ObservableCollection<TagFilterNodeViewModel> RootNodes { get; } = new();
     public ObservableCollection<TagFilterNodeViewModel> VisibleRootNodes { get; } = new();
@@ -113,10 +114,17 @@ public partial class FilterToolbarViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isStar5Active;
 
+    [ObservableProperty]
+    private bool _isLandscapeActive;
+
+    [ObservableProperty]
+    private bool _isPortraitActive;
+
     public bool IsAnyFilterActive =>
         IsFlaggedActive || IsNeutralActive || IsRejectedActive ||
         IsGreenActive || IsBlueActive || IsYellowOrangeActive || IsRedActive || IsPurpleActive || IsNoneActive ||
         IsStar0Active || IsStar1Active || IsStar2Active || IsStar3Active || IsStar4Active || IsStar5Active ||
+        IsLandscapeActive || IsPortraitActive ||
         IsTagFilterActive;
 
     partial void OnIsFlaggedActiveChanged(bool value) => UpdateCollectionsAndNotify();
@@ -129,6 +137,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
     partial void OnIsRedActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsPurpleActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsNoneActiveChanged(bool value) => UpdateCollectionsAndNotify();
+
+    partial void OnIsLandscapeActiveChanged(bool value) => UpdateCollectionsAndNotify();
+    partial void OnIsPortraitActiveChanged(bool value) => UpdateCollectionsAndNotify();
 
     partial void OnIsStar0ActiveChanged(bool value) { if (value) ClearOtherStars(0); UpdateCollectionsAndNotify(); }
     partial void OnIsStar1ActiveChanged(bool value) { if (value) ClearOtherStars(1); UpdateCollectionsAndNotify(); }
@@ -187,6 +198,11 @@ public partial class FilterToolbarViewModel : ViewModelBase
         if (IsPurpleActive) FilterColors.Add(ColorLabel.Purple);
         if (IsNoneActive) FilterColors.Add(ColorLabel.None);
 
+        // Orientations
+        FilterOrientations.Clear();
+        if (IsLandscapeActive) FilterOrientations.Add(Orientation.Landscape);
+        if (IsPortraitActive) FilterOrientations.Add(Orientation.Portrait);
+
         OnPropertyChanged(nameof(IsTagFilterActive));
         OnPropertyChanged(nameof(ActiveTagFiltersCountText));
         OnPropertyChanged(nameof(IsAnyFilterActive));
@@ -217,6 +233,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
             IsStar3Active = false;
             IsStar4Active = false;
             IsStar5Active = false;
+
+            IsLandscapeActive = false;
+            IsPortraitActive = false;
         }
         finally
         {
@@ -252,6 +271,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
             IsStar3Active = false;
             IsStar4Active = false;
             IsStar5Active = false;
+
+            IsLandscapeActive = false;
+            IsPortraitActive = false;
 
             foreach (var root in RootNodes)
             {

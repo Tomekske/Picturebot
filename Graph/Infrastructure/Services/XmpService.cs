@@ -28,6 +28,7 @@ public class XmpService(
     private static readonly XNamespace dc = "http://purl.org/dc/elements/1.1/";
     private static readonly XNamespace photoshop = "http://ns.adobe.com/photoshop/1.0/";
     private static readonly XNamespace lr = "http://ns.adobe.com/lightroom/1.0/";
+    private static readonly XNamespace tiff = "http://ns.adobe.com/tiff/1.0/";
 
     public async Task LoadMetadataAsync(Picture picture) {
         if (picture.SubFolder == null) {
@@ -38,6 +39,7 @@ public class XmpService(
             picture.Rating = 0;
             picture.ColorLabel = ColorLabel.None;
             picture.CurationStatus = CurationStatus.Unflagged;
+            picture.Orientation = Orientation.Unknown;
             return;
         }
 
@@ -47,6 +49,7 @@ public class XmpService(
             picture.Rating = 0;
             picture.ColorLabel = ColorLabel.None;
             picture.CurationStatus = CurationStatus.Unflagged;
+            picture.Orientation = Orientation.Unknown;
             return;
         }
 
@@ -70,6 +73,7 @@ public class XmpService(
                 picture.Rating = 0;
                 picture.ColorLabel = ColorLabel.None;
                 picture.CurationStatus = CurationStatus.Unflagged;
+                picture.Orientation = Orientation.Unknown;
                 return;
             }
 
@@ -79,6 +83,7 @@ public class XmpService(
                 picture.Rating = 0;
                 picture.ColorLabel = ColorLabel.None;
                 picture.CurationStatus = CurationStatus.Unflagged;
+                picture.Orientation = Orientation.Unknown;
                 return;
             }
 
@@ -173,6 +178,13 @@ public class XmpService(
             }
             picture.Keywords = keywords;
             picture.KeywordsJson = System.Text.Json.JsonSerializer.Serialize(keywords);
+
+            // 6. Orientation
+            var orientationStr = desc.Attribute(tiff + "Orientation")?.Value
+                ?? desc.Element(tiff + "Orientation")?.Value
+                ?? desc.Attribute(xmp + "Orientation")?.Value
+                ?? desc.Element(xmp + "Orientation")?.Value;
+            picture.Orientation = ParseOrientation(orientationStr);
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load XMP metadata for picture {Name} from {Path}", picture.Name, xmpPath);
         }
@@ -242,12 +254,24 @@ public class XmpService(
             desc.Element(xmp + "ModifyDate")?.Remove();
             desc.Element(xmp + "MetadataDate")?.Remove();
             desc.Element(xmp + "CreateDate")?.Remove();
+            desc.Element(tiff + "Orientation")?.Remove();
+            desc.Element(xmp + "Orientation")?.Remove();
+            desc.Attribute(xmp + "Orientation")?.Remove();
 
             // Set/update attributes
             desc.SetAttributeValue(xmp + "CreatorTool", "Picturebot");
             desc.SetAttributeValue(xmp + "Rating", picture.Rating.ToString());
             desc.SetAttributeValue(xmp + "Label", picture.ColorLabel == ColorLabel.None ? "" : picture.ColorLabel.ToString());
             desc.Attribute(photoshop + "Urgency")?.Remove();
+
+            // Write tiff:Orientation ("1" for Landscape, "6" for Portrait)
+            if (picture.Orientation == Orientation.Portrait) {
+                desc.SetAttributeValue(tiff + "Orientation", "6");
+            } else if (picture.Orientation == Orientation.Landscape) {
+                desc.SetAttributeValue(tiff + "Orientation", "1");
+            } else {
+                desc.Attribute(tiff + "Orientation")?.Remove();
+            }
 
             // Write xmpDM:pick and xmpDM:good for Lightroom compatibility
             if (picture.CurationStatus == CurationStatus.Flagged) {
@@ -404,7 +428,26 @@ public class XmpService(
         return ColorLabel.None;
     }
 
-
+    private Orientation ParseOrientation(string? orientationStr) {
+        if (string.IsNullOrWhiteSpace(orientationStr)) return Orientation.Unknown;
+        var trimmed = orientationStr.Trim();
+        if (int.TryParse(trimmed, out var intVal)) {
+            return intVal switch {
+                1 or 2 or 3 or 4 => Orientation.Landscape,
+                5 or 6 or 7 or 8 => Orientation.Portrait,
+                _ => Orientation.Unknown
+            };
+        }
+        if (string.Equals(trimmed, "Landscape", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "Horizontal", StringComparison.OrdinalIgnoreCase)) {
+            return Orientation.Landscape;
+        }
+        if (string.Equals(trimmed, "Portrait", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "Vertical", StringComparison.OrdinalIgnoreCase)) {
+            return Orientation.Portrait;
+        }
+        return Orientation.Unknown;
+    }
 
     private XDocument CreateNewXmpDocument(out XElement desc) {
         desc = new XElement(rdf + "Description",
@@ -427,6 +470,7 @@ public class XmpService(
         var xmpDM = XNamespace.Get("http://ns.adobe.com/xmp/1.0/DynamicMedia/");
         if (desc.Attribute(XNamespace.Xmlns + "xmpDM") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "xmpDM", xmpDM.NamespaceName));
         if (desc.Attribute(XNamespace.Xmlns + "lr") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "lr", lr.NamespaceName));
+        if (desc.Attribute(XNamespace.Xmlns + "tiff") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "tiff", tiff.NamespaceName));
     }
 
     private void UpdateTitleElement(XElement desc, string title) {

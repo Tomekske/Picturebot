@@ -24,6 +24,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Messages;
 using Picturebot.Services;
 using Picturebot.Views;
+using PictureWorker.Domain.Interfaces;
 using Serilog;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
@@ -51,6 +52,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly ISettingsService _settingsService;
     private readonly IXmpService _xmpService;
     private readonly IPickedService _pickedService;
+    private readonly IPictureAnalyzer? _pictureAnalyzer;
     private readonly IFewShotTagDiscoveryService? _tagDiscoveryService;
     private readonly IGlobalExemplarCentroidService? _centroidService;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? _scopeFactory;
@@ -76,6 +78,7 @@ public partial class GalleryViewModel : ViewModelBase,
     public ObservableCollection<CurationStatus> FilterStatuses => FilterToolbar.FilterStatuses;
     public ObservableCollection<int> FilterRatings => FilterToolbar.FilterRatings;
     public ObservableCollection<ColorLabel> FilterColors => FilterToolbar.FilterColors;
+    public ObservableCollection<Orientation> FilterOrientations => FilterToolbar.FilterOrientations;
 
     // Boolean properties for UI bindings
     public bool IsFlaggedFilterActive { get => FilterStatuses.Contains(CurationStatus.Flagged); set => ToggleStatusFilter(CurationStatus.Flagged, value); }
@@ -97,6 +100,9 @@ public partial class GalleryViewModel : ViewModelBase,
     public bool IsBlueColorFilterActive { get => FilterColors.Contains(ColorLabel.Blue); set => ToggleColorFilter(ColorLabel.Blue, value); }
     public bool IsPinkColorFilterActive { get => FilterColors.Contains(ColorLabel.Pink); set => ToggleColorFilter(ColorLabel.Pink, value); }
     public bool IsPurpleColorFilterActive { get => FilterColors.Contains(ColorLabel.Purple); set => ToggleColorFilter(ColorLabel.Purple, value); }
+
+    public bool IsLandscapeFilterActive { get => FilterOrientations.Contains(Orientation.Landscape); set => ToggleOrientationFilter(Orientation.Landscape, value); }
+    public bool IsPortraitFilterActive { get => FilterOrientations.Contains(Orientation.Portrait); set => ToggleOrientationFilter(Orientation.Portrait, value); }
 
     public bool CanEditOrDeleteCurrentNode => !IsLibraryRoot && !IsGlobalSearchActive && _currentNode != null;
 
@@ -163,6 +169,7 @@ public partial class GalleryViewModel : ViewModelBase,
         ISettingsService settingsService, ICurationQueue curationQueue,
         IAlbumService albumService, IFolderService folderService, ICopyService copyService,
         IXmpService xmpService, IPickedService pickedService,
+        IPictureAnalyzer? pictureAnalyzer = null,
         IFewShotTagDiscoveryService? tagDiscoveryService = null,
         IGlobalExemplarCentroidService? centroidService = null,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? scopeFactory = null) {
@@ -177,6 +184,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _copyService = copyService;
         _xmpService = xmpService;
         _pickedService = pickedService;
+        _pictureAnalyzer = pictureAnalyzer;
         _tagDiscoveryService = tagDiscoveryService;
         _centroidService = centroidService;
         _scopeFactory = scopeFactory;
@@ -689,15 +697,15 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private Orientation GetOrientation(Picture p) {
-        if (p.Width > p.Height) {
-            return Orientation.Landscape;
+        if (p.Orientation != Orientation.Unknown) {
+            return p.Orientation;
         }
 
-        if (p.Height > p.Width) {
-            return Orientation.Portrait;
+        if (p.Width > 0 && p.Height > 0) {
+            return p.Width < p.Height ? Orientation.Portrait : Orientation.Landscape;
         }
 
-        return Orientation.Square;
+        return Orientation.Landscape;
     }
 
     private int CalculateHammingDistance(ulong h1, ulong h2) {
@@ -1314,6 +1322,14 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    private void ToggleOrientationFilter(Orientation orientation, bool isActive) {
+        if (FilterToolbar == null) return;
+        switch (orientation) {
+            case Orientation.Landscape: FilterToolbar.IsLandscapeActive = isActive; break;
+            case Orientation.Portrait: FilterToolbar.IsPortraitActive = isActive; break;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
     private void ShowPickedOnly() {
         FilterToolbar.SetFlaggedOnly();
@@ -1344,6 +1360,10 @@ public partial class GalleryViewModel : ViewModelBase,
 
         if (FilterColors.Any()) {
             filtered = filtered.Where(p => FilterColors.Contains(p.ColorLabel));
+        }
+
+        if (FilterOrientations.Any()) {
+            filtered = filtered.Where(p => FilterOrientations.Contains(p.Orientation));
         }
 
         if (FilterToolbar.IsTagFilterActive) {
@@ -1422,6 +1442,9 @@ public partial class GalleryViewModel : ViewModelBase,
         OnPropertyChanged(nameof(IsBlueColorFilterActive));
         OnPropertyChanged(nameof(IsPinkColorFilterActive));
         OnPropertyChanged(nameof(IsPurpleColorFilterActive));
+
+        OnPropertyChanged(nameof(IsLandscapeFilterActive));
+        OnPropertyChanged(nameof(IsPortraitFilterActive));
     }
 
     private void UpdateBreadcrumbs(Node? node) {
@@ -1700,8 +1723,13 @@ public partial class GalleryViewModel : ViewModelBase,
             }
             pathService.PopulatePaths(firstBatchPics);
 
-            // Load XMP metadata in parallel first
-            await Task.WhenAll(firstBatchPics.Select(pic => xmpService.LoadMetadataAsync(pic)));
+            var pictureAnalyzer = scope?.ServiceProvider.GetService<IPictureAnalyzer>() ?? _pictureAnalyzer;
+
+            // Load XMP metadata in parallel first and ensure orientation is calculated retroactively
+            await Task.WhenAll(firstBatchPics.Select(async pic => {
+                await xmpService.LoadMetadataAsync(pic);
+                await EnsurePictureOrientationAsync(pic, pictureAnalyzer, xmpService);
+            }));
 
             // Sync picked and highlight files if they are missing
             foreach (var pic in firstBatchPics) {
@@ -1834,6 +1862,7 @@ public partial class GalleryViewModel : ViewModelBase,
                     // Load XMP metadata in parallel background threads with capped concurrency
                     await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
                         await _xmpService.LoadMetadataAsync(pic);
+                        await EnsurePictureOrientationAsync(pic, pictureAnalyzer, _xmpService);
                     });
 
                     // Sync picked and highlight files if they are missing
@@ -2336,10 +2365,25 @@ public partial class GalleryViewModel : ViewModelBase,
         return keywordsChanged;
     }
 
-    private enum Orientation {
-        Landscape,
-        Portrait,
-        Square
+    private static async Task EnsurePictureOrientationAsync(Picture pic, IPictureAnalyzer? pictureAnalyzer, IXmpService xmpService) {
+        if (pic.Orientation != Domain.Enums.Orientation.Unknown) return;
+
+        if (pic.Width > 0 && pic.Height > 0) {
+            pic.Orientation = pic.Width < pic.Height ? Domain.Enums.Orientation.Portrait : Domain.Enums.Orientation.Landscape;
+            await xmpService.SaveMetadataAsync(pic);
+            return;
+        }
+
+        var imgPath = pic.SubFolder?.Preview ?? pic.SubFolder?.Thumbnail ?? pic.SubFolder?.Raw;
+        if (!string.IsNullOrEmpty(imgPath) && System.IO.File.Exists(imgPath) && pictureAnalyzer != null) {
+            var dimResult = await pictureAnalyzer.GetDimensionsAsync(imgPath);
+            if (!dimResult.IsError && dimResult.Value.Width > 0 && dimResult.Value.Height > 0) {
+                pic.Width = dimResult.Value.Width;
+                pic.Height = dimResult.Value.Height;
+                pic.Orientation = pic.Width < pic.Height ? Domain.Enums.Orientation.Portrait : Domain.Enums.Orientation.Landscape;
+                await xmpService.SaveMetadataAsync(pic);
+            }
+        }
     }
 }
 
