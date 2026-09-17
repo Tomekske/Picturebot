@@ -57,6 +57,12 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private ObservableCollection<string> _keywords = new();
 
+    [ObservableProperty]
+    private string? _aiFeedback;
+
+    [ObservableProperty]
+    private bool _isAiBest;
+
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;
@@ -64,6 +70,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         _rating = picture.Rating;
         _orientation = picture.Orientation;
         _processingState = picture.ProcessingState;
+        _aiFeedback = picture.Metrics?.AiFeedback;
         _keywords = new ObservableCollection<string>(picture.Keywords ?? new List<string>());
     }
 

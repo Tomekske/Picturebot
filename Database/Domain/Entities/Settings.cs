@@ -98,4 +98,8 @@ public class Settings {
     public string HierarchyNodesJson { get; set; } = "[]";
     public string TagGroupsJson { get; set; } = "[]";
     public string? ActiveTagGroupId { get; set; }
+
+    public string GeminiApiKey { get; set; } = string.Empty;
+    public string AiCurationModel { get; set; } = "gemini-3.6-flash";
+    public bool EnableAiBurstCuration { get; set; } = true;
 }

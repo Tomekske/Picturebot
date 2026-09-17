@@ -132,6 +132,15 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private int _burstTimeThreshold = 3;
 
     [ObservableProperty]
+    private string _geminiApiKey = string.Empty;
+
+    [ObservableProperty]
+    private string _aiCurationModel = "gemini-3.6-flash";
+
+    [ObservableProperty]
+    private bool _enableAiBurstCuration = true;
+
+    [ObservableProperty]
     private string _editFolderPath = string.Empty;
 
     [ObservableProperty]
@@ -351,6 +360,11 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         GroupingThreshold = settings.GroupingThreshold;
         BurstTimeThreshold = settings.BurstTimeThresholdSeconds;
         BurstFallbackThreshold = settings.BurstFallbackTimeThresholdSeconds;
+        GeminiApiKey = settings.GeminiApiKey ?? string.Empty;
+        AiCurationModel = (!string.IsNullOrWhiteSpace(settings.AiCurationModel) && !settings.AiCurationModel.Equals("gemini-2.5-flash", StringComparison.OrdinalIgnoreCase))
+            ? settings.AiCurationModel 
+            : "gemini-3.6-flash";
+        EnableAiBurstCuration = settings.EnableAiBurstCuration;
         LaunchFullScreen = settings.LaunchMaximized;
         RedLabelName = settings.RedLabelName;
         OrangeLabelName = settings.OrangeLabelName;
@@ -633,6 +647,9 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             GroupingThreshold = GroupingThreshold,
             BurstTimeThresholdSeconds = BurstTimeThreshold,
             BurstFallbackTimeThresholdSeconds = BurstFallbackThreshold,
+            GeminiApiKey = GeminiApiKey.Trim(),
+            AiCurationModel = !string.IsNullOrWhiteSpace(AiCurationModel) ? AiCurationModel.Trim() : "gemini-3.6-flash",
+            EnableAiBurstCuration = EnableAiBurstCuration,
             LaunchMaximized = LaunchFullScreen,
             RedLabelName = RedLabelName,
             OrangeLabelName = OrangeLabelName,

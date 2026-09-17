@@ -67,4 +67,8 @@ public class SettingsModel {
     public List<HierarchyNode> HierarchyNodes { get; set; } = new();
     public List<TagGroup> TagGroups { get; set; } = new();
     public Guid? ActiveTagGroupId { get; set; }
+
+    public string GeminiApiKey { get; set; } = string.Empty;
+    public string AiCurationModel { get; set; } = "gemini-3.6-flash";
+    public bool EnableAiBurstCuration { get; set; } = true;
 }

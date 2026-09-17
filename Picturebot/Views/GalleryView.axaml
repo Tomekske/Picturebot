@@ -113,6 +113,13 @@
                                             Foreground="{DynamicResource SukiPrimaryColor}" />
                     </Button>
 
+                    <Button Classes="Basic" ToolTip.Tip="AI Curate Bursts (Multimodal Vision Evaluation)"
+                            IsVisible="{Binding IsBurstViewEnabled}"
+                            Command="{Binding AiCurateBurstCommand}">
+                        <icons:MaterialIcon Kind="Creation" Width="20" Height="20"
+                                            Foreground="#38BDF8" />
+                    </Button>
+
                     <views:FilterToolbarView DataContext="{Binding FilterToolbar}" VerticalAlignment="Center" Margin="4,0" />
                     <Button Classes="Basic" ToolTip.Tip="Sort">
                         <icons:MaterialIcon Kind="SortVariant" Width="20" Height="20" />
@@ -443,6 +450,23 @@
                                                                 <icons:MaterialIcon Kind="Flag"
                                                                         Width="16" Height="16"
                                                                         Foreground="#4CAF50" />
+                                                             </Border>
+
+                                                            <!-- Top Right: Best Pick / AI Indicator -->
+                                                            <Border VerticalAlignment="Top"
+                                                                    HorizontalAlignment="Right"
+                                                                    Margin="4"
+                                                                    Padding="4,2"
+                                                                    CornerRadius="4"
+                                                                    Background="#D01E293B"
+                                                                    ToolTip.Tip="{Binding AiFeedback}"
+                                                                    IsVisible="{Binding IsBest}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="3">
+                                                                    <icons:MaterialIcon Kind="Star"
+                                                                            Width="12" Height="12"
+                                                                            Foreground="#FACC15" />
+                                                                    <TextBlock Text="BEST" FontSize="10" FontWeight="Bold" Foreground="#FACC15" VerticalAlignment="Center" />
+                                                                </StackPanel>
                                                             </Border>
                                                         </Panel>
 
