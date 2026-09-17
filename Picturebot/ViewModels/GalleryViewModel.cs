@@ -110,6 +110,7 @@ public partial class GalleryViewModel : ViewModelBase,
     [NotifyCanExecuteChangedFor(nameof(PlayCarouselCommand))]
     [NotifyCanExecuteChangedFor(nameof(GroupSimilarPicturesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInExplorerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenInDxoCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyToEditCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyToPrintCommand))]
     private bool _canPlayCarousel;
@@ -302,7 +303,20 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    public void ClearSelection() {
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = false;
+        }
+        SelectedPictures.Clear();
+        SelectedPicture = null;
+        UpdateActiveMode();
+        WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(null));
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+    }
+
     public async void Receive(NodeSelectedMessage message) {
+        ClearSelection();
+
         if (IsGlobalSearchActive) {
             IsGlobalSearchActive = false;
             ActiveSearchQuery = string.Empty;
@@ -345,6 +359,8 @@ public partial class GalleryViewModel : ViewModelBase,
         IsShowingAlbum = true;
         IsBurstViewEnabled = false;
         IsLibraryRoot = false;
+
+        ClearSelection();
 
         // Clear UI collections
         Items.Clear();
@@ -821,6 +837,120 @@ public partial class GalleryViewModel : ViewModelBase,
         }
     }
 
+    public static List<PictureItemViewModel> ResolvePicturesForDxo(
+        IEnumerable<PictureItemViewModel> allPictures,
+        IEnumerable<PictureItemViewModel> picturesList,
+        IEnumerable<PictureItemViewModel> selectedPictures,
+        PictureItemViewModel? selectedPicture) {
+        var explicitlySelected = allPictures.Where(p => p.IsSelected).ToList();
+        if (!explicitlySelected.Any()) {
+            explicitlySelected = selectedPictures.Where(p => p != null && p.IsSelected).ToList();
+        }
+
+        if (explicitlySelected.Any()) {
+            return explicitlySelected;
+        }
+
+        if (selectedPicture != null && selectedPicture.IsSelected) {
+            return new List<PictureItemViewModel> { selectedPicture };
+        }
+
+        // Priority when no pictures are explicitly selected:
+        // 1. First picked (Flagged) picture in album
+        // 2. First picture in album
+        var fallbackPic = picturesList.FirstOrDefault(p => p.CurationStatus == Domain.Enums.CurationStatus.Flagged)
+            ?? allPictures.FirstOrDefault(p => p.CurationStatus == Domain.Enums.CurationStatus.Flagged)
+            ?? picturesList.FirstOrDefault()
+            ?? allPictures.FirstOrDefault();
+
+        if (fallbackPic != null) {
+            return new List<PictureItemViewModel> { fallbackPic };
+        }
+
+        if (selectedPicture != null) {
+            return new List<PictureItemViewModel> { selectedPicture };
+        }
+
+        return new List<PictureItemViewModel>();
+    }
+
+    public List<PictureItemViewModel> ResolvePicturesForDxo() =>
+        ResolvePicturesForDxo(_allPictures, PicturesList, SelectedPictures, SelectedPicture);
+
+    [RelayCommand(CanExecute = nameof(CanExecuteOpenInExplorer))]
+    private void OpenInDxo() {
+        var targetVms = ResolvePicturesForDxo();
+
+        if (!targetVms.Any()) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("No Picture Found")
+                .WithContent("No pictures in the current album to open in DxO PhotoLab.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        var exePath = DetailsInspectorViewModel.GetDxoExecutablePath();
+        if (!File.Exists(exePath)) {
+            Log.Warning("DxO PhotoLab executable not found at {Path}", exePath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("DxO PhotoLab Not Found")
+                .WithContent($"Could not find DxO PhotoLab executable at:\n{exePath}")
+                .Dismiss().ByClicking()
+                .Dismiss().After(TimeSpan.FromSeconds(5))
+                .Queue();
+            return;
+        }
+
+        var libraryPath = _settingsService.Current.LibraryPath;
+        var validPaths = new List<string>();
+
+        foreach (var picVm in targetVms) {
+            var filePath = DetailsInspectorViewModel.ResolveRawOrImagePath(picVm.Picture, libraryPath);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath)) {
+                validPaths.Add(filePath);
+            } else {
+                Log.Warning("Could not find image or RAW file for picture {Name}", picVm.Name);
+            }
+        }
+
+        if (!validPaths.Any()) {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("File Not Found")
+                .WithContent("Could not locate RAW image file(s) for the selected picture(s).")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        try {
+            var arguments = string.Join(" ", validPaths.Select(p => $"\"{p}\""));
+            Log.Information("Opening in DxO PhotoLab: {Exe} {Args}", exePath, arguments);
+
+            var startInfo = new ProcessStartInfo {
+                FileName = exePath,
+                Arguments = arguments,
+                WorkingDirectory = Path.GetDirectoryName(validPaths.First()),
+                UseShellExecute = true
+            };
+            Process.Start(startInfo);
+
+            var countText = validPaths.Count == 1 ? Path.GetFileName(validPaths[0]) : $"{validPaths.Count} pictures";
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Opening in DxO PhotoLab")
+                .WithContent($"Opened {countText} in DxO PhotoLab 9.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to launch DxO PhotoLab at {Exe}", exePath);
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle("Error")
+                .WithContent($"Failed to launch DxO PhotoLab: {ex.Message}")
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
     private bool CanExecuteOpenInExplorer() => CanPlayCarousel && CanExecuteShortcuts();
 
     [RelayCommand(CanExecute = nameof(CanExecuteSyncPicked))]
@@ -1074,6 +1204,8 @@ public partial class GalleryViewModel : ViewModelBase,
         _currentNode = currentNode;
         IsBurstViewEnabled = false;
         IsLibraryRoot = currentNode == null;
+
+        ClearSelection();
 
         // Clear collections to prevent ghosting
         Items.Clear();
@@ -1508,6 +1640,8 @@ public partial class GalleryViewModel : ViewModelBase,
         _currentNode = album;
         IsBurstViewEnabled = false;
         IsLibraryRoot = false;
+
+        ClearSelection();
 
         // Clear UI collections immediately to indicate loading
         Items.Clear();

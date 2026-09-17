@@ -72,6 +72,11 @@
                             IsEnabled="{Binding CanPlayCarousel}">
                         <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
                     </Button>
+                    <Button Classes="Basic" ToolTip.Tip="Open in DxO PhotoLab"
+                            Command="{Binding OpenInDxoCommand}"
+                            IsEnabled="{Binding CanPlayCarousel}">
+                        <icons:MaterialIcon Kind="OpenInApp" Width="20" Height="20" />
+                    </Button>
                     <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
 
                     <Button Classes="Basic" ToolTip.Tip="Play Carousel (F)"
