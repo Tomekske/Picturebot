@@ -796,16 +796,12 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVms);
-
-        if (settings.EnableAiBurstCuration && !string.IsNullOrWhiteSpace(settings.GeminiApiKey)) {
-            _ = Task.Run(async () => {
-                await Task.Delay(100);
-                await Dispatcher.UIThread.InvokeAsync(() => AiCurateBurstAsync());
-            });
-        }
     }
 
     private string? GetBestImagePath(Picture picture) {
+        if (picture.SubFolder == null) {
+            _pathService?.PopulatePaths(picture);
+        }
         if (!string.IsNullOrEmpty(picture.SubFolder?.Preview) && File.Exists(picture.SubFolder.Preview)) {
             return picture.SubFolder.Preview;
         }
@@ -815,6 +811,9 @@ public partial class GalleryViewModel : ViewModelBase,
         if (!string.IsNullOrEmpty(picture.SubFolder?.Raw) && File.Exists(picture.SubFolder.Raw)) {
             return picture.SubFolder.Raw;
         }
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Picked) && File.Exists(picture.SubFolder.Picked)) {
+            return picture.SubFolder.Picked;
+        }
         return null;
     }
 
@@ -822,11 +821,28 @@ public partial class GalleryViewModel : ViewModelBase,
     public async Task AiCurateBurstAsync(PictureGroupViewModel? group = null) {
         if (IsAiCurating) return;
 
-        var targetGroups = group != null 
-            ? new List<PictureGroupViewModel> { group }
-            : GroupedPictures.Where(g => g.IsBurstGroup && g.Pictures.Count > 1).ToList();
+        var allPics = AllPictures
+            .Union(GroupedPictures.SelectMany(g => g.Pictures))
+            .Union(PicturesList)
+            .Union(SelectedPictures)
+            .Distinct()
+            .ToList();
 
-        if (!targetGroups.Any()) {
+        var targetPictures = group != null 
+            ? group.Pictures.Where(p => p.IsSelected).ToList()
+            : allPics.Where(p => p != null && p.IsSelected).ToList();
+
+        if (group != null && !targetPictures.Any()) {
+            targetPictures = group.Pictures.ToList();
+        }
+
+        if (targetPictures.Count < 2) {
+            MainWindow.ToastManager.CreateToast()
+                .OfType(Avalonia.Controls.Notifications.NotificationType.Warning)
+                .WithTitle("AI Curation")
+                .WithContent("Please select at least 2 pictures to compare and curate with AI.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
             return;
         }
 
@@ -841,83 +857,109 @@ public partial class GalleryViewModel : ViewModelBase,
             return;
         }
 
+        var inputList = targetPictures
+            .Select(p => (Id: p.Picture.Id.ToString(), ImagePath: GetBestImagePath(p.Picture)))
+            .Where(t => !string.IsNullOrEmpty(t.ImagePath))
+            .Select(t => (t.Id, t.ImagePath!))
+            .ToList();
+
+        if (inputList.Count < 2) {
+            MainWindow.ToastManager.CreateToast()
+                .OfType(Avalonia.Controls.Notifications.NotificationType.Warning)
+                .WithTitle("AI Curation")
+                .WithContent("Could not locate image files on disk for the selected pictures.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
         IsAiCurating = true;
+        WeakReferenceMessenger.Default.Send(new AiCurationStatusMessage(new AiCurationStatus(true, $"AI Curating {targetPictures.Count} selected pictures with Gemini...")));
         try {
             var aiService = _aiCurationService ?? _scopeFactory?.CreateScope().ServiceProvider.GetService<IAiPictureCurationService>();
             if (aiService == null) return;
 
-            int evaluatedBursts = 0;
-            foreach (var burst in targetGroups) {
-                var inputList = burst.Pictures
-                    .Select(p => (Id: p.Picture.Id.ToString(), ImagePath: GetBestImagePath(p.Picture)))
-                    .Where(t => !string.IsNullOrEmpty(t.ImagePath))
-                    .Select(t => (t.Id, t.ImagePath!))
-                    .ToList();
+            var result = await aiService.EvaluateBurstAsync(inputList, CancellationToken.None);
+            if (!result.IsError) {
+                var curation = result.Value;
 
-                if (inputList.Count <= 1) continue;
+                var groupResult = new AiCurationGroupResultViewModel {
+                    Header = string.Empty
+                };
 
-                var result = await aiService.EvaluateBurstAsync(inputList, CancellationToken.None);
-                if (!result.IsError) {
-                    var curation = result.Value;
-                    evaluatedBursts++;
-                    foreach (var picVm in burst.Pictures) {
-                        var picId = picVm.Picture.Id.ToString();
-                        bool isWinner = string.Equals(curation.BestPickId, picId, StringComparison.OrdinalIgnoreCase);
-                        picVm.IsBest = isWinner;
-                        picVm.IsAiBest = isWinner;
+                int itemIdx = 1;
+                bool anyWinner = false;
+                foreach (var picVm in targetPictures) {
+                    var picId = picVm.Picture.Id.ToString();
+                    bool isWinner = string.Equals(curation.BestPickId, picId, StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(curation.BestPickId, picVm.Name, StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(curation.BestPickId, Path.GetFileNameWithoutExtension(picVm.Name), StringComparison.OrdinalIgnoreCase)
+                                 || (int.TryParse(curation.BestPickId, out var winIdx) && winIdx == itemIdx);
 
-                        if (curation.Feedback.TryGetValue(picId, out var fb)) {
-                            picVm.AiFeedback = fb;
-                            if (picVm.Picture.Metrics != null) {
-                                picVm.Picture.Metrics.AiFeedback = fb;
+                    if (isWinner) anyWinner = true;
+
+                    string? fb = null;
+                    if (!curation.Feedback.TryGetValue(picId, out fb)) {
+                        if (!curation.Feedback.TryGetValue(picVm.Name, out fb)) {
+                            if (!curation.Feedback.TryGetValue(Path.GetFileNameWithoutExtension(picVm.Name), out fb)) {
+                                if (!curation.Feedback.TryGetValue(itemIdx.ToString(), out fb)) {
+                                    curation.Feedback.TryGetValue($"Image {itemIdx}", out fb);
+                                }
                             }
                         }
                     }
-                } else {
-                    var errorDesc = result.FirstError.Description;
-                    Log.Warning("AI curation failed for burst group {Header}: {Error}", burst.Header, errorDesc);
-                    Dispatcher.UIThread.Post(() => {
-                        try {
-                            MainWindow.ToastManager.CreateToast()
-                                .OfType(Avalonia.Controls.Notifications.NotificationType.Error)
-                                .WithTitle("AI Curation Error")
-                                .WithContent(errorDesc)
-                                .Dismiss().ByClicking()
-                                .Dismiss().After(TimeSpan.FromSeconds(8))
-                                .Queue();
-                        } catch (Exception ex) {
-                            Log.Warning(ex, "Failed to create toast for AI Curation error");
-                        }
-                    });
-                    break;
-                }
-            }
 
-            if (evaluatedBursts > 0) {
-                MainWindow.ToastManager.CreateToast()
-                    .OfType(Avalonia.Controls.Notifications.NotificationType.Success)
-                    .WithTitle("AI Curation Complete")
-                    .WithContent($"Evaluated {evaluatedBursts} burst sequence(s) using Gemini Vision.")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
+                    groupResult.Items.Add(new AiCurationItemResultViewModel {
+                        Index = itemIdx++,
+                        PictureVm = picVm,
+                        IsBest = isWinner,
+                        Feedback = !string.IsNullOrWhiteSpace(fb) ? fb : (isWinner ? "Selected as best pick by Gemini Vision." : "Alternative shot.")
+                    });
+                }
+
+                // Guarantee at least one winner
+                if (!anyWinner && groupResult.Items.Count > 0) {
+                    var bestItem = groupResult.Items.OrderByDescending(i => i.PictureVm.Picture.Sharpness).FirstOrDefault() ?? groupResult.Items[0];
+                    bestItem.IsBest = true;
+                    if (string.IsNullOrWhiteSpace(bestItem.Feedback) || bestItem.Feedback == "Alternative shot.") {
+                        bestItem.Feedback = "Selected as best pick.";
+                    }
+                }
+
+                var resultGroups = new List<AiCurationGroupResultViewModel> { groupResult };
+
+                Dispatcher.UIThread.Post(() => {
+                    try {
+                        var dialogVm = new AiCurationResultDialogViewModel(resultGroups, _curationQueue);
+                        MainWindow.DialogManager.CreateDialog()
+                            .WithContent(new AiCurationResultDialog { DataContext = dialogVm })
+                            .TryShow();
+                    } catch (Exception ex) {
+                        Log.Error(ex, "Failed to open AI Curation dialog");
+                    }
+                });
+            } else {
+                var errorDesc = result.FirstError.Description;
+                Log.Warning("AI curation failed: {Error}", errorDesc);
+                Dispatcher.UIThread.Post(() => {
+                    try {
+                        MainWindow.ToastManager.CreateToast()
+                            .OfType(Avalonia.Controls.Notifications.NotificationType.Error)
+                            .WithTitle("AI Curation Error")
+                            .WithContent(errorDesc)
+                            .Dismiss().ByClicking()
+                            .Dismiss().After(TimeSpan.FromSeconds(8))
+                            .Queue();
+                    } catch (Exception ex) {
+                        Log.Warning(ex, "Failed to create toast for AI Curation error");
+                    }
+                });
             }
         } catch (Exception ex) {
-            Log.Error(ex, "Error during AI burst curation");
-            Dispatcher.UIThread.Post(() => {
-                try {
-                    MainWindow.ToastManager.CreateToast()
-                        .OfType(Avalonia.Controls.Notifications.NotificationType.Error)
-                        .WithTitle("AI Curation Error")
-                        .WithContent(ex.Message)
-                        .Dismiss().ByClicking()
-                        .Dismiss().After(TimeSpan.FromSeconds(8))
-                        .Queue();
-                } catch (Exception toastEx) {
-                    Log.Warning(toastEx, "Failed to create toast for AI Curation exception");
-                }
-            });
+            Log.Error(ex, "Failed to run AI curation for selected pictures");
         } finally {
             IsAiCurating = false;
+            WeakReferenceMessenger.Default.Send(new AiCurationStatusMessage(new AiCurationStatus(false, string.Empty)));
         }
     }
 

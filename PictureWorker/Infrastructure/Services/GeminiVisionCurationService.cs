@@ -58,7 +58,7 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
         HttpClient? httpClient = null) {
         _settingsService = settingsService;
         _fileSystem = fileSystem;
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
     }
 
     public async Task<ErrorOr<AiCurationResult>> EvaluateBurstAsync(
@@ -86,8 +86,17 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
             var promptBuilder = new StringBuilder();
             promptBuilder.AppendLine(SystemPrompt);
             promptBuilder.AppendLine();
-            promptBuilder.AppendLine("Evaluate the following images in this burst group and return the JSON response:");
-            promptBuilder.AppendLine("Images to evaluate:");
+            promptBuilder.AppendLine("Evaluate the following images in this burst group and return a JSON object with this exact structure:");
+            promptBuilder.AppendLine("{");
+            promptBuilder.AppendLine("  \"best_pick\": \"<exact ID of the single best photo>\",");
+            promptBuilder.AppendLine("  \"feedback\": {");
+            foreach (var (id, _) in pictures) {
+                promptBuilder.AppendLine($"    \"{id}\": \"<one to two sentences of objective diagnostic critique>\",");
+            }
+            promptBuilder.AppendLine("  }");
+            promptBuilder.AppendLine("}");
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine("Images to evaluate in this burst:");
             foreach (var (id, _) in pictures) {
                 promptBuilder.AppendLine($"- Image ID: {id}");
             }
@@ -133,31 +142,55 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
 
             var endpointUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(modelName)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
 
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpointUrl) {
-                Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
-            };
+            const int maxRetries = 3;
+            TimeSpan initialDelay = TimeSpan.FromMilliseconds(1500);
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
-            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            HttpResponseMessage? response = null;
+            string responseContent = string.Empty;
 
-            if (!response.IsSuccessStatusCode) {
-                Log.Error("Gemini API error ({StatusCode}) for model {Model}: {Content}", response.StatusCode, modelName, responseContent);
+            for (int attempt = 0; attempt <= maxRetries; attempt++) {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpointUrl) {
+                    Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
+                };
 
-                string errorMessage = $"Gemini API error ({(int)response.StatusCode}): {response.ReasonPhrase}";
-                try {
-                    using var errorDoc = JsonDocument.Parse(responseContent);
-                    if (errorDoc.RootElement.TryGetProperty("error", out var errObj) &&
-                        errObj.TryGetProperty("message", out var msgProp)) {
-                        var innerMsg = msgProp.GetString();
-                        if (!string.IsNullOrWhiteSpace(innerMsg)) {
-                            errorMessage = innerMsg;
-                        }
-                    }
-                } catch {
-                    // Fallback to default message
+                response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+                responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (response.IsSuccessStatusCode) {
+                    break;
                 }
 
-                return Error.Failure("AiCuration.ApiError", $"[{modelName}] {errorMessage}");
+                int statusCode = (int)response.StatusCode;
+                bool isTransient = statusCode == 503 || statusCode == 429 || statusCode == 504 || statusCode == 502;
+
+                if (!isTransient || attempt == maxRetries) {
+                    Log.Error("Gemini API error ({StatusCode}) for model {Model}: {Content}", response.StatusCode, modelName, responseContent);
+
+                    string errorMessage = $"Gemini API error ({(int)response.StatusCode}): {response.ReasonPhrase}";
+                    try {
+                        using var errorDoc = JsonDocument.Parse(responseContent);
+                        if (errorDoc.RootElement.TryGetProperty("error", out var errObj) &&
+                            errObj.TryGetProperty("message", out var msgProp)) {
+                            var innerMsg = msgProp.GetString();
+                            if (!string.IsNullOrWhiteSpace(innerMsg)) {
+                                errorMessage = innerMsg;
+                            }
+                        }
+                    } catch {
+                        // Fallback to default message
+                    }
+
+                    return Error.Failure("AiCuration.ApiError", $"[{modelName}] {errorMessage}");
+                }
+
+                var delay = TimeSpan.FromMilliseconds(
+                    initialDelay.TotalMilliseconds * Math.Pow(2, attempt) + Random.Shared.Next(0, 500)
+                );
+
+                Log.Warning("Gemini API attempt {Attempt}/{MaxAttempts} for model {Model} returned {StatusCode}. Retrying with exponential backoff in {DelayMs}ms...",
+                    attempt + 1, maxRetries + 1, modelName, statusCode, (int)delay.TotalMilliseconds);
+
+                await Task.Delay(delay, cancellationToken);
             }
 
             // 3. Extract and parse generated JSON text
@@ -167,6 +200,9 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
             }
 
             return parsedResult.Value;
+        } catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested) {
+            Log.Warning(ex, "Gemini API request timed out");
+            return Error.Failure("AiCuration.Timeout", "AI curation timed out while waiting for Gemini API response. Please try again.");
         } catch (OperationCanceledException) {
             return Error.Failure("AiCuration.Cancelled", "AI curation was cancelled.");
         } catch (Exception ex) {
@@ -281,6 +317,48 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
         }
     }
 
+    public static string? ResolveMatchedId(string rawCandidate, IReadOnlyList<string> expectedIds) {
+        if (string.IsNullOrWhiteSpace(rawCandidate) || expectedIds.Count == 0) return null;
+
+        var candidate = rawCandidate.Trim();
+
+        // 1. Direct exact match (case-insensitive)
+        var direct = expectedIds.FirstOrDefault(id => string.Equals(id, candidate, StringComparison.OrdinalIgnoreCase));
+        if (direct != null) return direct;
+
+        // 2. Stripped decorations: "[Image ID: 123]", "Image 1", "Photo #1", "Image ID 123"
+        var stripped = candidate
+            .Replace("[", "")
+            .Replace("]", "")
+            .Replace("Image ID:", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Image ID", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Image", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Photo", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("#", "")
+            .Trim();
+
+        var strippedMatch = expectedIds.FirstOrDefault(id => string.Equals(id, stripped, StringComparison.OrdinalIgnoreCase));
+        if (strippedMatch != null) return strippedMatch;
+
+        // 3. 1-based or 0-based index match (e.g. "1", "2")
+        if (int.TryParse(stripped, out var index)) {
+            if (index >= 1 && index <= expectedIds.Count) {
+                return expectedIds[index - 1];
+            }
+            if (index == 0 && expectedIds.Count > 0) {
+                return expectedIds[0];
+            }
+        }
+
+        // 4. Substring match
+        var containsMatch = expectedIds.FirstOrDefault(id =>
+            candidate.Contains(id, StringComparison.OrdinalIgnoreCase) ||
+            id.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+        if (containsMatch != null) return containsMatch;
+
+        return null;
+    }
+
     public static ErrorOr<AiCurationResult> ParseCurationJson(string jsonText, IReadOnlyList<string> expectedIds, string? rawResponse = null) {
         try {
             var cleanJson = jsonText.Trim();
@@ -305,7 +383,13 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
             var feedback = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (root.TryGetProperty("feedback", out var feedbackProp) && feedbackProp.ValueKind == JsonValueKind.Object) {
                 foreach (var prop in feedbackProp.EnumerateObject()) {
-                    feedback[prop.Name] = prop.Value.GetString() ?? string.Empty;
+                    var val = prop.Value.GetString() ?? string.Empty;
+                    feedback[prop.Name] = val;
+
+                    var resolvedId = ResolveMatchedId(prop.Name, expectedIds);
+                    if (resolvedId != null && !feedback.ContainsKey(resolvedId)) {
+                        feedback[resolvedId] = val;
+                    }
                 }
             }
 
@@ -313,7 +397,7 @@ Output Strictness: Return valid JSON matching the requested schema. Do not inclu
                 return Error.Validation("AiCuration.MissingBestPick", "AI response did not declare a 'best_pick' winner.");
             }
 
-            var matchedWinnerId = expectedIds.FirstOrDefault(id => string.Equals(id, bestPickId, StringComparison.OrdinalIgnoreCase));
+            var matchedWinnerId = ResolveMatchedId(bestPickId, expectedIds);
             if (matchedWinnerId == null) {
                 return Error.Validation("AiCuration.InvalidBestPickId", $"AI declared winner '{bestPickId}' which does not match any image in the burst group.");
             }

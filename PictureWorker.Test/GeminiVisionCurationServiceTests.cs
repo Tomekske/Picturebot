@@ -119,6 +119,50 @@ public class GeminiVisionCurationServiceTests {
     }
 
     [Test]
+    public void ParseCurationJson_WithIndexWinnerAndDecoratedFeedback_ResolvesIdsAndFeedback() {
+        // Arrange
+        var json = @"{
+            ""best_pick"": ""2"",
+            ""feedback"": {
+                ""1"": ""Slight camera shake."",
+                ""2"": ""Sharp subject focus and pleasing composition.""
+            }
+        }";
+        var expectedIds = new[] { "pic_001", "pic_002" };
+
+        // Act
+        var result = GeminiVisionCurationService.ParseCurationJson(json, expectedIds);
+
+        // Assert
+        Assert.That(result.IsError, Is.False);
+        Assert.That(result.Value.BestPickId, Is.EqualTo("pic_002"));
+        Assert.That(result.Value.Feedback["pic_002"], Does.Contain("Sharp subject focus"));
+        Assert.That(result.Value.Feedback["pic_001"], Does.Contain("camera shake"));
+    }
+
+    [Test]
+    public void ParseCurationJson_WithBracketsPrefix_ResolvesCorrectly() {
+        // Arrange
+        var json = @"{
+            ""best_pick"": ""[Image ID: 1052]"",
+            ""feedback"": {
+                ""[Image ID: 1052]"": ""Perfect catchlights in eyes."",
+                ""[Image ID: 1053]"": ""Alternative shot with subject looking away.""
+            }
+        }";
+        var expectedIds = new[] { "1052", "1053" };
+
+        // Act
+        var result = GeminiVisionCurationService.ParseCurationJson(json, expectedIds);
+
+        // Assert
+        Assert.That(result.IsError, Is.False);
+        Assert.That(result.Value.BestPickId, Is.EqualTo("1052"));
+        Assert.That(result.Value.Feedback["1052"], Does.Contain("catchlights"));
+        Assert.That(result.Value.Feedback["1053"], Does.Contain("Alternative shot"));
+    }
+
+    [Test]
     public async Task EvaluateBurstAsync_EmptyList_ReturnsValidationError() {
         // Arrange
         var service = new GeminiVisionCurationService(_mockSettingsService.Object, _mockFileSystem);
@@ -241,5 +285,120 @@ public class GeminiVisionCurationServiceTests {
         // Assert
         Assert.That(result.IsError, Is.True);
         Assert.That(result.FirstError.Description, Does.Contain("gemini-3.6-flash"));
+    }
+
+    [Test]
+    public async Task EvaluateBurstAsync_Transient503ThenSuccess_RetriesAndSucceeds() {
+        // Arrange
+        _mockSettingsService.Setup(s => s.Current).Returns(new SettingsModel {
+            GeminiApiKey = "test-api-key",
+            AiCurationModel = "gemini-3.6-flash"
+        });
+
+        _mockFileSystem.AddFile("C:\\photos\\img1.jpg", new MockFileData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }));
+
+        var mockHandler = new Mock<HttpMessageHandler>();
+        int callCount = 0;
+
+        var geminiSuccessJson = @"{
+            ""candidates"": [
+                {
+                    ""content"": {
+                        ""parts"": [
+                            {
+                                ""text"": ""{\n  \""best_pick\"": \""img1\"",\n  \""feedback\"": {\n    \""img1\"": \""Sharp focus on eyes.\""\n  }\n}""
+                            }
+                        ]
+                    }
+                }
+            ]
+        }";
+
+        var gemini503Json = @"{
+            ""error"": {
+                ""code"": 503,
+                ""message"": ""This model is currently experiencing high demand."",
+                ""status"": ""UNAVAILABLE""
+            }
+        }";
+
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => {
+                callCount++;
+                if (callCount == 1) {
+                    return new HttpResponseMessage {
+                        StatusCode = HttpStatusCode.ServiceUnavailable,
+                        Content = new StringContent(gemini503Json, Encoding.UTF8, "application/json")
+                    };
+                }
+                return new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(geminiSuccessJson, Encoding.UTF8, "application/json")
+                };
+            });
+
+        var httpClient = new HttpClient(mockHandler.Object);
+        var service = new GeminiVisionCurationService(_mockSettingsService.Object, _mockFileSystem, httpClient);
+
+        // Act
+        var result = await service.EvaluateBurstAsync(new List<(string Id, string ImagePath)> {
+            ("img1", "C:\\photos\\img1.jpg")
+        });
+
+        // Assert
+        Assert.That(result.IsError, Is.False);
+        Assert.That(result.Value.BestPickId, Is.EqualTo("img1"));
+        Assert.That(callCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task EvaluateBurstAsync_NonTransient400_DoesNotRetry() {
+        // Arrange
+        _mockSettingsService.Setup(s => s.Current).Returns(new SettingsModel {
+            GeminiApiKey = "test-api-key",
+            AiCurationModel = "gemini-3.6-flash"
+        });
+
+        _mockFileSystem.AddFile("C:\\photos\\img1.jpg", new MockFileData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }));
+
+        var mockHandler = new Mock<HttpMessageHandler>();
+        int callCount = 0;
+
+        var gemini400Json = @"{
+            ""error"": {
+                ""code"": 400,
+                ""message"": ""API key not valid."",
+                ""status"": ""INVALID_ARGUMENT""
+            }
+        }";
+
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => {
+                callCount++;
+                return new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    Content = new StringContent(gemini400Json, Encoding.UTF8, "application/json")
+                };
+            });
+
+        var httpClient = new HttpClient(mockHandler.Object);
+        var service = new GeminiVisionCurationService(_mockSettingsService.Object, _mockFileSystem, httpClient);
+
+        // Act
+        var result = await service.EvaluateBurstAsync(new List<(string Id, string ImagePath)> {
+            ("img1", "C:\\photos\\img1.jpg")
+        });
+
+        // Assert
+        Assert.That(result.IsError, Is.True);
+        Assert.That(callCount, Is.EqualTo(1));
     }
 }

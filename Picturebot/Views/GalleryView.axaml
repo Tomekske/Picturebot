@@ -113,8 +113,8 @@
                                             Foreground="{DynamicResource SukiPrimaryColor}" />
                     </Button>
 
-                    <Button Classes="Basic" ToolTip.Tip="AI Curate Bursts (Multimodal Vision Evaluation)"
-                            IsVisible="{Binding IsBurstViewEnabled}"
+                    <Button Classes="Basic" ToolTip.Tip="AI Curate Selected Pictures (Multimodal Vision Evaluation)"
+                            IsVisible="{Binding IsShowingAlbum}"
                             Command="{Binding AiCurateBurstCommand}">
                         <icons:MaterialIcon Kind="Creation" Width="20" Height="20"
                                             Foreground="#38BDF8" />

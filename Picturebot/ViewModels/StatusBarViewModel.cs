@@ -1,19 +1,28 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Domain.Enums;
+using Graph.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Picturebot.Messages;
 using Picturebot.Views;
 using SukiUI.Dialogs;
 
-using Microsoft.Extensions.DependencyInjection;
-using Graph.Domain.Interfaces;
-
 namespace Picturebot.ViewModels;
 
-public partial class StatusBarViewModel : ViewModelBase {
+public partial class StatusBarViewModel : ViewModelBase, IRecipient<AiCurationStatusMessage> {
     public SyncStatusViewModel SyncStatusVM { get; }
+
+    [ObservableProperty]
+    private bool _isAiCurating;
+
+    [ObservableProperty]
+    private string _aiCurationStatusText = string.Empty;
 
     public StatusBarViewModel(IConfiguration configuration, IServiceScopeFactory scopeFactory, ICurationQueue curationQueue) {
         SyncStatusVM = new SyncStatusViewModel(scopeFactory, curationQueue);
@@ -23,12 +32,21 @@ public partial class StatusBarViewModel : ViewModelBase {
         var env = configuration["Environment"] ??
                   Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
         ShowDevBadge = env != AppEnvironment.Production;
+
+        WeakReferenceMessenger.Default.Register<AiCurationStatusMessage>(this);
     }
 
     public ISukiDialogManager DialogManager { get; } = new SukiDialogManager();
 
     public string AppVersion { get; }
     public bool ShowDevBadge { get; }
+
+    public void Receive(AiCurationStatusMessage message) {
+        Dispatcher.UIThread.Post(() => {
+            IsAiCurating = message.Value.IsCurating;
+            AiCurationStatusText = message.Value.StatusText;
+        });
+    }
 
     [RelayCommand]
     private void OpenSettings() {
