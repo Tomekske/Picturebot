@@ -31,6 +31,11 @@ public class Metrics {
     public byte[]? Embedding { get; set; }
 
     /// <summary>
+    ///     Diagnostic AI vision evaluation feedback for this picture.
+    /// </summary>
+    public string? AiFeedback { get; set; }
+
+    /// <summary>
     ///     The picture these metrics belong to.
     /// </summary>
     public Picture? Picture { get; set; }

@@ -499,7 +499,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         var token = _cts.Token;
 
         try {
-            var loadedBitmap = await ImageHelper.LoadAndOrientAsync(previewPath, 600);
+            var loadedBitmap = await ImageHelper.LoadAndOrientAsync(previewPath, 600, picVm.Picture.RawExifOrientation);
             if (token.IsCancellationRequested || SelectedPicture != picVm) {
                 loadedBitmap?.Dispose();
                 return;

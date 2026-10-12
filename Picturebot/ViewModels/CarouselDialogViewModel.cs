@@ -97,7 +97,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
                     var path = _pictures[i].Picture.SubFolder?.Preview;
                     if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
                         // Increase to 2400 for high-res sharpness
-                        Previews[i] = await ImageHelper.LoadAndOrientAsync(path, 2400);
+                        Previews[i] = await ImageHelper.LoadAndOrientAsync(path, 2400, _pictures[i].Picture.RawExifOrientation);
                     }
                 }
             }

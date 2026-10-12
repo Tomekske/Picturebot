@@ -567,6 +567,23 @@
                                 <TextBlock Text="Burst Fallback Time (Seconds)" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
                                 <NumericUpDown Grid.Column="1" Value="{Binding BurstFallbackThreshold}" Minimum="1" Maximum="120" FormatString="0" Height="36" Width="150" HorizontalAlignment="Right" />
                             </Grid>
+
+                            <TextBlock Text="AI VISION CURATION" Foreground="#888888" FontSize="12" FontWeight="Bold" Margin="0,16,0,4" LetterSpacing="1" />
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Enable AI Burst Curation" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding EnableAiBurstCuration}" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="Gemini API Key" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding GeminiApiKey}" Watermark="Enter Google Gemini API Key" Height="36" Width="350" HorizontalAlignment="Right" VerticalContentAlignment="Center" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" Height="40">
+                                <TextBlock Text="AI Vision Model" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="13" />
+                                <TextBox Grid.Column="1" Text="{Binding AiCurationModel}" Watermark="e.g. gemini-3.6-flash" Height="36" Width="250" HorizontalAlignment="Right" VerticalContentAlignment="Center" />
+                            </Grid>
                         </StackPanel>
 
                         <!-- View 3: Color Labels -->

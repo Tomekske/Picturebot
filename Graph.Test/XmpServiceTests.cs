@@ -509,4 +509,38 @@ public class XmpServiceTests : IDisposable {
 
         Assert.That(pic.Orientation, Is.EqualTo(expected));
     }
+
+    [Test]
+    public async Task SaveAndLoad_RawExifOrientation_ShouldPreserveExactOrientationCode() {
+        // Arrange
+        var rawPath = @"C:\RAWs\PicOri8.NEF";
+        var xmpPath = @"C:\RAWs\PicOri8.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+
+        var picPortrait8 = new Picture {
+            Name = "PicOri8",
+            Orientation = Orientation.Portrait,
+            RawExifOrientation = 8,
+            SubFolder = new SubFolder { Raw = rawPath }
+        };
+
+        // Act - Save with RawExifOrientation = 8 (270 CW portrait)
+        await _xmpService.SaveMetadataAsync(picPortrait8);
+
+        var xml = _mockFileSystem.File.ReadAllText(xmpPath);
+        var doc = XDocument.Parse(xml);
+        var desc = doc.Descendants().First(e => e.Name.LocalName == "Description");
+        var tiff = XNamespace.Get("http://ns.adobe.com/tiff/1.0/");
+
+        Assert.That(desc.Attribute(tiff + "Orientation")?.Value, Is.EqualTo("8"));
+
+        // Load into new picture
+        var loaded = new Picture { Name = "PicOri8", SubFolder = new SubFolder { Raw = rawPath } };
+        await _xmpService.LoadMetadataAsync(loaded);
+
+        Assert.Multiple(() => {
+            Assert.That(loaded.RawExifOrientation, Is.EqualTo(8));
+            Assert.That(loaded.Orientation, Is.EqualTo(Orientation.Portrait));
+        });
+    }
 }

@@ -86,13 +86,17 @@ public class ImportPicturesCommand : IImportPicturesCommand {
             var width = dimResult is { IsError: false } ? dimResult.Value.Width : 0;
             var height = dimResult is { IsError: false } ? dimResult.Value.Height : 0;
 
+            var oriResult = await _pictureAnalyzer.ExtractOrientationAsync(fileToInspect);
+            var rawExifOrientation = oriResult is { IsError: false } ? oriResult.Value : 1;
+
             foreach (var file in pair) {
                 cachedDataList.Add(new CachedPictureData {
                     FilePath = file,
                     PrimaryDate = primaryDate,
                     PHash = 0, // Will be calculated by Background Worker
                     Width = width,
-                    Height = height
+                    Height = height,
+                    RawExifOrientation = rawExifOrientation
                 });
             }
         }
@@ -148,7 +152,8 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 _fileSystem.File.Copy(jpgFile.FilePath, importedJpgPath);
             }
 
-            var orientation = (cachedData.Width > 0 && cachedData.Height > 0 && cachedData.Width < cachedData.Height)
+            var orientation = (cachedData.RawExifOrientation is 5 or 6 or 7 or 8 ||
+                               (cachedData.Width > 0 && cachedData.Height > 0 && cachedData.Width < cachedData.Height))
                 ? Orientation.Portrait
                 : Orientation.Landscape;
 
@@ -162,7 +167,8 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 Extension = rawExtension,
                 Width = cachedData.Width,
                 Height = cachedData.Height,
-                Orientation = orientation
+                Orientation = orientation,
+                RawExifOrientation = cachedData.RawExifOrientation
             };
 
             await _nodeService.CreateNodeAsync(pictureNode);

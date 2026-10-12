@@ -22,6 +22,9 @@ namespace Database.Migrations
                     b.Property<int>("PictureId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AiFeedback")
+                        .HasColumnType("TEXT");
+
                     b.Property<byte[]>("Embedding")
                         .HasColumnType("BLOB");
 
@@ -73,6 +76,10 @@ namespace Database.Migrations
                     b.Property<string>("ActiveTagGroupId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AiCurationModel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BlueLabelName")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -111,7 +118,14 @@ namespace Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("EnableAiBurstCuration")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("FullscreenShortcut")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeminiApiKey")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -240,6 +254,7 @@ namespace Database.Migrations
                         new
                         {
                             Id = 1,
+                            AiCurationModel = "gemini-2.5-flash",
                             BlueLabelName = "Blue",
                             BlueLabelShortcut = "Ctrl+NumPad5",
                             BurstFallbackTimeThresholdSeconds = 10,
@@ -250,7 +265,9 @@ namespace Database.Migrations
                             CurationPickedShortcut = "P",
                             CurationRejectedShortcut = "X",
                             EditFolderPath = "",
+                            EnableAiBurstCuration = true,
                             FullscreenShortcut = "F",
+                            GeminiApiKey = "",
                             GlobalKeywordTaxonomy = "",
                             GreenLabelName = "Green",
                             GreenLabelShortcut = "Ctrl+NumPad4",

@@ -57,6 +57,12 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private ObservableCollection<string> _keywords = new();
 
+    [ObservableProperty]
+    private string? _aiFeedback;
+
+    [ObservableProperty]
+    private bool _isAiBest;
+
     public PictureItemViewModel(Picture picture) {
         Picture = picture;
         _curationStatus = picture.CurationStatus;
@@ -64,10 +70,13 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
         _rating = picture.Rating;
         _orientation = picture.Orientation;
         _processingState = picture.ProcessingState;
+        _aiFeedback = picture.Metrics?.AiFeedback;
         _keywords = new ObservableCollection<string>(picture.Keywords ?? new List<string>());
     }
 
     public Picture Picture { get; }
+
+    public int RawExifOrientation => Picture.RawExifOrientation;
 
     public bool IsVisible { get; set; }
 
@@ -154,7 +163,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
         try {
             var priority = IsVisible ? 0 : 1;
-            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(_resolvedThumbnailPath, targetHeight, priority, token);
+            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(_resolvedThumbnailPath, targetHeight, priority, Picture.RawExifOrientation, token);
             
             if (!token.IsCancellationRequested && bitmap != null) {
                 Thumbnail = bitmap;

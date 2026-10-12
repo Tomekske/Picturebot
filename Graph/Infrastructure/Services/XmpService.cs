@@ -184,6 +184,9 @@ public class XmpService(
                 ?? desc.Element(tiff + "Orientation")?.Value
                 ?? desc.Attribute(xmp + "Orientation")?.Value
                 ?? desc.Element(xmp + "Orientation")?.Value;
+            if (int.TryParse(orientationStr, out var rawOri) && rawOri > 0) {
+                picture.RawExifOrientation = rawOri;
+            }
             picture.Orientation = ParseOrientation(orientationStr);
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load XMP metadata for picture {Name} from {Path}", picture.Name, xmpPath);
@@ -264,11 +267,23 @@ public class XmpService(
             desc.SetAttributeValue(xmp + "Label", picture.ColorLabel == ColorLabel.None ? "" : picture.ColorLabel.ToString());
             desc.Attribute(photoshop + "Urgency")?.Remove();
 
-            // Write tiff:Orientation ("1" for Landscape, "6" for Portrait)
-            if (picture.Orientation == Orientation.Portrait) {
-                desc.SetAttributeValue(tiff + "Orientation", "6");
-            } else if (picture.Orientation == Orientation.Landscape) {
-                desc.SetAttributeValue(tiff + "Orientation", "1");
+            // Write tiff:Orientation
+            if (picture.Orientation == Orientation.Landscape) {
+                if (picture.RawExifOrientation is 1 or 2 or 3 or 4) {
+                    desc.SetAttributeValue(tiff + "Orientation", picture.RawExifOrientation.ToString());
+                } else {
+                    picture.RawExifOrientation = 1;
+                    desc.SetAttributeValue(tiff + "Orientation", "1");
+                }
+            } else if (picture.Orientation == Orientation.Portrait) {
+                if (picture.RawExifOrientation is 5 or 6 or 7 or 8) {
+                    desc.SetAttributeValue(tiff + "Orientation", picture.RawExifOrientation.ToString());
+                } else {
+                    picture.RawExifOrientation = 6;
+                    desc.SetAttributeValue(tiff + "Orientation", "6");
+                }
+            } else if (picture.RawExifOrientation > 0) {
+                desc.SetAttributeValue(tiff + "Orientation", picture.RawExifOrientation.ToString());
             } else {
                 desc.Attribute(tiff + "Orientation")?.Remove();
             }
@@ -404,14 +419,29 @@ public class XmpService(
                 }
             }
 
+            var pictureAnalyzer = scope.ServiceProvider.GetService<PictureWorker.Domain.Interfaces.IPictureAnalyzer>();
+
             foreach (var picture in pictures) {
                 if (legacyData.TryGetValue(picture.Id, out var legacy)) {
                     picture.CurationStatus = legacy.status;
                     picture.ColorLabel = legacy.label;
                     picture.Rating = legacy.rating;
-
-                    await SaveMetadataAsync(picture);
                 }
+
+                if (pictureAnalyzer != null) {
+                    var rawFile = picture.SubFolder?.Raw;
+                    var imgPath = picture.SubFolder?.Preview ?? picture.SubFolder?.Thumbnail ?? picture.SubFolder?.Raw;
+                    var fileToInspect = (!string.IsNullOrEmpty(rawFile) && fileSystem.File.Exists(rawFile)) ? rawFile : imgPath;
+                    if (!string.IsNullOrEmpty(fileToInspect) && fileSystem.File.Exists(fileToInspect)) {
+                        var oriResult = await pictureAnalyzer.ExtractOrientationAsync(fileToInspect);
+                        if (!oriResult.IsError && oriResult.Value > 0) {
+                            picture.RawExifOrientation = oriResult.Value;
+                            picture.Orientation = (oriResult.Value is 5 or 6 or 7 or 8) ? Orientation.Portrait : Orientation.Landscape;
+                        }
+                    }
+                }
+
+                await SaveMetadataAsync(picture);
             }
         } finally {
             if (originalState != System.Data.ConnectionState.Open) {

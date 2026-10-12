@@ -53,6 +53,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly IXmpService _xmpService;
     private readonly IPickedService _pickedService;
     private readonly IPictureAnalyzer? _pictureAnalyzer;
+    private readonly IAiPictureCurationService? _aiCurationService;
     private readonly IFewShotTagDiscoveryService? _tagDiscoveryService;
     private readonly IGlobalExemplarCentroidService? _centroidService;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? _scopeFactory;
@@ -65,6 +66,9 @@ public partial class GalleryViewModel : ViewModelBase,
 
     [ObservableProperty]
     private bool _isLoading;
+
+    [ObservableProperty]
+    private bool _isAiCurating;
 
     [ObservableProperty]
     private bool _isGlobalSearchActive;
@@ -170,6 +174,7 @@ public partial class GalleryViewModel : ViewModelBase,
         IAlbumService albumService, IFolderService folderService, ICopyService copyService,
         IXmpService xmpService, IPickedService pickedService,
         IPictureAnalyzer? pictureAnalyzer = null,
+        IAiPictureCurationService? aiCurationService = null,
         IFewShotTagDiscoveryService? tagDiscoveryService = null,
         IGlobalExemplarCentroidService? centroidService = null,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? scopeFactory = null) {
@@ -185,6 +190,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _xmpService = xmpService;
         _pickedService = pickedService;
         _pictureAnalyzer = pictureAnalyzer;
+        _aiCurationService = aiCurationService;
         _tagDiscoveryService = tagDiscoveryService;
         _centroidService = centroidService;
         _scopeFactory = scopeFactory;
@@ -790,6 +796,171 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         GroupedPictures = new ObservableCollection<PictureGroupViewModel>(groupVms);
+    }
+
+    private string? GetBestImagePath(Picture picture) {
+        if (picture.SubFolder == null) {
+            _pathService?.PopulatePaths(picture);
+        }
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Preview) && File.Exists(picture.SubFolder.Preview)) {
+            return picture.SubFolder.Preview;
+        }
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Thumbnail) && File.Exists(picture.SubFolder.Thumbnail)) {
+            return picture.SubFolder.Thumbnail;
+        }
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Raw) && File.Exists(picture.SubFolder.Raw)) {
+            return picture.SubFolder.Raw;
+        }
+        if (!string.IsNullOrEmpty(picture.SubFolder?.Picked) && File.Exists(picture.SubFolder.Picked)) {
+            return picture.SubFolder.Picked;
+        }
+        return null;
+    }
+
+    [RelayCommand]
+    public async Task AiCurateBurstAsync(PictureGroupViewModel? group = null) {
+        if (IsAiCurating) return;
+
+        var allPics = AllPictures
+            .Union(GroupedPictures.SelectMany(g => g.Pictures))
+            .Union(PicturesList)
+            .Union(SelectedPictures)
+            .Distinct()
+            .ToList();
+
+        var targetPictures = group != null 
+            ? group.Pictures.Where(p => p.IsSelected).ToList()
+            : allPics.Where(p => p != null && p.IsSelected).ToList();
+
+        if (group != null && !targetPictures.Any()) {
+            targetPictures = group.Pictures.ToList();
+        }
+
+        if (targetPictures.Count < 2) {
+            MainWindow.ToastManager.CreateToast()
+                .OfType(Avalonia.Controls.Notifications.NotificationType.Warning)
+                .WithTitle("AI Curation")
+                .WithContent("Please select at least 2 pictures to compare and curate with AI.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        var settings = _settingsService.Current;
+        if (string.IsNullOrWhiteSpace(settings.GeminiApiKey)) {
+            MainWindow.ToastManager.CreateToast()
+                .OfType(Avalonia.Controls.Notifications.NotificationType.Warning)
+                .WithTitle("AI Curation")
+                .WithContent("Please configure your Gemini API Key in Settings to enable AI Curation.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        var inputList = targetPictures
+            .Select(p => (Id: p.Picture.Id.ToString(), ImagePath: GetBestImagePath(p.Picture)))
+            .Where(t => !string.IsNullOrEmpty(t.ImagePath))
+            .Select(t => (t.Id, t.ImagePath!))
+            .ToList();
+
+        if (inputList.Count < 2) {
+            MainWindow.ToastManager.CreateToast()
+                .OfType(Avalonia.Controls.Notifications.NotificationType.Warning)
+                .WithTitle("AI Curation")
+                .WithContent("Could not locate image files on disk for the selected pictures.")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        IsAiCurating = true;
+        WeakReferenceMessenger.Default.Send(new AiCurationStatusMessage(new AiCurationStatus(true, $"AI Curating {targetPictures.Count} selected pictures with Gemini...")));
+        try {
+            var aiService = _aiCurationService ?? _scopeFactory?.CreateScope().ServiceProvider.GetService<IAiPictureCurationService>();
+            if (aiService == null) return;
+
+            var result = await aiService.EvaluateBurstAsync(inputList, CancellationToken.None);
+            if (!result.IsError) {
+                var curation = result.Value;
+
+                var groupResult = new AiCurationGroupResultViewModel {
+                    Header = string.Empty
+                };
+
+                int itemIdx = 1;
+                bool anyWinner = false;
+                foreach (var picVm in targetPictures) {
+                    var picId = picVm.Picture.Id.ToString();
+                    bool isWinner = string.Equals(curation.BestPickId, picId, StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(curation.BestPickId, picVm.Name, StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(curation.BestPickId, Path.GetFileNameWithoutExtension(picVm.Name), StringComparison.OrdinalIgnoreCase)
+                                 || (int.TryParse(curation.BestPickId, out var winIdx) && winIdx == itemIdx);
+
+                    if (isWinner) anyWinner = true;
+
+                    string? fb = null;
+                    if (!curation.Feedback.TryGetValue(picId, out fb)) {
+                        if (!curation.Feedback.TryGetValue(picVm.Name, out fb)) {
+                            if (!curation.Feedback.TryGetValue(Path.GetFileNameWithoutExtension(picVm.Name), out fb)) {
+                                if (!curation.Feedback.TryGetValue(itemIdx.ToString(), out fb)) {
+                                    curation.Feedback.TryGetValue($"Image {itemIdx}", out fb);
+                                }
+                            }
+                        }
+                    }
+
+                    groupResult.Items.Add(new AiCurationItemResultViewModel {
+                        Index = itemIdx++,
+                        PictureVm = picVm,
+                        IsBest = isWinner,
+                        Feedback = !string.IsNullOrWhiteSpace(fb) ? fb : (isWinner ? "Selected as best pick by Gemini Vision." : "Alternative shot.")
+                    });
+                }
+
+                // Guarantee at least one winner
+                if (!anyWinner && groupResult.Items.Count > 0) {
+                    var bestItem = groupResult.Items.OrderByDescending(i => i.PictureVm.Picture.Sharpness).FirstOrDefault() ?? groupResult.Items[0];
+                    bestItem.IsBest = true;
+                    if (string.IsNullOrWhiteSpace(bestItem.Feedback) || bestItem.Feedback == "Alternative shot.") {
+                        bestItem.Feedback = "Selected as best pick.";
+                    }
+                }
+
+                var resultGroups = new List<AiCurationGroupResultViewModel> { groupResult };
+
+                Dispatcher.UIThread.Post(() => {
+                    try {
+                        var dialogVm = new AiCurationResultDialogViewModel(resultGroups, _curationQueue);
+                        MainWindow.DialogManager.CreateDialog()
+                            .WithContent(new AiCurationResultDialog { DataContext = dialogVm })
+                            .TryShow();
+                    } catch (Exception ex) {
+                        Log.Error(ex, "Failed to open AI Curation dialog");
+                    }
+                });
+            } else {
+                var errorDesc = result.FirstError.Description;
+                Log.Warning("AI curation failed: {Error}", errorDesc);
+                Dispatcher.UIThread.Post(() => {
+                    try {
+                        MainWindow.ToastManager.CreateToast()
+                            .OfType(Avalonia.Controls.Notifications.NotificationType.Error)
+                            .WithTitle("AI Curation Error")
+                            .WithContent(errorDesc)
+                            .Dismiss().ByClicking()
+                            .Dismiss().After(TimeSpan.FromSeconds(8))
+                            .Queue();
+                    } catch (Exception ex) {
+                        Log.Warning(ex, "Failed to create toast for AI Curation error");
+                    }
+                });
+            }
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to run AI curation for selected pictures");
+        } finally {
+            IsAiCurating = false;
+            WeakReferenceMessenger.Default.Send(new AiCurationStatusMessage(new AiCurationStatus(false, string.Empty)));
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteGroupSimilar))]
@@ -2366,6 +2537,24 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private static async Task EnsurePictureOrientationAsync(Picture pic, IPictureAnalyzer? pictureAnalyzer, IXmpService xmpService) {
+        var rawFile = pic.SubFolder?.Raw;
+        var imgPath = pic.SubFolder?.Preview ?? pic.SubFolder?.Thumbnail ?? pic.SubFolder?.Raw;
+        var fileToInspect = (!string.IsNullOrEmpty(rawFile) && System.IO.File.Exists(rawFile)) ? rawFile : imgPath;
+
+        if (!string.IsNullOrEmpty(fileToInspect) && System.IO.File.Exists(fileToInspect) && pictureAnalyzer != null) {
+            var oriResult = await pictureAnalyzer.ExtractOrientationAsync(fileToInspect);
+            var trueExif = oriResult is { IsError: false } ? oriResult.Value : 1;
+
+            if (pic.RawExifOrientation != trueExif || pic.Orientation == Domain.Enums.Orientation.Unknown) {
+                pic.RawExifOrientation = trueExif;
+                pic.Orientation = (trueExif is 5 or 6 or 7 or 8 || (pic.Width > 0 && pic.Height > 0 && pic.Width < pic.Height))
+                    ? Domain.Enums.Orientation.Portrait
+                    : Domain.Enums.Orientation.Landscape;
+                await xmpService.SaveMetadataAsync(pic);
+                return;
+            }
+        }
+
         if (pic.Orientation != Domain.Enums.Orientation.Unknown) return;
 
         if (pic.Width > 0 && pic.Height > 0) {
@@ -2374,7 +2563,6 @@ public partial class GalleryViewModel : ViewModelBase,
             return;
         }
 
-        var imgPath = pic.SubFolder?.Preview ?? pic.SubFolder?.Thumbnail ?? pic.SubFolder?.Raw;
         if (!string.IsNullOrEmpty(imgPath) && System.IO.File.Exists(imgPath) && pictureAnalyzer != null) {
             var dimResult = await pictureAnalyzer.GetDimensionsAsync(imgPath);
             if (!dimResult.IsError && dimResult.Value.Width > 0 && dimResult.Value.Height > 0) {

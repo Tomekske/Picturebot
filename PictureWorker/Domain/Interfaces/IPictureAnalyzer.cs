@@ -1,4 +1,4 @@
-﻿using ErrorOr;
+using ErrorOr;
 
 namespace PictureWorker.Domain.Interfaces;
 
@@ -7,4 +7,5 @@ public interface IPictureAnalyzer {
     Task<ErrorOr<int>> CalculateSharpnessAsync(string filePath);
     Task<ErrorOr<DateTime>> ExtractTimestamp(string filePath);
     Task<ErrorOr<(int Width, int Height)>> GetDimensionsAsync(string filePath);
+    Task<ErrorOr<int>> ExtractOrientationAsync(string filePath);
 }
