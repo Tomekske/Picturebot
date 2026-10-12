@@ -17,5 +17,7 @@ public class PictureModel : NodeModel {
 
     public Orientation Orientation { get; set; } = Orientation.Unknown;
 
+    public int RawExifOrientation { get; set; } = 0;
+
     public SubFolderModel? SubFolder { get; set; }
 }

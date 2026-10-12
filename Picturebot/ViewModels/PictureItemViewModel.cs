@@ -76,6 +76,8 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public Picture Picture { get; }
 
+    public int RawExifOrientation => Picture.RawExifOrientation;
+
     public bool IsVisible { get; set; }
 
     public string Name => Picture.Name;
@@ -161,7 +163,7 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
         try {
             var priority = IsVisible ? 0 : 1;
-            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(_resolvedThumbnailPath, targetHeight, priority, token);
+            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(_resolvedThumbnailPath, targetHeight, priority, Picture.RawExifOrientation, token);
             
             if (!token.IsCancellationRequested && bitmap != null) {
                 Thumbnail = bitmap;

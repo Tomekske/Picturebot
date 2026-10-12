@@ -194,6 +194,30 @@ public class PictureAnalyzerService : IPictureAnalyzer {
         }
     }
 
+    public async Task<ErrorOr<int>> ExtractOrientationAsync(string filePath) {
+        if (!_fileSystem.File.Exists(filePath)) {
+            return Error.NotFound(
+                "Picture.NotFound",
+                $"The file was not found at path: {filePath}");
+        }
+
+        try {
+            return await Task.Run<ErrorOr<int>>(() => {
+                using var stream = _fileSystem.File.OpenRead(filePath);
+                var directories = ImageMetadataReader.ReadMetadata(stream);
+                var ifd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
+
+                if (ifd0Directory != null && ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation, out var orientation)) {
+                    return orientation;
+                }
+
+                return 1;
+            });
+        } catch (Exception) {
+            return 1;
+        }
+    }
+
     // Helper method to keep the logic clean
     private bool TryParseMetadataDate(string? dateString, out DateTime result) {
         return DateTime.TryParseExact(

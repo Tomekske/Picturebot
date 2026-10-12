@@ -2537,6 +2537,24 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private static async Task EnsurePictureOrientationAsync(Picture pic, IPictureAnalyzer? pictureAnalyzer, IXmpService xmpService) {
+        var rawFile = pic.SubFolder?.Raw;
+        var imgPath = pic.SubFolder?.Preview ?? pic.SubFolder?.Thumbnail ?? pic.SubFolder?.Raw;
+        var fileToInspect = (!string.IsNullOrEmpty(rawFile) && System.IO.File.Exists(rawFile)) ? rawFile : imgPath;
+
+        if (!string.IsNullOrEmpty(fileToInspect) && System.IO.File.Exists(fileToInspect) && pictureAnalyzer != null) {
+            var oriResult = await pictureAnalyzer.ExtractOrientationAsync(fileToInspect);
+            var trueExif = oriResult is { IsError: false } ? oriResult.Value : 1;
+
+            if (pic.RawExifOrientation != trueExif || pic.Orientation == Domain.Enums.Orientation.Unknown) {
+                pic.RawExifOrientation = trueExif;
+                pic.Orientation = (trueExif is 5 or 6 or 7 or 8 || (pic.Width > 0 && pic.Height > 0 && pic.Width < pic.Height))
+                    ? Domain.Enums.Orientation.Portrait
+                    : Domain.Enums.Orientation.Landscape;
+                await xmpService.SaveMetadataAsync(pic);
+                return;
+            }
+        }
+
         if (pic.Orientation != Domain.Enums.Orientation.Unknown) return;
 
         if (pic.Width > 0 && pic.Height > 0) {
@@ -2545,7 +2563,6 @@ public partial class GalleryViewModel : ViewModelBase,
             return;
         }
 
-        var imgPath = pic.SubFolder?.Preview ?? pic.SubFolder?.Thumbnail ?? pic.SubFolder?.Raw;
         if (!string.IsNullOrEmpty(imgPath) && System.IO.File.Exists(imgPath) && pictureAnalyzer != null) {
             var dimResult = await pictureAnalyzer.GetDimensionsAsync(imgPath);
             if (!dimResult.IsError && dimResult.Value.Width > 0 && dimResult.Value.Height > 0) {

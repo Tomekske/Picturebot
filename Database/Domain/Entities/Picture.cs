@@ -70,6 +70,12 @@ public class Picture : Node {
     public Orientation Orientation { get; set; } = Orientation.Unknown;
 
     /// <summary>
+    ///     The raw EXIF orientation code (1, 3, 6, 8, etc.) from the camera, loaded from and saved to XMP.
+    /// </summary>
+    [NotMapped]
+    public int RawExifOrientation { get; set; } = 0;
+
+    /// <summary>
     ///     The extension of the raw picture file (e.g., .ARW, .CR2).
     /// </summary>
     public string? Extension { get; set; }

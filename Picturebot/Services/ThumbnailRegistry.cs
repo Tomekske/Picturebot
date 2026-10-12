@@ -22,32 +22,38 @@ public class ThumbnailRequest {
     public CancellationToken CancellationToken { get; }
     public TaskCompletionSource<Bitmap?> Tcs { get; }
     public int Priority { get; }
+    public int RawExifOrientation { get; }
 
     private string? _cacheKey;
-    public string CacheKey => _cacheKey ??= CalculateCacheKey(FilePath);
+    public string CacheKey => _cacheKey ??= CalculateCacheKey(FilePath, RawExifOrientation);
 
-    public ThumbnailRequest(string filePath, int targetHeight, int priority, CancellationToken cancellationToken) {
+    public ThumbnailRequest(string filePath, int targetHeight, int priority, int rawExifOrientation, CancellationToken cancellationToken) {
         FilePath = filePath;
         TargetHeight = targetHeight;
         Priority = priority;
+        RawExifOrientation = rawExifOrientation;
         CancellationToken = cancellationToken;
         Tcs = new TaskCompletionSource<Bitmap?>(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
-    private static string CalculateCacheKey(string filePath) {
+    public ThumbnailRequest(string filePath, int targetHeight, int priority, CancellationToken cancellationToken)
+        : this(filePath, targetHeight, priority, 0, cancellationToken) {
+    }
+
+    private static string CalculateCacheKey(string filePath, int rawExifOrientation) {
         try {
             var fileInfo = new FileInfo(filePath);
             if (!fileInfo.Exists) {
                 return string.Empty;
             }
             var lastWrite = fileInfo.LastWriteTimeUtc.Ticks;
-            var input = $"{filePath}_{lastWrite}";
+            var input = $"{filePath}_{lastWrite}_{rawExifOrientation}_v2";
             using var sha256 = SHA256.Create();
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(bytes).ToLower();
         } catch {
             using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(filePath));
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes($"{filePath}_{rawExifOrientation}_v2"));
             return Convert.ToHexString(bytes).ToLower();
         }
     }
@@ -167,12 +173,16 @@ public class ThumbnailRegistry : IDisposable {
         return _lruCache.TryGet(filePath, out bitmap);
     }
 
-    public async Task<Bitmap?> QueueRequestAsync(string filePath, int targetHeight, int priority, CancellationToken cancellationToken) {
+    public Task<Bitmap?> QueueRequestAsync(string filePath, int targetHeight, int priority, CancellationToken cancellationToken) {
+        return QueueRequestAsync(filePath, targetHeight, priority, 0, cancellationToken);
+    }
+
+    public async Task<Bitmap?> QueueRequestAsync(string filePath, int targetHeight, int priority, int rawExifOrientation, CancellationToken cancellationToken) {
         if (_lruCache.TryGet(filePath, out var cached)) {
             return cached;
         }
 
-        var request = new ThumbnailRequest(filePath, targetHeight, priority, cancellationToken);
+        var request = new ThumbnailRequest(filePath, targetHeight, priority, rawExifOrientation, cancellationToken);
 
         lock (_queueLock) {
             _queue.Enqueue(request, request.Priority);
@@ -275,11 +285,30 @@ public class ThumbnailRegistry : IDisposable {
 
             if (rawBytes != null && rawBytes.Length > 0) {
                 try {
-                    await File.WriteAllBytesAsync(cachePath, rawBytes, request.CancellationToken).ConfigureAwait(false);
-                    request.CancellationToken.ThrowIfCancellationRequested();
+                    using var img = Image.Load(rawBytes);
+                    var hasExifOrientation = img.Metadata.ExifProfile != null &&
+                        img.Metadata.ExifProfile.TryGetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation, out var orientationValue) &&
+                        orientationValue.Value > 1;
 
-                    using var ms = new MemoryStream(rawBytes);
-                    var bmp = Bitmap.DecodeToHeight(ms, request.TargetHeight);
+                    if (hasExifOrientation) {
+                        img.Mutate(x => x.AutoOrient());
+                    } else if (request.RawExifOrientation > 1) {
+                        var isPortraitExif = request.RawExifOrientation is 5 or 6 or 7 or 8;
+                        var isAlreadyPortrait = img.Height > img.Width;
+                        if ((isPortraitExif && !isAlreadyPortrait) || (!isPortraitExif && isAlreadyPortrait)) {
+                            img.Mutate(x => Picturebot.Utilities.ImageHelper.ApplyOrientation(x, request.RawExifOrientation));
+                        }
+                    }
+
+                    img.Mutate(x => x.Resize(new ResizeOptions {
+                        Size = new Size(0, request.TargetHeight),
+                        Mode = ResizeMode.Max
+                    }));
+
+                    await Task.Run(() => img.SaveAsJpeg(cachePath, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = 85 }), request.CancellationToken).ConfigureAwait(false);
+
+                    using var fs = new FileStream(cachePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+                    var bmp = Bitmap.DecodeToHeight(fs, request.TargetHeight);
                     _lruCache.Add(request.FilePath, bmp);
                     return bmp;
                 } catch (Exception ex) {
@@ -293,7 +322,19 @@ public class ThumbnailRegistry : IDisposable {
         try {
             using var image = await Task.Run(() => {
                 var img = Image.Load(request.FilePath);
-                img.Mutate(x => x.AutoOrient());
+                var hasExifOrientation = img.Metadata.ExifProfile != null &&
+                    img.Metadata.ExifProfile.TryGetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation, out var orientationValue) &&
+                    orientationValue.Value > 1;
+
+                if (hasExifOrientation) {
+                    img.Mutate(x => x.AutoOrient());
+                } else if (request.RawExifOrientation > 1) {
+                    var isPortraitExif = request.RawExifOrientation is 5 or 6 or 7 or 8;
+                    var isAlreadyPortrait = img.Height > img.Width;
+                    if ((isPortraitExif && !isAlreadyPortrait) || (!isPortraitExif && isAlreadyPortrait)) {
+                        img.Mutate(x => Picturebot.Utilities.ImageHelper.ApplyOrientation(x, request.RawExifOrientation));
+                    }
+                }
                 return img;
             }, request.CancellationToken).ConfigureAwait(false);
 

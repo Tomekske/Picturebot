@@ -210,6 +210,8 @@ public class ImportPicturesCommandTests {
             .ReturnsAsync(capturedDate);
         _mockPictureAnalyzer.Setup(a => a.GetDimensionsAsync(portraitPhotoPath))
             .ReturnsAsync((1080, 1920)); // Height > Width -> Portrait
+        _mockPictureAnalyzer.Setup(a => a.ExtractOrientationAsync(portraitPhotoPath))
+            .ReturnsAsync(8);
 
         // Act
         var resultAlbum = await _command.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
@@ -217,10 +219,12 @@ public class ImportPicturesCommandTests {
         // Assert
         _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p =>
             p.Orientation == Orientation.Portrait &&
+            p.RawExifOrientation == 8 &&
             p.Width == 1080 &&
             p.Height == 1920)), Times.Once);
 
         _mockXmpService.Verify(x => x.SaveMetadataAsync(It.Is<Picture>(p =>
-            p.Orientation == Orientation.Portrait)), Times.Once);
+            p.Orientation == Orientation.Portrait &&
+            p.RawExifOrientation == 8)), Times.Once);
     }
 }
