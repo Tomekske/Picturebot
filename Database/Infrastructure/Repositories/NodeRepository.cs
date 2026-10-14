@@ -10,6 +10,13 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
     protected readonly ApplicationDbContext _context = context;
 
     public async Task CreateAsync(Node node) {
+        var strayMetrics = _context.ChangeTracker.Entries<Metrics>()
+            .Where(e => e.State == EntityState.Added && (node is not Picture p || e.Entity != p.Metrics))
+            .ToList();
+        foreach (var entry in strayMetrics) {
+            entry.State = EntityState.Detached;
+        }
+
         _context.Nodes.Add(node);
         await _context.SaveChangesAsync();
     }
@@ -56,13 +63,13 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
 
     public async Task<List<Node>> FindChildrenAsync(int parentId) {
         return await _context.Nodes
+            .AsNoTracking()
             .Include(n => n.Parent)
             .Include(n => (n as Picture)!.Metrics)
             .Where(n => n.ParentId == parentId)
             .OrderBy(n => n.Name)
             .ToListAsync();
     }
-
 
     public async Task UpdateAsync(Node node) {
         var trackedEntity = _context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
@@ -79,6 +86,14 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
         }
 
         try {
+            // Clean up any stray Added metrics before starting to avoid SQLite Error 19
+            var strayMetricsBefore = _context.ChangeTracker.Entries<Metrics>()
+                .Where(e => e.State == EntityState.Added)
+                .ToList();
+            foreach (var entry in strayMetricsBefore) {
+                entry.State = EntityState.Detached;
+            }
+
             if (trackedEntity != null) {
                 // Update the properties of the tracked entity without replacing it
                 _context.Entry(trackedEntity).CurrentValues.SetValues(node);
@@ -89,7 +104,8 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
             }
 
             if (metrics != null && node.Id > 0) {
-                var existingMetrics = await _context.Metrics.FirstOrDefaultAsync(m => m.PictureId == node.Id);
+                var existingMetrics = _context.Metrics.Local.FirstOrDefault(m => m.PictureId == node.Id)
+                    ?? await _context.Metrics.FirstOrDefaultAsync(m => m.PictureId == node.Id);
                 if (existingMetrics != null) {
                     _context.Entry(existingMetrics).CurrentValues.SetValues(metrics);
                 } else {
@@ -97,58 +113,105 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
                         PictureId = node.Id,
                         Sharpness = metrics.Sharpness,
                         PHash = metrics.PHash,
-                        Embedding = metrics.Embedding
+                        Embedding = metrics.Embedding,
+                        AiFeedback = metrics.AiFeedback
                     });
                 }
             }
             
             await _context.SaveChangesAsync();
         } finally {
+            // Clean up any stray Added metrics after save
+            var strayMetricsAfter = _context.ChangeTracker.Entries<Metrics>()
+                .Where(e => e.State == EntityState.Added)
+                .ToList();
+            foreach (var entry in strayMetricsAfter) {
+                entry.State = EntityState.Detached;
+            }
+
             node.Parent = parent;
             node.Children = children;
             if (picture != null) {
                 picture.Metrics = metrics;
+            }
+
+            if (trackedEntity == null) {
+                _context.Entry(node).State = EntityState.Detached;
+            }
+
+            if (metrics != null) {
+                var mEntry = _context.Entry(metrics);
+                if (mEntry != null && mEntry.State == EntityState.Added) {
+                    mEntry.State = EntityState.Detached;
+                }
             }
         }
     }
 
     public async Task DeleteAsync(Node node) {
-        var trackedEntity = _context.Nodes.Local.FirstOrDefault(n => n.Id == node.Id);
+        if (node.Id <= 0) return;
 
         if (node is Album) {
-            var albumChildren = await _context.Nodes
-                .Where(n => n.ParentId == node.Id)
-                .ToListAsync();
-            _context.Nodes.RemoveRange(albumChildren);
+            // 1. Delete all metrics of children pictures
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM metrics WHERE PictureId IN (SELECT Id FROM nodes WHERE ParentId = {node.Id});");
+
+            // 2. Delete from pictures table
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM pictures WHERE Id IN (SELECT Id FROM nodes WHERE ParentId = {node.Id});");
+
+            // 3. Delete from nodes table (for children pictures)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM nodes WHERE ParentId = {node.Id};");
+
+            // 4. Delete from albums table
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM albums WHERE Id = {node.Id};");
+
+            // 5. Delete from nodes table (for the album itself)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM nodes WHERE Id = {node.Id};");
+        } else if (node is Picture) {
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM metrics WHERE PictureId = {node.Id};");
+
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM pictures WHERE Id = {node.Id};");
+
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM nodes WHERE Id = {node.Id};");
+        } else if (node is Folder) {
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM folders WHERE Id = {node.Id};");
+
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM nodes WHERE Id = {node.Id};");
+        } else {
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM nodes WHERE Id = {node.Id};");
         }
 
-        var parent = node.Parent;
-        var children = node.Children;
-        var picture = node as Picture;
-        var metrics = picture?.Metrics;
-
-        node.Parent = null;
-        node.Children = null;
-        if (picture != null) {
-            picture.Metrics = null;
+        // Clean up any locally tracked entities in EF Core change tracker
+        var localNodes = _context.Nodes.Local
+            .Where(n => n.Id == node.Id || (node is Album && n.ParentId == node.Id))
+            .ToList();
+        foreach (var local in localNodes) {
+            _context.Entry(local).State = EntityState.Detached;
         }
 
-        try {
-            if (trackedEntity != null) {
-                _context.Nodes.Remove(trackedEntity);
-            } else {
-                // Detach navigation properties to prevent EF from trying to track the entire graph,
-                // which causes identity conflicts if the parent or children are already tracked.
-                _context.Nodes.Remove(node);
-            }
+        var localMetrics = _context.Metrics.Local
+            .Where(m => m.PictureId == node.Id || localNodes.Any(ln => ln.Id == m.PictureId))
+            .ToList();
+        foreach (var local in localMetrics) {
+            _context.Entry(local).State = EntityState.Detached;
+        }
 
-            await _context.SaveChangesAsync();
-        } finally {
-            node.Parent = parent;
-            node.Children = children;
-            if (picture != null) {
-                picture.Metrics = metrics;
-            }
+        // Clean up any stray Added metrics that might have been queued in the change tracker
+        var strayMetrics = _context.ChangeTracker.Entries<Metrics>()
+            .Where(e => e.State == EntityState.Added)
+            .ToList();
+        foreach (var entry in strayMetrics) {
+            entry.State = EntityState.Detached;
         }
     }
 }

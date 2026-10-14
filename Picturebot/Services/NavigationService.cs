@@ -6,7 +6,7 @@ using Picturebot.Messages;
 
 namespace Picturebot.Services;
 
-public class NavigationService : INavigationService, IRecipient<NodeSelectedMessage> {
+public class NavigationService : INavigationService, IRecipient<NodeSelectedMessage>, IRecipient<NodeDeletedMessage> {
     private readonly List<Node?> _history = new() { null };
     private int _historyIndex = 0;
     private Node? _currentNode;
@@ -14,6 +14,7 @@ public class NavigationService : INavigationService, IRecipient<NodeSelectedMess
 
     public NavigationService() {
         WeakReferenceMessenger.Default.Register<NodeSelectedMessage>(this);
+        WeakReferenceMessenger.Default.Register<NodeDeletedMessage>(this);
     }
 
     public Node? CurrentNode => _currentNode;
@@ -35,6 +36,24 @@ public class NavigationService : INavigationService, IRecipient<NodeSelectedMess
         _history.Add(node);
         _historyIndex = _history.Count - 1;
         _currentNode = node;
+    }
+
+    public void Receive(NodeDeletedMessage message) {
+        var deletedNode = message.Value;
+        if (deletedNode == null) return;
+
+        for (int i = _history.Count - 1; i >= 0; i--) {
+            if (_history[i]?.Id == deletedNode.Id) {
+                _history.RemoveAt(i);
+                if (_historyIndex >= i && _historyIndex > 0) {
+                    _historyIndex--;
+                }
+            }
+        }
+
+        if (_currentNode?.Id == deletedNode.Id) {
+            NavigateTo(deletedNode.Parent);
+        }
     }
 
     public void NavigateTo(Node? node, bool addToHistory = true) {

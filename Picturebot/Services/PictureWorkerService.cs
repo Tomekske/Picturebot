@@ -115,6 +115,7 @@ public class PictureWorkerService(
         // 1. Initial State: Load all metadata once before entering the parallel loop
         var allPicturesInAlbum = await context.Pictures
             .Include(p => p.Parent)
+            .Include(p => p.Metrics)
             .Where(p => p.ParentId == albumId)
             .ToListAsync(ct);
 
@@ -303,7 +304,9 @@ public class PictureWorkerService(
         }
 
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var dbPic = await context.Pictures.FindAsync(new object[] { picture.Id }, ct);
+        var dbPic = await context.Pictures
+            .Include(p => p.Metrics)
+            .FirstOrDefaultAsync(p => p.Id == picture.Id, ct);
         if (dbPic != null) {
             dbPic.Width = picture.Width;
             dbPic.Height = picture.Height;
@@ -312,6 +315,22 @@ public class PictureWorkerService(
             dbPic.KeywordsJson = picture.KeywordsJson;
             dbPic.ProcessingState = ProcessingState.Completed;
             dbPic.LastErrorMessage = null;
+            if (picture.Metrics != null) {
+                if (dbPic.Metrics != null) {
+                    dbPic.Metrics.Sharpness = picture.Metrics.Sharpness ?? dbPic.Metrics.Sharpness;
+                    dbPic.Metrics.PHash = picture.Metrics.PHash ?? dbPic.Metrics.PHash;
+                    dbPic.Metrics.Embedding = picture.Metrics.Embedding ?? dbPic.Metrics.Embedding;
+                    dbPic.Metrics.AiFeedback = picture.Metrics.AiFeedback ?? dbPic.Metrics.AiFeedback;
+                } else {
+                    dbPic.Metrics = new Metrics {
+                        PictureId = dbPic.Id,
+                        Sharpness = picture.Metrics.Sharpness,
+                        PHash = picture.Metrics.PHash,
+                        Embedding = picture.Metrics.Embedding,
+                        AiFeedback = picture.Metrics.AiFeedback
+                    };
+                }
+            }
             await context.SaveChangesAsync(ct);
         }
 
