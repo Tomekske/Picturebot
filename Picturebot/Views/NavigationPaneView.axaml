@@ -115,6 +115,27 @@
                           HorizontalAlignment="Stretch"
                           Height="32"
                           VerticalAlignment="Center">
+                        <Grid.ContextMenu>
+                            <ContextMenu Background="#1E1E22" BorderBrush="#333337" BorderThickness="1">
+                                <MenuItem Header="Edit"
+                                          Command="{Binding $parent[TreeView].((vm:NavigationPaneViewModel)DataContext).EditNodeCommand}"
+                                          CommandParameter="{Binding}">
+                                    <MenuItem.Icon>
+                                        <icons:MaterialIcon Kind="Pencil" Width="16" Height="16" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="Delete"
+                                          Command="{Binding $parent[TreeView].((vm:NavigationPaneViewModel)DataContext).DeleteNodeCommand}"
+                                          CommandParameter="{Binding}"
+                                          Foreground="#EF4444">
+                                    <MenuItem.Icon>
+                                        <icons:MaterialIcon Kind="Delete" Width="16" Height="16" Foreground="#EF4444" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Grid.ContextMenu>
+
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Panel Width="18" Height="18" VerticalAlignment="Center">
                                 <icons:MaterialIcon Kind="Folder"
@@ -134,13 +155,17 @@
                                     IsVisible="{Binding IsSelected}">
                             <Button Classes="Basic"
                                     Padding="4"
-                                    ToolTip.Tip="Edit">
+                                    ToolTip.Tip="Edit"
+                                    Command="{Binding $parent[TreeView].((vm:NavigationPaneViewModel)DataContext).EditNodeCommand}"
+                                    CommandParameter="{Binding}">
                                 <icons:MaterialIcon Kind="Pencil" Width="14" Height="14"
                                                     Foreground="{DynamicResource SukiText}" />
                             </Button>
                             <Button Classes="Basic"
                                     Padding="4"
-                                    ToolTip.Tip="Delete">
+                                    ToolTip.Tip="Delete"
+                                    Command="{Binding $parent[TreeView].((vm:NavigationPaneViewModel)DataContext).DeleteNodeCommand}"
+                                    CommandParameter="{Binding}">
                                 <icons:MaterialIcon Kind="Delete" Width="14" Height="14"
                                                     Foreground="{DynamicResource SukiText}" />
                             </Button>

@@ -4,6 +4,7 @@ using Database.Domain.Interfaces;
 using Domain.Enums;
 using Domain.Interfaces;
 using Graph.Domain.Interfaces;
+using Serilog;
 
 namespace Graph.Infrastructure.Services;
 
@@ -63,11 +64,55 @@ public class AlbumService(
                 fileSystem.Directory.CreateDirectory(deletedRoot);
             }
 
-            // Move the directory to the retention path
-            fileSystem.Directory.Move(sourcePath, destinationPath);
+            MoveDirectorySafely(sourcePath, destinationPath);
         }
 
         await nodeService.DeleteNodeAsync(album);
+    }
+
+    private void MoveDirectorySafely(string sourceDir, string destinationDir) {
+        // Attempt fast move with retries
+        for (int i = 0; i < 5; i++) {
+            try {
+                fileSystem.Directory.Move(sourceDir, destinationDir);
+                return;
+            } catch (IOException) when (i < 4) {
+                Thread.Sleep(100);
+            } catch (UnauthorizedAccessException) when (i < 4) {
+                Thread.Sleep(100);
+            }
+        }
+
+        // Fallback: If atomic Move fails due to OS handle locks, copy items across and remove source
+        CopyDirectoryRecursively(sourceDir, destinationDir);
+        for (int i = 0; i < 5; i++) {
+            try {
+                fileSystem.Directory.Delete(sourceDir, true);
+                return;
+            } catch (Exception) when (i < 4) {
+                Thread.Sleep(100);
+            } catch (Exception) {
+                // If the source directory cannot be immediately deleted due to a temporary lock,
+                // log a warning rather than failing the deletion operation.
+                Log.Warning("Could not immediately remove directory {SourceDir} after moving contents to {DestinationDir}", sourceDir, destinationDir);
+            }
+        }
+    }
+
+    private void CopyDirectoryRecursively(string sourceDir, string targetDir) {
+        if (!fileSystem.Directory.Exists(targetDir)) {
+            fileSystem.Directory.CreateDirectory(targetDir);
+        }
+
+        foreach (var file in fileSystem.Directory.GetFiles(sourceDir)) {
+            var targetFilePath = fileSystem.Path.Combine(targetDir, fileSystem.Path.GetFileName(file));
+            fileSystem.File.Copy(file, targetFilePath, true);
+        }
+
+        foreach (var subDir in fileSystem.Directory.GetDirectories(sourceDir)) {
+            var targetSubDir = fileSystem.Path.Combine(targetDir, fileSystem.Path.GetFileName(subDir));
+            CopyDirectoryRecursively(subDir, targetSubDir);
+        }
     }
 
     public async Task DeletePictureAsync(Picture picture) {

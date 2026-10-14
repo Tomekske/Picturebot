@@ -209,6 +209,116 @@ public class NodeRepositoryTests : IDisposable {
         });
     }
 
+    [Test]
+    public async Task DeleteAsync_WhenAlbumWithPicturesAndMetricsIsDeleted_ShouldRemoveAlbumAndAllPicturesAndMetrics() {
+        // Arrange
+        var album = new Album {
+            Name = "Summer Vacation",
+            Type = NodeType.Album,
+            Uuid = Guid.NewGuid().ToString()
+        };
+        await _repository.CreateAsync(album);
+
+        var pic1 = new Picture {
+            Name = "pic1.jpg",
+            Type = NodeType.Picture,
+            ParentId = album.Id,
+            CapturedAt = DateTime.UtcNow
+        };
+        await _repository.CreateAsync(pic1);
+
+        var metrics1 = new Metrics {
+            PictureId = pic1.Id,
+            Sharpness = 80,
+            PHash = 111111UL
+        };
+        _context.Metrics.Add(metrics1);
+
+        var pic2 = new Picture {
+            Name = "pic2.jpg",
+            Type = NodeType.Picture,
+            ParentId = album.Id,
+            CapturedAt = DateTime.UtcNow
+        };
+        await _repository.CreateAsync(pic2);
+
+        var metrics2 = new Metrics {
+            PictureId = pic2.Id,
+            Sharpness = 90,
+            PHash = 222222UL
+        };
+        _context.Metrics.Add(metrics2);
+        await _context.SaveChangesAsync();
+
+        // Also simulate stray Added metrics in change tracker (the exact bug encountered by user)
+        _context.ChangeTracker.Clear();
+        var stray = new Metrics {
+            PictureId = pic1.Id,
+            Sharpness = 99
+        };
+        _context.Metrics.Add(stray);
+
+        // Act & Assert
+        Assert.DoesNotThrowAsync(async () => await _repository.DeleteAsync(album));
+
+        var deletedAlbum = await _context.Albums.FirstOrDefaultAsync(a => a.Id == album.Id);
+        var deletedAlbumNode = await _context.Nodes.FirstOrDefaultAsync(n => n.Id == album.Id);
+        var deletedPics = await _context.Pictures.Where(p => p.ParentId == album.Id).ToListAsync();
+        var deletedM1 = await _context.Metrics.FirstOrDefaultAsync(m => m.PictureId == pic1.Id);
+        var deletedM2 = await _context.Metrics.FirstOrDefaultAsync(m => m.PictureId == pic2.Id);
+
+        Assert.Multiple(() => {
+            Assert.That(deletedAlbum, Is.Null);
+            Assert.That(deletedAlbumNode, Is.Null);
+            Assert.That(deletedPics, Is.Empty);
+            Assert.That(deletedM1, Is.Null);
+            Assert.That(deletedM2, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task UpdateAsync_WithStrayAddedMetrics_DoesNotThrowUniqueConstraintViolation() {
+        // Arrange: Create a folder and a picture with existing metrics
+        var folder = new Folder {
+            Name = "Original Folder",
+            Type = NodeType.Folder
+        };
+        await _repository.CreateAsync(folder);
+
+        var pic = new Picture {
+            Name = "pic.jpg",
+            Type = NodeType.Picture,
+            ParentId = folder.Id,
+            CapturedAt = DateTime.UtcNow
+        };
+        await _repository.CreateAsync(pic);
+
+        var metrics = new Metrics {
+            PictureId = pic.Id,
+            Sharpness = 50,
+            PHash = 12345UL
+        };
+        _context.Metrics.Add(metrics);
+        await _context.SaveChangesAsync();
+
+        // Simulate stray Added metrics in change tracker for the same PictureId (the exact bug encountered when editing folders)
+        _context.ChangeTracker.Clear();
+        var stray = new Metrics {
+            PictureId = pic.Id,
+            Sharpness = 99
+        };
+        _context.Metrics.Add(stray);
+
+        // Act: Rename the folder and update
+        folder.Name = "Renamed Folder";
+        Assert.DoesNotThrowAsync(async () => await _repository.UpdateAsync(folder));
+
+        // Assert: Folder was updated successfully
+        var updated = await _context.Folders.FirstOrDefaultAsync(f => f.Id == folder.Id);
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Name, Is.EqualTo("Renamed Folder"));
+    }
+
     public void Dispose() {
     }
 }

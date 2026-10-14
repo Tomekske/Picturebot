@@ -8,12 +8,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Database.Domain.Entities;
+using Domain.Enums;
 using Domain.Interfaces;
 using Domain.Models;
 using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Commands;
 using Picturebot.Messages;
+using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Dialogs;
@@ -31,6 +33,7 @@ public partial class NavigationPaneViewModel : ViewModelBase,
     private readonly IImportPicturesCommand _importCommand;
     private readonly INodeService _nodeService;
     private readonly ISettingsService _settingsService;
+    private readonly INavigationService _navigationService;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
 
     [ObservableProperty]
@@ -53,7 +56,8 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         IImportAlbumsService importAlbumsService,
         ISettingsService settingsService,
         IImportPicturesCommand importCommand,
-        Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory) {
+        Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
+        INavigationService navigationService) {
         _nodeService = nodeService;
         _folderService = folderService;
         _albumService = albumService;
@@ -61,6 +65,7 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         _settingsService = settingsService;
         _importCommand = importCommand;
         _scopeFactory = scopeFactory;
+        _navigationService = navigationService;
         _ = LoadFoldersAsync();
         RefreshKeywordSuggestions();
 
@@ -174,6 +179,86 @@ public partial class NavigationPaneViewModel : ViewModelBase,
 
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new BatchImportAlbumsDialog { DataContext = vm })
+            .TryShow();
+    }
+
+    [RelayCommand]
+    public async Task EditNodeAsync(NavigationNodeViewModel? nodeVm) {
+        if (nodeVm == null) return;
+        var nodeToEdit = nodeVm.Node;
+        if (nodeToEdit == null) return;
+
+        var allNodes = await _nodeService.LoadHydratedTreeAsync();
+        var vm = new EditNodeDialogViewModel(_nodeService, _folderService, nodeToEdit, allNodes, result => {
+            if (result != null) {
+                // Broadcast update to refresh the tree and gallery
+                WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
+            }
+        });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new EditNodeDialog { DataContext = vm })
+            .TryShow();
+    }
+
+    [RelayCommand]
+    public void DeleteNode(NavigationNodeViewModel? nodeVm) {
+        if (nodeVm == null) return;
+        var nodeToDelete = nodeVm.Node;
+        if (nodeToDelete == null) return;
+
+        var title = $"Delete {nodeToDelete.Type}";
+        var message = nodeToDelete.Type == NodeType.Folder
+            ? $"Are you sure you want to delete the folder '{nodeToDelete.Name}'? Only empty folders can be deleted."
+            : $"Are you sure you want to delete the album '{nodeToDelete.Name}'? This will move the physical directory to the 'deleted' folder and remove all picture records from the database.";
+
+        var vm = new ConfirmDeleteDialogViewModel(title, message, async result => {
+            if (result) {
+                try {
+                    var parent = nodeToDelete.Parent;
+
+                    if (nodeToDelete is Folder folder) {
+                        await _folderService.DeleteAsync(folder);
+                    } else if (nodeToDelete is Album album) {
+                        await _albumService.DeleteAsync(album);
+                    }
+
+                    if (parent?.Children != null) {
+                        var inMemoryChild = parent.Children.FirstOrDefault(c => c.Id == nodeToDelete.Id);
+                        if (inMemoryChild != null) {
+                            parent.Children.Remove(inMemoryChild);
+                        }
+                    }
+
+                    Log.Information("{Type} deleted: {Name}", nodeToDelete.Type, nodeToDelete.Name);
+
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"{nodeToDelete.Type} '{nodeToDelete.Name}' has been deleted.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+
+                    // If the node being deleted is the currently active node, navigate away AFTER deletion
+                    if (_navigationService.CurrentNode?.Id == nodeToDelete.Id) {
+                        _navigationService.NavigateTo(parent);
+                    }
+
+                    // Broadcast deletion to refresh the tree and gallery
+                    WeakReferenceMessenger.Default.Send(new NodeDeletedMessage(nodeToDelete));
+                } catch (Exception ex) {
+                    Log.Error(ex, "Failed to delete {Type}", nodeToDelete.Type);
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Error")
+                        .WithContent(ex.Message)
+                        .Dismiss().ByClicking()
+                        .Queue();
+                }
+            }
+        });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new ConfirmDeleteDialog { DataContext = vm })
             .TryShow();
     }
 

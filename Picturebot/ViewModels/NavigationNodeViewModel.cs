@@ -31,6 +31,7 @@ public partial class NavigationNodeViewModel : ViewModelBase {
         }
     }
 
+    public Node Node => _node;
     public int Id { get; }
     public string Name { get; }
     public bool IsFolder { get; }

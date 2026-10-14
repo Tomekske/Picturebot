@@ -71,6 +71,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private bool _isAiCurating;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEditOrDeleteCurrentNode))]
     private bool _isGlobalSearchActive;
 
     [ObservableProperty]
@@ -140,6 +141,7 @@ public partial class GalleryViewModel : ViewModelBase,
     private bool _isShowingAlbum;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEditOrDeleteCurrentNode))]
     private bool _isLibraryRoot;
 
     [ObservableProperty]
@@ -248,29 +250,60 @@ public partial class GalleryViewModel : ViewModelBase,
 
     public void Receive(NodeDeletedMessage message) {
         var deletedNode = message.Value;
+        if (deletedNode == null) return;
 
-        // If we are in the parent folder or album, remove the deleted node
-        if (_currentNode?.Id == deletedNode.ParentId || (_currentNode == null && deletedNode.ParentId == null)) {
-            var itemToRemove = Items.FirstOrDefault(i => i.Id == deletedNode.Id);
-            if (itemToRemove != null) {
-                Items.Remove(itemToRemove);
-                if (deletedNode is Folder) {
-                    FolderItems.Remove(itemToRemove);
-                } else if (deletedNode is Album) {
-                    AlbumItems.Remove(itemToRemove);
-                }
+        // Clean up in-memory parent children collection
+        if (deletedNode.Parent?.Children != null) {
+            var inMemoryChild = deletedNode.Parent.Children.FirstOrDefault(c => c.Id == deletedNode.Id);
+            if (inMemoryChild != null) {
+                deletedNode.Parent.Children.Remove(inMemoryChild);
             }
+        }
 
-            var picToRemove = _allPictures.FirstOrDefault(p => p.Picture.Id == deletedNode.Id);
-            if (picToRemove != null) {
-                picToRemove.PropertyChanged -= OnPictureItemPropertyChanged;
-                _allPictures.Remove(picToRemove);
-                SelectedPictures.Remove(picToRemove);
-                if (SelectedPicture?.Picture.Id == deletedNode.Id) {
-                    SelectedPicture = SelectedPictures.FirstOrDefault();
-                }
-                ApplyFilters();
+        // If the current node itself was deleted, navigate up to parent
+        if (_currentNode?.Id == deletedNode.Id) {
+            TearDownXmpWatcher();
+            _navigationService.NavigateTo(deletedNode.Parent);
+            return;
+        }
+
+        // Unconditionally remove the deleted node from UI collections if present
+        var itemToRemove = Items.FirstOrDefault(i => i.Id == deletedNode.Id);
+        if (itemToRemove != null) {
+            Items.Remove(itemToRemove);
+            if (deletedNode is Folder) {
+                FolderItems.Remove(itemToRemove);
+            } else if (deletedNode is Album) {
+                AlbumItems.Remove(itemToRemove);
             }
+        }
+
+        var picToRemove = _allPictures.FirstOrDefault(p => p.Picture.Id == deletedNode.Id);
+        if (picToRemove != null) {
+            picToRemove.PropertyChanged -= OnPictureItemPropertyChanged;
+            _allPictures.Remove(picToRemove);
+            SelectedPictures.Remove(picToRemove);
+            if (SelectedPicture?.Picture.Id == deletedNode.Id) {
+                SelectedPicture = SelectedPictures.FirstOrDefault();
+            }
+            ApplyFilters();
+        }
+
+        // If we are currently in the parent folder, re-fetch children from DB to guarantee sync
+        if (_currentNode is Folder currentFolder && currentFolder.Id == deletedNode.ParentId) {
+            _ = Task.Run(async () => {
+                using var scope = _scopeFactory?.CreateScope();
+                var nodeService = scope?.ServiceProvider.GetService<INodeService>() ?? _nodeService;
+                var children = await nodeService.FindChildrenAsync(currentFolder.Id);
+                currentFolder.Children = children;
+                Dispatcher.UIThread.Post(() => {
+                    if (_currentNode?.Id == currentFolder.Id) {
+                        UpdateGalleryItems(currentFolder, children);
+                    }
+                });
+            });
+        } else if (_currentNode == null && deletedNode.ParentId == null) {
+            _ = LoadInitialItemsAsync();
         }
     }
 
@@ -1318,13 +1351,21 @@ public partial class GalleryViewModel : ViewModelBase,
             if (result) {
                 try {
                     var nodeToDelete = _currentNode;
+                    var parent = nodeToDelete.Parent;
+
+                    TearDownXmpWatcher();
+
                     if (nodeToDelete is Folder folder) {
                         await _folderService.DeleteAsync(folder);
                     } else if (nodeToDelete is Album album) {
-                        if (_currentNode?.Id == album.Id) {
-                            TearDownXmpWatcher();
-                        }
                         await _albumService.DeleteAsync(album);
+                    }
+
+                    if (parent?.Children != null) {
+                        var inMemoryChild = parent.Children.FirstOrDefault(c => c.Id == nodeToDelete.Id);
+                        if (inMemoryChild != null) {
+                            parent.Children.Remove(inMemoryChild);
+                        }
                     }
 
                     Log.Information("{Type} deleted: {Name}", nodeToDelete.Type, nodeToDelete.Name);
@@ -1336,11 +1377,10 @@ public partial class GalleryViewModel : ViewModelBase,
                         .Dismiss().After(TimeSpan.FromSeconds(3))
                         .Queue();
 
-                    // Navigate back to parent
-                    var parent = nodeToDelete.Parent;
+                    // Navigate to parent after DB deletion is complete
                     _navigationService.NavigateTo(parent);
 
-                    // Broadcast deletion to refresh the tree
+                    // Broadcast deletion to refresh the tree and gallery
                     WeakReferenceMessenger.Default.Send(new NodeDeletedMessage(nodeToDelete));
                 } catch (Exception ex) {
                     Log.Error(ex, "Failed to delete {Type}", _currentNode.Type);
@@ -1376,6 +1416,22 @@ public partial class GalleryViewModel : ViewModelBase,
             TearDownXmpWatcher();
         }
 
+        if (node is Folder folder) {
+            UpdateGalleryItems(node, node.Children?.ToList());
+            _ = Task.Run(async () => {
+                using var scope = _scopeFactory?.CreateScope();
+                var nodeService = scope?.ServiceProvider.GetService<INodeService>() ?? _nodeService;
+                var children = await nodeService.FindChildrenAsync(folder.Id);
+                folder.Children = children;
+                Dispatcher.UIThread.Post(() => {
+                    if (_currentNode?.Id == folder.Id) {
+                        UpdateGalleryItems(folder, children);
+                    }
+                });
+            });
+            return;
+        }
+
         UpdateGalleryItems(node, node.Children?.ToList());
     }
 
@@ -1383,6 +1439,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _currentNode = currentNode;
         IsBurstViewEnabled = false;
         IsLibraryRoot = currentNode == null;
+        OnPropertyChanged(nameof(CanEditOrDeleteCurrentNode));
 
         ClearSelection();
 
@@ -1834,6 +1891,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _currentNode = album;
         IsBurstViewEnabled = false;
         IsLibraryRoot = false;
+        OnPropertyChanged(nameof(CanEditOrDeleteCurrentNode));
 
         ClearSelection();
 
