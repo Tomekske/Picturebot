@@ -1,0 +1,127 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Picturebot design tokens (dark only).
+        Views must use these keys via {DynamicResource ...} and never hard-code colors.
+        Brand palette (monochromatic): #1C21C7, #323694, #343661, #262633, #2C2C33.
+    -->
+
+    <!-- ── Surfaces (darkest → lightest) ─────────────────────────────── -->
+    <Color x:Key="Color.Surface.App">#1B1B23</Color>
+    <Color x:Key="Color.Surface.Panel">#262633</Color>
+    <Color x:Key="Color.Surface.Card">#2C2C33</Color>
+    <Color x:Key="Color.Surface.Raised">#35353F</Color>
+    <Color x:Key="Color.Surface.Overlay">#CC0E0E14</Color>
+
+    <SolidColorBrush x:Key="Surface.App" Color="{StaticResource Color.Surface.App}" />
+    <SolidColorBrush x:Key="Surface.Panel" Color="{StaticResource Color.Surface.Panel}" />
+    <SolidColorBrush x:Key="Surface.Card" Color="{StaticResource Color.Surface.Card}" />
+    <SolidColorBrush x:Key="Surface.Raised" Color="{StaticResource Color.Surface.Raised}" />
+    <SolidColorBrush x:Key="Surface.Overlay" Color="{StaticResource Color.Surface.Overlay}" />
+
+    <!-- Neutral backdrop behind photos (no blue tint, so colors are judged correctly) -->
+    <SolidColorBrush x:Key="Photo.Backdrop" Color="#1E1E1E" />
+    <SolidColorBrush x:Key="Photo.Placeholder" Color="#4A4A4A" />
+
+    <!-- ── Accent (brand) ─────────────────────────────────────────────── -->
+    <Color x:Key="Color.Accent.Fill">#1C21C7</Color>
+    <Color x:Key="Color.Accent.Secondary">#323694</Color>
+    <Color x:Key="Color.Accent.Foreground">#8C90FF</Color>
+
+    <!-- Filled controls (primary button, active toggle). Text on top: Text.OnAccent -->
+    <SolidColorBrush x:Key="Accent.Fill" Color="{StaticResource Color.Accent.Fill}" />
+    <SolidColorBrush x:Key="Accent.Fill.Hover" Color="#2B31E0" />
+    <SolidColorBrush x:Key="Accent.Fill.Pressed" Color="#161AA0" />
+    <!-- Selected tree item / row -->
+    <SolidColorBrush x:Key="Accent.Selected" Color="{StaticResource Color.Accent.Secondary}" />
+    <!-- Hover on navigation items, active filter chips -->
+    <SolidColorBrush x:Key="Accent.Subtle" Color="#343661" />
+    <!-- Accent drawn ON dark surfaces: links, icons, focus ring, selection outline -->
+    <SolidColorBrush x:Key="Accent.Foreground" Color="{StaticResource Color.Accent.Foreground}" />
+
+    <!-- ── Interaction states (translucent, work on any surface) ───────── -->
+    <SolidColorBrush x:Key="State.Hover" Color="#15FFFFFF" />
+    <SolidColorBrush x:Key="State.Active" Color="#25FFFFFF" />
+    <SolidColorBrush x:Key="State.ActiveHover" Color="#35FFFFFF" />
+
+    <!-- ── Text ───────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="Text.Primary" Color="#ECECF4" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#A3A3B5" />
+    <SolidColorBrush x:Key="Text.Muted" Color="#6E6E80" />
+    <SolidColorBrush x:Key="Text.OnAccent" Color="#FFFFFF" />
+
+    <!-- ── Borders ────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="Border.Subtle" Color="#3A3A46" />
+    <SolidColorBrush x:Key="Border.Strong" Color="#4A4A58" />
+
+    <!-- ── Status (semantic, not brand) ───────────────────────────────── -->
+    <SolidColorBrush x:Key="Status.Picked" Color="#3FB950" />
+    <SolidColorBrush x:Key="Status.Picked.Subtle" Color="#1C3326" />
+    <SolidColorBrush x:Key="Status.Picked.Border" Color="#2D5A3A" />
+    <SolidColorBrush x:Key="Status.Danger.Subtle" Color="#3A1E22" />
+    <SolidColorBrush x:Key="Status.Rejected" Color="#F85149" />
+    <SolidColorBrush x:Key="Status.Warning" Color="#D29922" />
+    <SolidColorBrush x:Key="Status.Danger" Color="#F85149" />
+    <SolidColorBrush x:Key="Status.Danger.Fill" Color="#B62324" />
+    <SolidColorBrush x:Key="Status.Danger.Fill.Hover" Color="#D12D2E" />
+    <SolidColorBrush x:Key="Status.Rating" Color="#F2C94C" />
+
+    <!-- ── Color labels (fixed, match Lightroom/DxO meaning) ──────────── -->
+    <Color x:Key="Color.Label.Red">#E5484D</Color>
+    <Color x:Key="Color.Label.Orange">#F2994A</Color>
+    <Color x:Key="Color.Label.Yellow">#F2C94C</Color>
+    <Color x:Key="Color.Label.Green">#46A758</Color>
+    <Color x:Key="Color.Label.Blue">#3BA0F6</Color>
+    <Color x:Key="Color.Label.Pink">#E86FA9</Color>
+    <Color x:Key="Color.Label.Purple">#A371F7</Color>
+
+    <SolidColorBrush x:Key="Label.Red" Color="{StaticResource Color.Label.Red}" />
+    <SolidColorBrush x:Key="Label.Orange" Color="{StaticResource Color.Label.Orange}" />
+    <SolidColorBrush x:Key="Label.Yellow" Color="{StaticResource Color.Label.Yellow}" />
+    <SolidColorBrush x:Key="Label.Green" Color="{StaticResource Color.Label.Green}" />
+    <SolidColorBrush x:Key="Label.Blue" Color="{StaticResource Color.Label.Blue}" />
+    <SolidColorBrush x:Key="Label.Pink" Color="{StaticResource Color.Label.Pink}" />
+    <SolidColorBrush x:Key="Label.Purple" Color="{StaticResource Color.Label.Purple}" />
+    <SolidColorBrush x:Key="Label.None" Color="#6E6E80" />
+
+    <!-- ── Icons (high contrast on dark surfaces) ─────────────────────── -->
+    <!-- Default icon / icon-button color: near-white so toolbars don't look washed out -->
+    <SolidColorBrush x:Key="Icon.Default" Color="#E8E8F2" />
+    <!-- Hover / active: a brighter tint of the brand blue -->
+    <SolidColorBrush x:Key="Icon.Hover" Color="#B3B6FF" />
+    <SolidColorBrush x:Key="Icon.Disabled" Color="#5A5A68" />
+
+    <!-- ── Node icons ─────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="Icon.Folder" Color="#F2C14E" />
+    <SolidColorBrush x:Key="Icon.Album" Color="{StaticResource Color.Accent.Foreground}" />
+
+    <!-- ── SukiUI overrides: map Suki's dark keys onto the tokens above ── -->
+    <Color x:Key="SukiBackground">#1B1B23</Color>
+    <Color x:Key="SukiStrongBackground">#35353F</Color>
+    <Color x:Key="SukiLightBackground">#262633</Color>
+    <Color x:Key="SukiCardBackground">#2C2C33</Color>
+    <Color x:Key="SukiPopupBackground">#262633</Color>
+    <Color x:Key="SukiGlassCardBackground">#2C2C33</Color>
+    <Color x:Key="SukiGlassCardOpaqueBackground">#2C2C33</Color>
+    <Color x:Key="ControlSukiGlassCardBackground">#2C2C33</Color>
+    <Color x:Key="SukiControlTouchBackground">#35353F</Color>
+    <Color x:Key="SukiDialogBackground">#0E0E14</Color>
+    <Color x:Key="SukiBorderBrush">#3A3A46</Color>
+    <Color x:Key="SukiControlBorderBrush">#4A4A58</Color>
+    <Color x:Key="SukiMediumBorderBrush">#4A4A58</Color>
+    <Color x:Key="SukiLightBorderBrush">#3A3A46</Color>
+    <Color x:Key="SukiMenuBorderBrush">#3A3A46</Color>
+    <Color x:Key="GlassBorderBrush">#3A3A46</Color>
+    <Color x:Key="SukiText">#ECECF4</Color>
+    <Color x:Key="SukiLowText">#A3A3B5</Color>
+    <Color x:Key="SukiMuteText">#6E6E80</Color>
+    <Color x:Key="SukiDisabledText">#5A5A68</Color>
+    <Color x:Key="SukiSuccessColor">#3FB950</Color>
+    <Color x:Key="SukiInformationColor">#1C21C7</Color>
+    <Color x:Key="SukiWarningColor">#D29922</Color>
+    <Color x:Key="SukiDangerColor">#F85149</Color>
+    <x:Double x:Key="GlassOpacity">1</x:Double>
+    <x:Double x:Key="ControlGlassOpacity">1</x:Double>
+    <x:Double x:Key="DiscreteControlGlassOpacity">1</x:Double>
+</ResourceDictionary>

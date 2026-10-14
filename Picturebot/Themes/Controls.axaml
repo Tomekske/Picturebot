@@ -1,0 +1,88 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        App-wide control styles on top of SukiUI. Included after SukiTheme in App.axaml.
+        Styles here beat Suki's ControlThemes, so they also need explicit pseudo-class states.
+    -->
+
+    <!-- Icon / ghost buttons (Classes="Basic"): bright icons, brand tint on hover.
+         A Foreground set directly on a button (e.g. a red delete icon) still wins. -->
+    <Style Selector="Button.Basic, ToggleButton.Basic">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Default}" />
+    </Style>
+    <Style Selector="Button.Basic:pointerover, Button.Basic:flyout-open, ToggleButton.Basic:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Hover}" />
+    </Style>
+    <Style Selector="Button.Basic:pressed, ToggleButton.Basic:pressed">
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+    <Style Selector="ToggleButton.Basic:checked">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Hover}" />
+    </Style>
+    <Style Selector="Button.Basic:disabled, ToggleButton.Basic:disabled">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Disabled}" />
+    </Style>
+
+    <!-- Primary action (Classes="Primary"): the one filled brand button per dialog/view -->
+    <Style Selector="Button.Primary">
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}" />
+    </Style>
+    <Style Selector="Button.Primary:pointerover, Button.Primary:flyout-open">
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill.Hover}" />
+    </Style>
+    <Style Selector="Button.Primary:pointerover /template/ Border#RootBorder, Button.Primary:pressed /template/ Border#RootBorder">
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill.Hover}" />
+    </Style>
+    <Style Selector="Button.Primary:pressed">
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill.Pressed}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+    </Style>
+
+    <!-- Destructive action (Classes="Danger") -->
+    <Style Selector="Button.Danger">
+        <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill}" />
+    </Style>
+    <Style Selector="Button.Danger:pointerover, Button.Danger:pressed">
+        <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill.Hover}" />
+    </Style>
+    <Style Selector="Button.Danger:pointerover /template/ Border#RootBorder, Button.Danger:pressed /template/ Border#RootBorder">
+        <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill.Hover}" />
+    </Style>
+
+    <!-- Disabled filled buttons: clearly inactive, still readable -->
+    <Style Selector="Button.Primary:disabled, Button.Danger:disabled">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <!-- Text inputs: focus border, floating placeholder and selection use readable brand tints -->
+    <Style Selector="TextBox /template/ Border#PART_TypingGlow">
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+    <Style Selector="TextBox /template/ TextBlock#PART_FloatingPlaceholder">
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+    <Style Selector="TextBox">
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent.Selected}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}" />
+    </Style>
+
+    <!-- Tree selection: brand secondary color instead of Suki's raw primary -->
+    <Style Selector="TreeViewItem:selected /template/ Border#SelectionBorder, TreeViewItem:selected /template/ Border#SelectionBorder:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Accent.Selected}" />
+    </Style>
+    <Style Selector="TreeViewItem /template/ Border#SelectionBorder:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Accent.Subtle}" />
+    </Style>
+</Styles>
