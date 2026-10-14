@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +15,7 @@ using Graph.Domain.Interfaces;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using Picturebot.Services;
+using Picturebot.Themes;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Toasts;
@@ -33,10 +35,10 @@ public partial class AiCurationItemResultViewModel : ObservableObject {
     private bool _isBest;
 
     public string BadgeText => IsBest ? "★ BEST PICK" : "ALTERNATIVE";
-    public string BadgeBackground => IsBest ? "#1E4620" : "#4E260A";
-    public string BadgeForeground => IsBest ? "#4ADE80" : "#FB923C";
-    public string CardBorderBrush => IsBest ? "#2ECC71" : "#2D2D36";
-    public string CardBackground => IsBest ? "#16231A" : "#1B1B22";
+    public IBrush BadgeBackground => ThemeBrushes.Get(IsBest ? "Status.Picked.Subtle" : "Surface.Raised");
+    public IBrush BadgeForeground => ThemeBrushes.Get(IsBest ? "Status.Picked" : "Label.Orange");
+    public IBrush CardBorderBrush => ThemeBrushes.Get(IsBest ? "Status.Picked.Border" : "Border.Subtle");
+    public IBrush CardBackground => ThemeBrushes.Get(IsBest ? "Status.Picked.Subtle" : "Surface.Card");
     public bool CanSetAsBest => !IsBest;
 
     public Action<AiCurationItemResultViewModel>? SetAsBestAction { get; set; }

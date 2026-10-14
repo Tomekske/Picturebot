@@ -28,7 +28,7 @@
         </Panel>
 
         <icons:MaterialIcon Kind="CheckCircleOutline" Width="18" Height="18"
-                            Foreground="Green"
+                            Foreground="{DynamicResource Status.Picked}"
                             IsVisible="{Binding !IsProcessing}" />
 
         <StackPanel VerticalAlignment="Center">

@@ -18,7 +18,7 @@
             <Setter Property="Margin" Value="1,0"/>
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
-            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="Opacity" Value="0.8"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -39,20 +39,20 @@
 
         <!-- Hover State -->
         <Style Selector="ToggleButton.FilterChip:pointerover">
-            <Setter Property="Opacity" Value="0.75"/>
-            <Setter Property="Background" Value="#15FFFFFF"/>
+            <Setter Property="Opacity" Value="1.0"/>
+            <Setter Property="Background" Value="{DynamicResource State.Hover}"/>
         </Style>
 
         <!-- Active/Selected State -->
         <Style Selector="ToggleButton.FilterChip:checked">
             <Setter Property="Opacity" Value="1.0"/>
-            <Setter Property="Background" Value="#25FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource State.Active}"/>
         </Style>
 
         <!-- Active and Hovered State -->
         <Style Selector="ToggleButton.FilterChip:checked:pointerover">
             <Setter Property="Opacity" Value="1.0"/>
-            <Setter Property="Background" Value="#35FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource State.ActiveHover}"/>
         </Style>
 
         <!-- Specialized Style for Stars (since they have wider content) -->
@@ -64,7 +64,7 @@
             <Setter Property="Margin" Value="1,0"/>
             <Setter Property="MinWidth" Value="32"/>
             <Setter Property="Height" Value="24"/>
-            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="Opacity" Value="0.8"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -83,54 +83,54 @@
         </Style>
 
         <Style Selector="ToggleButton.StarChip:pointerover">
-            <Setter Property="Opacity" Value="0.75"/>
-            <Setter Property="Background" Value="#15FFFFFF"/>
+            <Setter Property="Opacity" Value="1.0"/>
+            <Setter Property="Background" Value="{DynamicResource State.Hover}"/>
         </Style>
 
         <Style Selector="ToggleButton.StarChip:checked">
             <Setter Property="Opacity" Value="1.0"/>
-            <Setter Property="Background" Value="#25FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource State.Active}"/>
         </Style>
 
         <Style Selector="ToggleButton.StarChip:checked:pointerover">
             <Setter Property="Opacity" Value="1.0"/>
-            <Setter Property="Background" Value="#35FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource State.ActiveHover}"/>
         </Style>
 
         <!-- Dynamic Icon Fills depending on state -->
         <!-- Picked Flag (Green when active) -->
         <Style Selector="ToggleButton.PickedFlag Path">
-            <Setter Property="Fill" Value="White" />
+            <Setter Property="Fill" Value="{DynamicResource Text.Primary}" />
         </Style>
         <Style Selector="ToggleButton.PickedFlag:checked Path">
-            <Setter Property="Fill" Value="#22C55E" />
+            <Setter Property="Fill" Value="{DynamicResource Status.Picked}" />
         </Style>
 
         <!-- Neutral Flag (Neutral Grey when active) -->
         <Style Selector="ToggleButton.NeutralFlag Path">
-            <Setter Property="Fill" Value="White" />
+            <Setter Property="Fill" Value="{DynamicResource Text.Primary}" />
         </Style>
         <Style Selector="ToggleButton.NeutralFlag:checked Path">
-            <Setter Property="Fill" Value="#6B7280" />
+            <Setter Property="Fill" Value="{DynamicResource Text.Muted}" />
         </Style>
 
         <!-- Rejected Flag (Red when active) -->
         <Style Selector="ToggleButton.RejectedFlag Path">
-            <Setter Property="Fill" Value="White" />
+            <Setter Property="Fill" Value="{DynamicResource Text.Primary}" />
         </Style>
         <Style Selector="ToggleButton.RejectedFlag:checked Path">
-            <Setter Property="Fill" Value="#EF4444" />
+            <Setter Property="Fill" Value="{DynamicResource Status.Danger}" />
         </Style>
 
         <!-- Rating Stars (Gold when active) -->
         <Style Selector="ToggleButton.StarChip Path">
-            <Setter Property="Fill" Value="White" />
+            <Setter Property="Fill" Value="{DynamicResource Text.Primary}" />
         </Style>
         <Style Selector="ToggleButton.StarChip:checked Path">
-            <Setter Property="Fill" Value="#EAB308" />
+            <Setter Property="Fill" Value="{DynamicResource Status.Rating}" />
         </Style>
         <Style Selector="ToggleButton.StarChip:checked TextBlock">
-            <Setter Property="Foreground" Value="#EAB308" />
+            <Setter Property="Foreground" Value="{DynamicResource Status.Rating}" />
         </Style>
 
         <Style Selector="Button.ResetBtn">
@@ -157,11 +157,11 @@
         </Style>
 
         <Style Selector="Button.ResetBtn:pointerover">
-            <Setter Property="Background" Value="#15FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource State.Hover}"/>
         </Style>
 
         <Style Selector="Button.ResetBtn:pointerover icons|MaterialIcon">
-            <Setter Property="Foreground" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="{DynamicResource Status.Danger}"/>
         </Style>
     </UserControl.Styles>
 
@@ -194,7 +194,7 @@
         </StackPanel>
 
         <!-- Vertical Separator -->
-        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
 
         <!-- Color Label Chips Group -->
         <StackPanel Orientation="Horizontal" Spacing="2">
@@ -202,47 +202,47 @@
             <ToggleButton Classes="FilterChip" 
                           IsChecked="{Binding IsGreenActive}"
                           ToolTip.Tip="Filter Green">
-                <Ellipse Width="10" Height="10" Fill="#22C55E"/>
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Green}"/>
             </ToggleButton>
 
             <!-- Blue -->
             <ToggleButton Classes="FilterChip" 
                           IsChecked="{Binding IsBlueActive}"
                           ToolTip.Tip="Filter Blue">
-                <Ellipse Width="10" Height="10" Fill="#3B82F6"/>
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Blue}"/>
             </ToggleButton>
 
             <!-- Yellow / Orange -->
             <ToggleButton Classes="FilterChip" 
                           IsChecked="{Binding IsYellowOrangeActive}"
                           ToolTip.Tip="Filter Yellow / Orange">
-                <Ellipse Width="10" Height="10" Fill="#EAB308"/>
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Yellow}"/>
             </ToggleButton>
 
             <!-- Red -->
             <ToggleButton Classes="FilterChip" 
                           IsChecked="{Binding IsRedActive}"
                           ToolTip.Tip="Filter Red">
-                <Ellipse Width="10" Height="10" Fill="#EF4444"/>
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Red}"/>
             </ToggleButton>
 
             <!-- Purple -->
             <ToggleButton Classes="FilterChip" 
                           IsChecked="{Binding IsPurpleActive}"
                           ToolTip.Tip="Filter Purple">
-                <Ellipse Width="10" Height="10" Fill="#A855F7"/>
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Purple}"/>
             </ToggleButton>
 
             <!-- Neutral / Grey -->
             <ToggleButton Classes="FilterChip" 
                           IsChecked="{Binding IsNoneActive}"
                           ToolTip.Tip="Filter Neutral / Grey">
-                <Ellipse Width="10" Height="10" Fill="#6B7280"/>
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.None}"/>
             </ToggleButton>
         </StackPanel>
 
         <!-- Vertical Separator -->
-        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
 
         <!-- Rating Stars Group -->
         <StackPanel Orientation="Horizontal" Spacing="1">
@@ -253,7 +253,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <Path Data="M12,15.39L8.24,17.66L9.25,13.38L5.91,10.5L10.29,10.13L12,6.1L13.71,10.13L18.09,10.5L14.75,13.38L15.76,17.66L12,15.39M22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z" 
                           Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="0" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                    <TextBlock Text="0" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </ToggleButton>
 
@@ -264,7 +264,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
                           Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                    <TextBlock Text="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </ToggleButton>
 
@@ -275,7 +275,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
                           Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="2" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                    <TextBlock Text="2" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </ToggleButton>
 
@@ -286,7 +286,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
                           Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="3" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                    <TextBlock Text="3" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </ToggleButton>
 
@@ -297,7 +297,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
                           Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="4" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                    <TextBlock Text="4" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </ToggleButton>
 
@@ -308,13 +308,13 @@
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
                           Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="5" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
+                    <TextBlock Text="5" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </ToggleButton>
         </StackPanel>
 
         <!-- Vertical Separator -->
-        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
 
         <!-- Orientation Group -->
         <StackPanel Orientation="Horizontal" Spacing="2">
@@ -323,7 +323,7 @@
                           IsChecked="{Binding IsLandscapeActive}"
                           ToolTip.Tip="Filter Landscape">
                 <Path Data="M19,5H5C3.9,5,3,5.9,3,7V17C3,18.1,3.9,19,5,19H19C20.1,19,21,18.1,21,17V7C21,5.9,20.1,5,19,5M19,17H5V7H19V17Z" 
-                      Width="14" Height="14" Stretch="Uniform" Fill="White"/>
+                      Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource Text.Primary}"/>
             </ToggleButton>
 
             <!-- Portrait -->
@@ -331,12 +331,12 @@
                           IsChecked="{Binding IsPortraitActive}"
                           ToolTip.Tip="Filter Portrait">
                 <Path Data="M17,3H7C5.9,3,5,3.9,5,5V19C5,20.1,5.9,21,7,21H17C18.1,21,19,20.1,19,19V5C19,3.9,18.1,3,17,3M17,19H7V5H17V19Z" 
-                      Width="14" Height="14" Stretch="Uniform" Fill="White"/>
+                      Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource Text.Primary}"/>
             </ToggleButton>
         </StackPanel>
 
         <!-- Vertical Separator -->
-        <Separator Width="1" Height="14" Background="#33FFFFFF" Margin="6,0" VerticalAlignment="Center"/>
+        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
 
         <!-- Tags Dropdown Button -->
         <Button Classes.primary="{Binding IsTagFilterActive}"
@@ -349,11 +349,11 @@
             <Button.Styles>
                 <Style Selector="Button">
                     <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="BorderBrush" Value="#33FFFFFF"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
                     <Setter Property="BorderThickness" Value="1"/>
                 </Style>
                 <Style Selector="Button.primary">
-                    <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor}"/>
+                    <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
                     <Setter Property="BorderBrush" Value="Transparent"/>
                     <Setter Property="BorderThickness" Value="0"/>
                 </Style>
@@ -361,31 +361,31 @@
             <StackPanel Orientation="Horizontal" Spacing="4">
                 <!-- Tag Icon -->
                 <Path Data="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 8.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z" 
-                      Width="11" Height="11" Stretch="Uniform" Fill="White" VerticalAlignment="Center"/>
-                <TextBlock Text="Tags" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="White"/>
-                <TextBlock Text="{Binding ActiveTagFiltersCountText}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Foreground="White" IsVisible="{Binding IsTagFilterActive}"/>
-                <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" Foreground="White"/>
+                      Width="11" Height="11" Stretch="Uniform" Fill="{DynamicResource Text.Primary}" VerticalAlignment="Center"/>
+                <TextBlock Text="Tags" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
+                <TextBlock Text="{Binding ActiveTagFiltersCountText}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}" IsVisible="{Binding IsTagFilterActive}"/>
+                <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
             </StackPanel>
             <Button.Flyout>
                 <Flyout Placement="BottomEdgeAlignedLeft">
-                    <Border x:DataType="vm:FilterToolbarViewModel" Width="290" Background="#1E1E22" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Border x:DataType="vm:FilterToolbarViewModel" Width="290" Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1" CornerRadius="8" Padding="12">
                         <StackPanel Spacing="10">
                             <!-- Search query TextBox -->
                             <TextBox Text="{Binding TagSearchText, Mode=TwoWay}" Watermark="Search tags..." Height="32" VerticalContentAlignment="Center"/>
 
                             <!-- Matching Logic Operator -->
                             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                <RadioButton Content="ANY (OR)" IsChecked="{Binding IsMatchAny, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
-                                <RadioButton Content="ALL (AND)" IsChecked="{Binding IsMatchAll, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
-                                <RadioButton Content="NOT (EXCLUDE)" IsChecked="{Binding IsMatchNot, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="White"/>
+                                <RadioButton Content="ANY (OR)" IsChecked="{Binding IsMatchAny, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="{DynamicResource Text.Primary}"/>
+                                <RadioButton Content="ALL (AND)" IsChecked="{Binding IsMatchAll, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="{DynamicResource Text.Primary}"/>
+                                <RadioButton Content="NOT (EXCLUDE)" IsChecked="{Binding IsMatchNot, Mode=TwoWay}" GroupName="MatchOperator" FontSize="10" Foreground="{DynamicResource Text.Primary}"/>
                             </StackPanel>
 
                             <!-- Hierarchical Taxonomy Tree (Non-collapsible, cleanly indented) -->
-                            <Border Background="#14171F" CornerRadius="6" BorderThickness="1" BorderBrush="#323846" Padding="6" MaxHeight="240">
+                            <Border Background="{DynamicResource Surface.Card}" CornerRadius="6" BorderThickness="1" BorderBrush="{DynamicResource Border.Subtle}" Padding="6" MaxHeight="240">
                                 <Panel>
                                     <!-- Empty State -->
                                     <TextBlock Text="No tags found" 
-                                               Foreground="#6B7280" 
+                                               Foreground="{DynamicResource Text.Muted}" 
                                                FontSize="11" 
                                                HorizontalAlignment="Center" 
                                                VerticalAlignment="Center"
@@ -403,11 +403,11 @@
                                                         <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding Name}" 
                                                                        FontSize="12" 
-                                                                       Foreground="White" 
+                                                                       Foreground="{DynamicResource Text.Primary}" 
                                                                        VerticalAlignment="Center"/>
                                                             <TextBlock Text="{Binding Count, StringFormat='({0})'}" 
                                                                        FontSize="10" 
-                                                                       Foreground="#888888" 
+                                                                       Foreground="{DynamicResource Text.Secondary}" 
                                                                        VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </CheckBox>
@@ -435,7 +435,7 @@
                 IsVisible="{Binding IsAnyFilterActive}"
                 ToolTip.Tip="Clear All Filters (Shift+R)"
                 Margin="4,0,0,0">
-            <icons:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="White"/>
+            <icons:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="{DynamicResource Text.Primary}"/>
         </Button>
     </StackPanel>
 </UserControl>

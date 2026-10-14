@@ -9,47 +9,47 @@
     <StackPanel Spacing="16" Margin="4">
         <!-- Header -->
         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,2,0,4">
-            <icons:MaterialIcon Kind="AutoFix" Width="26" Height="26" Foreground="#A855F7" VerticalAlignment="Center" />
+            <icons:MaterialIcon Kind="AutoFix" Width="26" Height="26" Foreground="{DynamicResource Accent.Foreground}" VerticalAlignment="Center" />
             <TextBlock Text="AI Curation Suggestions"
                        FontSize="20"
                        FontWeight="SemiBold"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource Text.Primary}"
                        VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- Subtitle / Instruction Box -->
-        <Border Background="#1A1A22"
-                BorderBrush="#2D2D3A"
+        <Border Background="{DynamicResource Surface.Panel}"
+                BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="14,12">
-            <TextBlock FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" LineHeight="18">
-                Review Gemini evaluations. Best Pick is marked <Span Foreground="#4ADE80" FontWeight="Bold">Green (5 Stars)</Span> and Alternatives <Span Foreground="#FB923C" FontWeight="Bold">Orange (0 Stars)</Span>.
+            <TextBlock FontSize="12" Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" LineHeight="18">
+                Review Gemini evaluations. Best Pick is marked <Span Foreground="{DynamicResource Status.Picked}" FontWeight="Bold">Green (5 Stars)</Span> and Alternatives <Span Foreground="{DynamicResource Label.Orange}" FontWeight="Bold">Orange (0 Stars)</Span>.
                 To change the Best Pick, simply click another photo before confirming.
             </TextBlock>
         </Border>
 
         <!-- Results List -->
-        <Border BorderBrush="#2A2A34"
+        <Border BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1"
                 CornerRadius="10"
                 MinHeight="200"
                 MaxHeight="540"
-                Background="#13131A">
+                Background="{DynamicResource Surface.App}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
                 <ItemsControl ItemsSource="{Binding Groups}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:AiCurationGroupResultViewModel">
                             <StackPanel Spacing="10" Margin="0,0,0,16">
                                 <!-- Burst Header if present -->
-                                <Border Background="#1E1E28"
+                                <Border Background="{DynamicResource Surface.Panel}"
                                         CornerRadius="6"
                                         Padding="10,6"
                                         IsVisible="{Binding Header, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                     <TextBlock Text="{Binding Header}"
                                                FontWeight="Bold"
                                                FontSize="12"
-                                               Foreground="#CBD5E1" />
+                                               Foreground="{DynamicResource Text.Primary}" />
                                 </Border>
 
                                 <!-- Pictures in this Burst -->
@@ -62,7 +62,7 @@
                                                            Text="{Binding Index}"
                                                            FontSize="14"
                                                            FontWeight="SemiBold"
-                                                           Foreground="#64748B"
+                                                           Foreground="{DynamicResource Text.Muted}"
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center" />
 
@@ -80,14 +80,14 @@
                                                                 Height="68"
                                                                 CornerRadius="8"
                                                                 ClipToBounds="True"
-                                                                Background="#0F0F14"
+                                                                Background="{DynamicResource Surface.App}"
                                                                 Margin="0,0,14,0"
                                                                 VerticalAlignment="Center">
                                                             <Panel>
                                                                 <icons:MaterialIcon Kind="ImageOutline"
                                                                                     Width="28"
                                                                                     Height="28"
-                                                                                    Foreground="#333340"
+                                                                                    Foreground="{DynamicResource Surface.Raised}"
                                                                                     HorizontalAlignment="Center"
                                                                                     VerticalAlignment="Center"
                                                                                     IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
@@ -102,11 +102,11 @@
                                                             <TextBlock Text="{Binding Name}"
                                                                        FontWeight="Bold"
                                                                        FontSize="13.5"
-                                                                       Foreground="#FFFFFF"
+                                                                       Foreground="{DynamicResource Text.Primary}"
                                                                        TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Text="{Binding Feedback}"
                                                                        FontSize="11.5"
-                                                                       Foreground="#94A3B8"
+                                                                       Foreground="{DynamicResource Text.Secondary}"
                                                                        TextWrapping="Wrap"
                                                                        LineHeight="16" />
                                                         </StackPanel>
@@ -133,28 +133,28 @@
                                                                         Margin="0,8,0,0">
                                                                 <!-- Best Pick Confirmed State -->
                                                                 <Border IsVisible="{Binding IsBest}"
-                                                                        Background="#14281B"
-                                                                        BorderBrush="#23532C"
+                                                                        Background="{DynamicResource Status.Picked.Subtle}"
+                                                                        BorderBrush="{DynamicResource Status.Picked.Border}"
                                                                         BorderThickness="1"
                                                                         CornerRadius="6"
                                                                         Padding="10,6">
                                                                     <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <icons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="#4ADE80" />
-                                                                        <TextBlock Text="Confirm Pick" FontSize="11" FontWeight="SemiBold" Foreground="#4ADE80" />
+                                                                        <icons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource Status.Picked}" />
+                                                                        <TextBlock Text="Confirm Pick" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Status.Picked}" />
                                                                     </StackPanel>
                                                                 </Border>
 
                                                                 <!-- Alternative Select Button -->
                                                                 <Button IsVisible="{Binding CanSetAsBest}"
                                                                         Command="{Binding SelectAsBestCommand}"
-                                                                        Background="#22C55E"
-                                                                        Foreground="White"
+                                                                        Background="{DynamicResource Status.Picked}"
+                                                                        Foreground="{DynamicResource Text.Primary}"
                                                                         CornerRadius="6"
                                                                         Padding="10,6"
                                                                         Cursor="Hand">
                                                                     <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <icons:MaterialIcon Kind="SquareEditOutline" Width="14" Height="14" Foreground="White" />
-                                                                        <TextBlock Text="Set as Best Pick" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                                                        <icons:MaterialIcon Kind="SquareEditOutline" Width="14" Height="14" Foreground="{DynamicResource Text.Primary}" />
+                                                                        <TextBlock Text="Set as Best Pick" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Text.Primary}" />
                                                                     </StackPanel>
                                                                 </Button>
                                                             </StackPanel>
@@ -178,17 +178,17 @@
                     Classes="Basic"
                     Content="Cancel"
                     Command="{Binding CancelCommand}"
-                    Foreground="#94A3B8"
+                    Foreground="{DynamicResource Text.Secondary}"
                     FontSize="13"
                     Width="90"
                     Margin="0,0,12,0" />
 
             <Button Grid.Column="2"
-                    Classes="Flat"
+                    Classes="Primary"
                     Content="Confirm Suggestions"
                     Command="{Binding ApplyCommand}"
-                    Background="#22C55E"
-                    Foreground="White"
+                    Background="{DynamicResource Status.Picked}"
+                    Foreground="{DynamicResource Text.Primary}"
                     FontWeight="Bold"
                     FontSize="13"
                     CornerRadius="8"

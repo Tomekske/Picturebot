@@ -5,7 +5,7 @@
         <ControlTheme x:Key="{x:Type controls:GpuAcceleratedCarousel}" TargetType="controls:GpuAcceleratedCarousel">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Panel Background="Black" ClipToBounds="True">
+                    <Panel Background="{DynamicResource Photo.Backdrop}" ClipToBounds="True">
                         <StackPanel Name="PART_ItemsContainer" 
                                     Orientation="Horizontal"
                                     VerticalAlignment="Stretch"

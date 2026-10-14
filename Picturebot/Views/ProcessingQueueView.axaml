@@ -11,7 +11,7 @@
         <DockPanel LastChildFill="False">
             <StackPanel Orientation="Horizontal" Spacing="10" DockPanel.Dock="Left">
                 <icons:MaterialIcon Kind="TrayArrowDown" Width="24" Height="24"
-                                    Foreground="{DynamicResource SukiPrimaryColor}" />
+                                    Foreground="{DynamicResource Accent.Foreground}" />
                 <TextBlock Text="Processing Queue" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" />
             </StackPanel>
 
@@ -31,13 +31,13 @@
             <StackPanel Spacing="8">
                 <!-- Curation Sync Section -->
                 <Border Padding="10" IsVisible="{Binding HasCurationItems}"
-                        Background="{DynamicResource SukiPrimaryColor10}"
-                        BorderBrush="{DynamicResource SukiPrimaryColor}"
+                        Background="{DynamicResource Accent.Subtle}"
+                        BorderBrush="{DynamicResource Accent.Foreground}"
                         BorderThickness="1"
                         CornerRadius="8">
                     <Grid ColumnDefinitions="Auto, *, Auto">
                         <icons:MaterialIcon Kind="Sync" Width="20" Height="20" Margin="0,0,10,0"
-                                            Foreground="{DynamicResource SukiPrimaryColor}" />
+                                            Foreground="{DynamicResource Accent.Foreground}" />
                         <TextBlock Grid.Column="1" Text="Curation Sync" FontWeight="Bold"
                                    VerticalAlignment="Center" />
                         <TextBlock Grid.Column="2" Text="{Binding CurationQueueCount, StringFormat='{}{0} pending'}"

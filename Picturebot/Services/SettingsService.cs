@@ -51,24 +51,12 @@ public class SettingsService : ISettingsService {
         ApplyTheme(settings.ThemeMode);
     }
 
-    private void ApplyTheme(ThemeMode mode) {
+    // Picturebot is dark-only (see Themes/Tokens.axaml); the stored ThemeMode is ignored.
+    private static void ApplyTheme(ThemeMode mode) {
         try {
-            switch (mode) {
-                case ThemeMode.Light:
-                    SukiTheme.GetInstance().ChangeBaseTheme(ThemeVariant.Light);
-                    break;
-                case ThemeMode.Dark:
-                    SukiTheme.GetInstance().ChangeBaseTheme(ThemeVariant.Dark);
-                    break;
-                case ThemeMode.System:
-                    if (Application.Current != null) {
-                        Application.Current.RequestedThemeVariant = ThemeVariant.Default;
-                    }
-
-                    break;
-            }
+            SukiTheme.GetInstance().ChangeBaseTheme(ThemeVariant.Dark);
         } catch {
-            // Log or ignore
+            // SukiTheme is not available in tests/headless runs
         }
     }
 

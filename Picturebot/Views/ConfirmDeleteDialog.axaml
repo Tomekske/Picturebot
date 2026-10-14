@@ -11,7 +11,7 @@
     
     <Grid RowDefinitions="Auto,*,Auto" Margin="20" Width="350">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,15">
-            <icons:MaterialIcon Kind="AlertCircle" Width="24" Height="24" Foreground="Red" />
+            <icons:MaterialIcon Kind="AlertCircle" Width="24" Height="24" Foreground="{DynamicResource Status.Danger}" />
             <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
         </StackPanel>
         
@@ -19,7 +19,7 @@
         
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Classes="Basic" Content="Cancel" Command="{Binding CancelCommand}" />
-            <Button Classes="Flat" Content="Delete" Command="{Binding ConfirmCommand}" Background="Red" Foreground="White" />
+            <Button Classes="Danger" Content="Delete" Command="{Binding ConfirmCommand}" />
         </StackPanel>
     </Grid>
 </UserControl>

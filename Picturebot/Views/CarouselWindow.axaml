@@ -12,7 +12,7 @@
         x:DataType="vm:CarouselDialogViewModel"
         Title="Carousel"
         Icon="/Assets/icon.ico"
-        Background="Black"
+        Background="{DynamicResource Photo.Backdrop}"
         SystemDecorations="None"
         WindowState="FullScreen"
         WindowStartupLocation="CenterScreen"
@@ -28,7 +28,7 @@
     </Window.Resources>
 
     <Grid>
-        <Canvas Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+        <Canvas Background="{DynamicResource Photo.Backdrop}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
         <controls:GpuAcceleratedCarousel
                Items="{Binding Previews}"
@@ -40,7 +40,7 @@
         <Button HorizontalAlignment="Left" VerticalAlignment="Top"
                 Classes="Basic" Margin="30"
                 Command="{Binding CloseCommand}"
-                Foreground="White"
+                Foreground="{DynamicResource Text.Primary}"
                 ZIndex="100">
             <icons:MaterialIcon Kind="Close" Width="40" Height="40" />
         </Button>
@@ -49,29 +49,29 @@
                     VerticalAlignment="Top"
                     Margin="30" Spacing="12" ZIndex="100">
             <!-- Main Metadata Badge -->
-            <Border Background="#CC000000" CornerRadius="20" Padding="20,10" BorderBrush="#33FFFFFF"
+            <Border Background="{DynamicResource Surface.Overlay}" CornerRadius="20" Padding="20,10" BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1">
                 <StackPanel Orientation="Horizontal" Spacing="20">
                     <TextBlock Text="{Binding CounterText}"
                                FontSize="18"
-                               Foreground="White" FontWeight="Bold" />
-                    <Separator Width="1" Height="20" Background="#66FFFFFF" />
+                               Foreground="{DynamicResource Text.Primary}" FontWeight="Bold" />
+                    <Separator Width="1" Height="20" Background="{DynamicResource Border.Strong}" />
                     <TextBlock Text="{Binding Sharpness, StringFormat='Sharpness: {0}'}"
                                FontSize="18"
-                               Foreground="White" FontWeight="SemiBold" />
+                               Foreground="{DynamicResource Text.Primary}" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
 
             <!-- Burst Context Badge (Secondary) -->
-            <Border Background="#CC000000" CornerRadius="15" Padding="15,8" BorderBrush="#33FFFFFF"
+            <Border Background="{DynamicResource Surface.Overlay}" CornerRadius="15" Padding="15,8" BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1"
                     HorizontalAlignment="Right"
                     IsVisible="{Binding CurrentGroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                    <icons:MaterialIcon Kind="BurstMode" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" />
+                    <icons:MaterialIcon Kind="BurstMode" Width="18" Height="18" Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding CurrentGroupName}"
                                FontSize="16"
-                               Foreground="White" FontWeight="Bold"
+                               Foreground="{DynamicResource Text.Primary}" FontWeight="Bold"
                                VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
@@ -80,7 +80,7 @@
         <Button HorizontalAlignment="Left" VerticalAlignment="Center"
                 Classes="Basic" Margin="20,0,0,0"
                 Command="{Binding PreviousCommand}"
-                Foreground="#88FFFFFF"
+                Foreground="{DynamicResource Text.Secondary}"
                 ZIndex="100">
             <icons:MaterialIcon Kind="ChevronLeft" Width="80" Height="80" />
         </Button>
@@ -88,17 +88,17 @@
         <Button HorizontalAlignment="Right" VerticalAlignment="Center"
                 Classes="Basic" Margin="0,0,20,0"
                 Command="{Binding NextCommand}"
-                Foreground="#88FFFFFF"
+                Foreground="{DynamicResource Text.Secondary}"
                 ZIndex="100">
             <icons:MaterialIcon Kind="ChevronRight" Width="80" Height="80" />
         </Button>
 
         <Border HorizontalAlignment="Center" VerticalAlignment="Bottom"
                 Margin="0,0,0,50"
-                Background="#EE151515"
+                Background="{DynamicResource Surface.Overlay}"
                 CornerRadius="30"
                 Padding="15,10"
-                BorderBrush="#44FFFFFF"
+                BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1"
                 ZIndex="100">
             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -109,7 +109,7 @@
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
                         <icons:MaterialIcon Kind="Flag" Width="36" Height="36"
                                             Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Flagged}" />
-                        <TextBlock Text="Flagged" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="Flagged" FontSize="12" Foreground="{DynamicResource Text.Primary}" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -120,7 +120,7 @@
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
                         <icons:MaterialIcon Kind="CircleOutline" Width="36" Height="36"
                                             Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Unflagged}" />
-                        <TextBlock Text="Neutral" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="Neutral" FontSize="12" Foreground="{DynamicResource Text.Primary}" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -131,11 +131,11 @@
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
                         <icons:MaterialIcon Kind="Close" Width="36" Height="36"
                                             Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Rejected}" />
-                        <TextBlock Text="Rejected" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="Rejected" FontSize="12" Foreground="{DynamicResource Text.Primary}" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
-                <Separator Width="1" Height="40" Background="#44FFFFFF" Margin="10,0" />
+                <Separator Width="1" Height="40" Background="{DynamicResource Border.Subtle}" Margin="10,0" />
 
                 <!-- Star Rating -->
                 <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
@@ -161,40 +161,40 @@
                     </Button>
                 </StackPanel>
 
-                <Separator Width="1" Height="40" Background="#44FFFFFF" Margin="10,0" />
+                <Separator Width="1" Height="40" Background="{DynamicResource Border.Subtle}" Margin="10,0" />
 
                 <!-- Color Labels -->
                 <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="5,0">
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Red}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#B71C1C" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Red}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Label.Red}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Red}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Orange}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#E67E22" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Orange}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Status.Warning}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Orange}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Yellow}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#FDD835" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Yellow}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Label.Yellow}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Yellow}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Green}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#33CC33" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Green}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Label.Green}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Green}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Blue}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#3333CC" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Blue}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Label.Blue}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Blue}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Pink}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#F06292" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Pink}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Label.Pink}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Pink}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Purple}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#CC33CC" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Purple}" />
+                        <Ellipse Width="24" Height="24" Fill="{DynamicResource Label.Purple}" 
+                                 Stroke="{DynamicResource Text.Primary}" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Purple}" />
                     </Button>
                     <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.None}" Padding="6">
-                        <icons:MaterialIcon Kind="LabelOffOutline" Width="24" Height="24" Foreground="White" />
+                        <icons:MaterialIcon Kind="LabelOffOutline" Width="24" Height="24" Foreground="{DynamicResource Text.Primary}" />
                     </Button>
                 </StackPanel>
             </StackPanel>

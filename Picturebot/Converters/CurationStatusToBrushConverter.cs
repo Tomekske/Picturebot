@@ -4,6 +4,8 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Domain.Enums;
 
+using Picturebot.Themes;
+
 namespace Picturebot.Converters;
 
 public class CurationStatusToBrushConverter : IValueConverter {
@@ -12,15 +14,15 @@ public class CurationStatusToBrushConverter : IValueConverter {
             Enum.TryParse<CurationStatus>(targetStr, out var targetStatus)) {
             if (status == targetStatus) {
                 return targetStatus switch {
-                    CurationStatus.Flagged => Brushes.ForestGreen, 
-                    CurationStatus.Unflagged => Brushes.SkyBlue,
-                    CurationStatus.Rejected => Brushes.Red,
-                    _ => Brushes.Gray
+                    CurationStatus.Flagged => ThemeBrushes.Get("Status.Picked"),
+                    CurationStatus.Unflagged => ThemeBrushes.Get("Accent.Foreground"),
+                    CurationStatus.Rejected => ThemeBrushes.Get("Status.Rejected"),
+                    _ => ThemeBrushes.Get("Text.Muted")
                 };
             }
         }
 
-        return Brushes.Gray;
+        return ThemeBrushes.Get("Text.Muted");
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Database.Domain.Entities;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,6 +18,7 @@ using Domain.Models;
 using Graph.Domain.Interfaces;
 using PictureWorker.Domain.Interfaces;
 using Picturebot.Messages;
+using Picturebot.Themes;
 using Picturebot.Utilities;
 using Serilog;
 
@@ -26,7 +28,9 @@ using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
-public record ColorLabelOption(ColorLabel Label, string Name, string HexColor);
+public record ColorLabelOption(ColorLabel Label, string Name) {
+    public IBrush Brush => ThemeBrushes.ForLabel(Label);
+}
 
 public partial class QuickTagButtonViewModel : ObservableObject {
     [ObservableProperty]
@@ -125,14 +129,14 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     public string PurpleLabelName => _settingsService.Current.PurpleLabelName;
 
     public List<ColorLabelOption> ColorLabelOptions => new() {
-        new(ColorLabel.None, "None", "Transparent"),
-        new(ColorLabel.Red, RedLabelName, "#B71C1C"),
-        new(ColorLabel.Orange, OrangeLabelName, "#E67E22"),
-        new(ColorLabel.Yellow, YellowLabelName, "#FDD835"),
-        new(ColorLabel.Green, GreenLabelName, "#33CC33"),
-        new(ColorLabel.Blue, BlueLabelName, "#3333CC"),
-        new(ColorLabel.Pink, PinkLabelName, "#F06292"),
-        new(ColorLabel.Purple, PurpleLabelName, "#CC33CC")
+        new(ColorLabel.None, "None"),
+        new(ColorLabel.Red, RedLabelName),
+        new(ColorLabel.Orange, OrangeLabelName),
+        new(ColorLabel.Yellow, YellowLabelName),
+        new(ColorLabel.Green, GreenLabelName),
+        new(ColorLabel.Blue, BlueLabelName),
+        new(ColorLabel.Pink, PinkLabelName),
+        new(ColorLabel.Purple, PurpleLabelName)
     };
 
     public ActiveMode ActiveMode => SelectedPictures.Count >= 2 ? ActiveMode.MultiMode : ActiveMode.SingleMode;
