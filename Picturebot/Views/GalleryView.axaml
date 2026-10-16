@@ -390,7 +390,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PictureItemViewModel">
-                                            <controls:AspectRatioPanel Ratio="0.85">
+                                            <Panel>
                                                 <!-- The 'Matted Print' Border -->
                                                 <Border Name="PART_AspectBorder"
                                                         Classes.rejected="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Rejected}"
@@ -399,13 +399,15 @@
                                                         BorderThickness="1"
                                                         CornerRadius="4"
                                                         ClipToBounds="True">
-                                                    <Grid RowDefinitions="*,Auto">
+                                                    <Grid RowDefinitions="Auto,Auto">
                                                         <!-- Color Label Background Overlay -->
                                                         <Border Grid.RowSpan="2"
                                                                 Background="{Binding ColorLabel, Converter={StaticResource ColorLabelToBrushConverter}}"
                                                                 Opacity="0.18" />
 
-                                                        <Panel Grid.Row="0" Margin="8" Background="{DynamicResource Photo.Backdrop}">
+                                                        <!-- Photo area is fixed at 3:2 (the camera's native shape), so landscape shots fill it with no
+                                                             letterbox bands; other shapes leave space that blends into the card. -->
+                                                        <controls:AspectRatioPanel Grid.Row="0" Margin="8" Ratio="0.6667">
                                                             <!-- Placeholder Fallback Border/Icon -->
                                                             <Border Background="{DynamicResource Photo.Backdrop}"
                                                                     BorderBrush="{DynamicResource Border.Subtle}"
@@ -471,7 +473,7 @@
                                                                     <TextBlock Text="BEST" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Status.Rating}" VerticalAlignment="Center" />
                                                                 </StackPanel>
                                                             </Border>
-                                                        </Panel>
+                                                        </controls:AspectRatioPanel>
 
                                                         <!-- Metadata Section with CheckBox -->
                                                         <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="8,4,8,8" VerticalAlignment="Center">
@@ -559,7 +561,7 @@
                                                         IsHitTestVisible="False"
                                                         IsVisible="{Binding IsSelected}"
                                                         ZIndex="10" />
-                                            </controls:AspectRatioPanel>
+                                            </Panel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
