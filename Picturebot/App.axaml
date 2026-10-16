@@ -12,6 +12,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://Picturebot/Themes/Tokens.axaml" />
+                <ResourceInclude Source="avares://Picturebot/Themes/ControlThemes.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

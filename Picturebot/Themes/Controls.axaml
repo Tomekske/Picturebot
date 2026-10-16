@@ -24,11 +24,29 @@
         <Setter Property="Foreground" Value="{DynamicResource Icon.Disabled}" />
     </Style>
 
-    <!-- Primary action (Classes="Primary"): the one filled brand button per dialog/view -->
+    <!--
+        Action buttons (same shape as the Settings dialog buttons):
+          Primary   - the one filled brand action per dialog/view (Save, Create, Confirm)
+          Secondary - neutral raised action (Cancel, Discard, Browse)
+          Danger    - destructive action (Delete)
+        Size and shape come from the shared style below; don't set Width/Height/CornerRadius per button.
+    -->
+    <Style Selector="Button.Primary, Button.Secondary, Button.Danger">
+        <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Primary -->
     <Style Selector="Button.Primary">
         <Setter Property="Background" Value="{DynamicResource Accent.Fill}" />
         <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.Primary:pointerover, Button.Primary:flyout-open">
         <Setter Property="Background" Value="{DynamicResource Accent.Fill.Hover}" />
@@ -43,11 +61,28 @@
         <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
     </Style>
 
-    <!-- Destructive action (Classes="Danger") -->
+    <!-- Secondary -->
+    <Style Selector="Button.Secondary">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+        <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="Button.Secondary:pointerover, Button.Secondary:flyout-open, Button.Secondary:pressed">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    </Style>
+    <Style Selector="Button.Secondary:pointerover /template/ Border#RootBorder, Button.Secondary:pressed /template/ Border#RootBorder">
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    </Style>
+
+    <!-- Danger -->
     <Style Selector="Button.Danger">
         <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill}" />
         <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.Danger:pointerover, Button.Danger:pressed">
         <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill.Hover}" />
@@ -58,8 +93,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill.Hover}" />
     </Style>
 
-    <!-- Disabled filled buttons: clearly inactive, still readable -->
-    <Style Selector="Button.Primary:disabled, Button.Danger:disabled">
+    <!-- Disabled: clearly inactive, still readable -->
+    <Style Selector="Button.Primary:disabled, Button.Secondary:disabled, Button.Danger:disabled">
         <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
         <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />

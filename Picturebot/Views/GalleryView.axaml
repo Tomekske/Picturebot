@@ -349,13 +349,15 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer IsVisible="{Binding IsShowingAlbum}" Padding="20,10,20,20">
+            <!-- Spacing lives on the content (not ScrollViewer.Padding) so the grid width matches the clip area -->
+            <ScrollViewer IsVisible="{Binding IsShowingAlbum}" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl x:Name="GroupedPicturesItemsControl" ItemsSource="{Binding GroupedPictures}"
+                              Margin="20,10,24,20"
                               Background="Transparent">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:PictureGroupViewModel">
-                            <StackPanel Spacing="10" Margin="0,0,0,30">
-                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="5,0">
+                            <StackPanel Spacing="14" Margin="0,0,0,32">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
                                     <icons:MaterialIcon Kind="BurstMode"
                                                         IsVisible="{Binding IsBurstGroup}"
                                                         Width="20" Height="20"
@@ -382,12 +384,13 @@
                                     </ItemsControl.Styles>
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <WrapPanel />
+                                            <!-- Fills the row: as many columns as fit at MinItemWidth, cards stretched equally -->
+                                            <controls:AdaptiveGridPanel MinItemWidth="260" Spacing="16" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PictureItemViewModel">
-                                            <controls:AspectRatioPanel Width="320" Ratio="0.85" Margin="8">
+                                            <controls:AspectRatioPanel Ratio="0.85">
                                                 <!-- The 'Matted Print' Border -->
                                                 <Border Name="PART_AspectBorder"
                                                         Classes.rejected="{Binding CurationStatus, Converter={StaticResource CurationStatusToBooleanConverter}, ConverterParameter=Rejected}"

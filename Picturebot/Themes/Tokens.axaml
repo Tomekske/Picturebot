@@ -7,6 +7,15 @@
         Brand palette (monochromatic): #1C21C7, #323694, #343661, #262633, #2C2C33.
     -->
 
+    <!-- ── Shape (same values as the Settings dialog) ─────────────────── -->
+    <CornerRadius x:Key="Radius.Dialog">10</CornerRadius>
+    <CornerRadius x:Key="Radius.Control">6</CornerRadius>
+
+    <!-- Dialog widths (DialogLayout.Size). Height follows content, capped at 85% of the window. -->
+    <x:Double x:Key="Dialog.Width.Small">440</x:Double>
+    <x:Double x:Key="Dialog.Width.Medium">560</x:Double>
+    <x:Double x:Key="Dialog.Width.Large">860</x:Double>
+
     <!-- ── Surfaces (darkest → lightest) ─────────────────────────────── -->
     <Color x:Key="Color.Surface.App">#1B1B23</Color>
     <Color x:Key="Color.Surface.Panel">#262633</Color>
@@ -18,6 +27,7 @@
     <SolidColorBrush x:Key="Surface.Panel" Color="{StaticResource Color.Surface.Panel}" />
     <SolidColorBrush x:Key="Surface.Card" Color="{StaticResource Color.Surface.Card}" />
     <SolidColorBrush x:Key="Surface.Raised" Color="{StaticResource Color.Surface.Raised}" />
+    <SolidColorBrush x:Key="Surface.Raised.Hover" Color="#40404C" />
     <SolidColorBrush x:Key="Surface.Overlay" Color="{StaticResource Color.Surface.Overlay}" />
 
     <!-- Neutral backdrop behind photos (no blue tint, so colors are judged correctly) -->

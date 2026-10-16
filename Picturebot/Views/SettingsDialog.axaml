@@ -14,7 +14,7 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
-        Width="860"
+        Width="{DynamicResource Dialog.Width.Large}"
         Height="600"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
@@ -219,38 +219,6 @@
             <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
         </Style>
 
-        <!-- Standard Button Styles -->
-        <Style Selector="Button.secondary">
-            <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="16,8" />
-            <Setter Property="FontWeight" Value="Medium" />
-        </Style>
-        <Style Selector="Button.secondary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
-        </Style>
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{DynamicResource Accent.Fill}" />
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="16,8" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Accent.Fill.Hover}" />
-        </Style>
-        <Style Selector="Button.danger">
-            <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill}" />
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="14,7" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.danger:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill.Hover}" />
-        </Style>
-
         <!-- Icon Action Button Styling -->
         <Style Selector="Button.action-icon-btn">
             <Setter Property="Background" Value="Transparent" />
@@ -288,17 +256,15 @@
                            VerticalAlignment="Center" 
                            Margin="16,0,0,0" />
                 
-                <Button Command="{Binding CloseDialogCommand}" 
+                <Button Classes="Basic"
+                        Command="{Binding CloseDialogCommand}"
                         CommandParameter="{Binding $parent[Window]}"
-                        Background="Transparent" 
-                        BorderThickness="0" 
-                        Foreground="{DynamicResource Text.Secondary}" 
-                        FontSize="16" 
-                        HorizontalAlignment="Right" 
-                        VerticalAlignment="Center" 
-                        Margin="0,0,16,0"
-                        Padding="4">
-                    <TextBlock Text="✕" />
+                        ToolTip.Tip="Close"
+                        Padding="6"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,10,0">
+                    <material:MaterialIcon Kind="Close" Width="16" Height="16" />
                 </Button>
                 
                 <!-- Header Bottom Divider -->
@@ -328,10 +294,10 @@
 
                 <!-- Right: Dialog Action Buttons -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12" Margin="0,0,16,0">
-                    <Button Classes="secondary" 
+                    <Button Classes="Secondary" 
                             Content="Discard Changes" 
                             Command="{Binding DiscardChangesCommand}" />
-                    <Button Classes="primary" 
+                    <Button Classes="Primary" 
                             Content="Save Changes" 
                             Command="{Binding SaveSettingsCommand}" 
                             CommandParameter="{Binding $parent[Window]}" />
@@ -747,7 +713,7 @@
                                     <Button Grid.Column="2" 
                                             Command="{Binding AddTagCommand}" 
                                             Height="36" 
-                                            Classes="primary" 
+                                            Classes="Primary" 
                                             Content="+ Add Tag" />
                                 </Grid>
 
@@ -870,8 +836,8 @@
                                         <TextBlock Text="{Binding DeleteTagConfirmMessage}" TextWrapping="Wrap" Foreground="{DynamicResource Text.Primary}" FontSize="13" LineHeight="18" />
 
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
-                                            <Button Classes="secondary" Content="Cancel" Command="{Binding CancelDeleteTagCommand}" Height="34" />
-                                            <Button Classes="danger" Content="Delete &amp; Unlink" Command="{Binding ConfirmDeleteTagCommand}" Height="34" />
+                                            <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelDeleteTagCommand}" Height="34" />
+                                            <Button Classes="Danger" Content="Delete &amp; Unlink" Command="{Binding ConfirmDeleteTagCommand}" Height="34" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -885,7 +851,7 @@
                                 <TextBlock Grid.Column="0" Text="TAXONOMY HIERARCHY" Foreground="{DynamicResource Text.Secondary}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" LetterSpacing="1" />
                                 
                                 <Button Grid.Column="1" 
-                                        Classes="secondary" 
+                                        Classes="Secondary" 
                                         Height="28" 
                                         Padding="10,2" 
                                         FontSize="11" 
@@ -1008,7 +974,7 @@
                                 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                     <!-- Import from Taxonomy Flyout Button -->
-                                    <Button Classes="secondary" 
+                                    <Button Classes="Secondary" 
                                             Height="28" 
                                             Padding="10,2" 
                                             FontSize="11" 
@@ -1058,7 +1024,7 @@
                                     </Button>
 
                                     <!-- Add Group Button -->
-                                    <Button Classes="secondary" 
+                                    <Button Classes="Secondary" 
                                             Height="28" 
                                             Padding="10,2" 
                                             FontSize="11" 

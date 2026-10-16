@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:Picturebot.ViewModels"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+             xmlns:controls="using:Picturebot.Controls"
              x:Class="Picturebot.Views.EditNodeDialog"
              x:DataType="vm:EditNodeDialogViewModel">
 
@@ -18,10 +19,15 @@
         </Style>
     </UserControl.Styles>
     
-    <Grid RowDefinitions="Auto,*,Auto" Margin="20" Width="400">
-        <TextBlock Grid.Row="0" Text="{Binding Title}" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" />
-        
-        <StackPanel Grid.Row="1" Spacing="15">
+    <controls:DialogLayout Title="{Binding Title}" CloseCommand="{Binding CancelCommand}">
+        <controls:DialogLayout.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelCommand}" />
+                <Button Classes="Primary" Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding !IsCreatingNewFolder}" />
+            </StackPanel>
+        </controls:DialogLayout.Footer>
+
+        <StackPanel Spacing="15">
             <StackPanel Spacing="5">
                 <TextBlock Text="Name" FontWeight="SemiBold" />
                 <TextBox Text="{Binding NodeName, Mode=TwoWay}" Watermark="Enter name..." />
@@ -55,26 +61,21 @@
             <!-- Inline Quick-Add Folder Input -->
             <Border IsVisible="{Binding IsCreatingNewFolder}"
                     Padding="15"
-                    Background="{DynamicResource SukiGlassCardBackground}"
-                    BorderBrush="{DynamicResource SukiBorderBrush}"
+                    Background="{DynamicResource Surface.Card}"
+                    BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1"
-                    CornerRadius="8">
+                    CornerRadius="{DynamicResource Radius.Dialog}">
                 <StackPanel Spacing="10">
                     <TextBlock Text="New Parent Folder Name" FontWeight="SemiBold" FontSize="14" />
                     <TextBox Text="{Binding NewFolderName, Mode=TwoWay}" 
                              Watermark="Folder name..."
                              Classes="Simple" />
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button Classes="Basic" Content="Cancel" Command="{Binding CancelNewFolderCommand}" Padding="8,4" />
-                        <Button Classes="Primary" Content="Create" Command="{Binding ConfirmNewFolderCommand}" Padding="12,4" />
+                        <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelNewFolderCommand}" />
+                        <Button Classes="Primary" Content="Create" Command="{Binding ConfirmNewFolderCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>
-        
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
-            <Button Classes="Basic" Content="Cancel" Command="{Binding CancelCommand}" />
-            <Button Classes="Primary" Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding !IsCreatingNewFolder}" />
-        </StackPanel>
-    </Grid>
+    </controls:DialogLayout>
 </UserControl>
