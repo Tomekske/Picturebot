@@ -4,395 +4,591 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Picturebot.ViewModels"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:converters="using:Picturebot.Converters"
              xmlns:models="using:Domain.Models"
              xmlns:enums="using:Domain.Enums"
-             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="800"
+             mc:Ignorable="d" d:DesignWidth="350" d:DesignHeight="800"
              x:Class="Picturebot.Views.DetailsInspectorView"
              x:DataType="vm:DetailsInspectorViewModel">
 
     <UserControl.Resources>
-        <converters:CurationStatusToBrushConverter x:Key="CurationStatusToBrushConverter" />
-        <converters:ColorLabelToBrushConverter x:Key="ColorLabelToBrushConverter" />
         <converters:RatingToBrushConverter x:Key="RatingToBrushConverter" />
+        <converters:EnumEqualsConverter x:Key="EnumEquals" />
     </UserControl.Resources>
 
-    <Grid RowDefinitions="Auto, *, Auto">
-        <!-- Header -->
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,10">
-            <TextBlock Text="Details"
-                       Classes="h3"
-                       FontWeight="Bold"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource SukiText}" />
+    <UserControl.Styles>
+        <!-- Collapsible section header -->
+        <Style Selector="Button.section-header">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.section-summary">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+        </Style>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" />
-        </Grid>
+        <!-- Label / value rows -->
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.field-value">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.field-hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
 
-        <!-- Main Content (Preview + Curation) -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="15,0">
-            <StackPanel Spacing="25">
-                <!-- Preview Box -->
-                <suki:GlassCard Padding="0" ClipToBounds="True">
-                    <Panel Background="{DynamicResource Photo.Backdrop}" MinHeight="200">
-                        <!-- Fade-in Image Logic -->
-                        <Image Source="{Binding PreviewImage}"
-                               Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               Classes.loaded="{Binding PreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <Image.Styles>
-                                <Style Selector="Image">
-                                    <Setter Property="Opacity" Value="0" />
-                                    <Setter Property="Transitions">
-                                        <Transitions>
-                                            <DoubleTransition Property="Opacity"
-                                                              Duration="0:0:0.6"
-                                                              Easing="QuadraticEaseOut" />
-                                        </Transitions>
-                                    </Setter>
-                                </Style>
-                                <Style Selector="Image.loaded">
-                                    <Setter Property="Opacity" Value="1" />
-                                </Style>
-                            </Image.Styles>
-                        </Image>
+        <!-- Segmented status control -->
+        <Style Selector="Button.segment">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="6,5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.segment:pointerover">
+            <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        </Style>
+        <Style Selector="Button.segment.pick.active">
+            <Setter Property="Background" Value="{DynamicResource Status.Picked.Subtle}" />
+            <Setter Property="Foreground" Value="{DynamicResource Status.Picked}" />
+        </Style>
+        <Style Selector="Button.segment.neutral.active">
+            <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        </Style>
+        <Style Selector="Button.segment.reject.active">
+            <Setter Property="Background" Value="{DynamicResource Status.Danger.Subtle}" />
+            <Setter Property="Foreground" Value="{DynamicResource Status.Rejected}" />
+        </Style>
 
-                        <!-- Empty State -->
-                        <StackPanel IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNull}}"
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    Spacing="10">
-                            <icons:MaterialIcon Kind="ImageOutline" Width="48" Height="48"
-                                                Foreground="{DynamicResource SukiLowText}" />
-                            <TextBlock Text="Select an asset to view details"
-                                       Foreground="{DynamicResource SukiLowText}"
-                                       FontSize="12" />
-                        </StackPanel>
+        <!-- Color label dots: ring and dot are two circles in the same 22px box, drawn without
+             layout rounding so they stay concentric at every display scaling (125%, 150%, ...). -->
+        <Style Selector="Button.dot">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel Width="22" Height="22" Background="Transparent" UseLayoutRounding="False">
+                        <Ellipse Width="22" Height="22"
+                                 Stroke="{TemplateBinding BorderBrush}"
+                                 StrokeThickness="2"
+                                 UseLayoutRounding="False" />
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          UseLayoutRounding="False" />
                     </Panel>
-                </suki:GlassCard>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.dot Ellipse">
+            <Setter Property="UseLayoutRounding" Value="False" />
+        </Style>
+        <Style Selector="Button.dot:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+        </Style>
+        <Style Selector="Button.dot.active, Button.dot.active:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource Text.Primary}" />
+        </Style>
 
-                <!-- Curation Section -->
-                <StackPanel Spacing="15"
-                            IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Text="Curation Status"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SukiText}" />
+        <!-- Quick tag chips -->
+        <Style Selector="ToggleButton.quick-tag">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+    </UserControl.Styles>
 
-                    <Grid ColumnDefinitions="*,*,*" HorizontalAlignment="Center">
-                        <!-- Flagged -->
-                        <Button Grid.Column="0" Classes="Basic"
-                                Command="{Binding SetCurationStatusCommand}"
-                                CommandParameter="{x:Static enums:CurationStatus.Flagged}"
-                                Padding="10">
-                            <StackPanel Spacing="5" HorizontalAlignment="Center">
-                                <icons:MaterialIcon Kind="Flag" Width="32" Height="32"
-                                                    Foreground="{Binding SelectedPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Flagged}" />
-                                <TextBlock Text="Flagged" FontSize="10" HorizontalAlignment="Center" />
+    <Grid RowDefinitions="Auto,*">
+        <!-- Panel title -->
+        <TextBlock Grid.Row="0"
+                   Text="Details"
+                   Classes="h3"
+                   FontWeight="Bold"
+                   Margin="16,10"
+                   Foreground="{DynamicResource Text.Primary}" />
+
+        <!-- Empty state -->
+        <StackPanel Grid.Row="1"
+                    IsVisible="{Binding !HasSelection}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="10"
+                    Margin="16,0,16,80">
+            <icons:MaterialIcon Kind="ImageOutline" Width="40" Height="40" Foreground="{DynamicResource Text.Muted}" />
+            <TextBlock Text="Select a picture to see its details"
+                       FontSize="12"
+                       Foreground="{DynamicResource Text.Muted}"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" IsVisible="{Binding HasSelection}" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="16" Margin="16,0,16,20">
+
+                <!-- Identity: one picture -->
+                <Grid IsVisible="{Binding IsSingleMode}">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="{Binding SelectedPicture.Name}" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Text.Primary}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock FontSize="12" Foreground="{DynamicResource Text.Secondary}" TextTrimming="CharacterEllipsis">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}{0:d MMM yyyy · HH:mm} · {1}">
+                                    <Binding Path="SelectedPicture.Picture.CapturedAt" />
+                                    <Binding Path="SelectedPicture.FileTypesText" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Identity: several pictures -->
+                <Grid IsVisible="{Binding IsMultiMode}">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="{Binding SelectedPictures.Count, StringFormat='{}{0} pictures selected'}" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Text.Primary}" />
+                        <TextBlock Text="Changes apply to all selected pictures" FontSize="12" Foreground="{DynamicResource Text.Secondary}" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Actions -->
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Button Grid.Column="0" Classes="Primary" Command="{Binding OpenInDxoCommand}" HorizontalAlignment="Stretch"
+                            ToolTip.Tip="Open in DxO PhotoLab">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:MaterialIcon Kind="OpenInApp" Width="16" Height="16" />
+                            <TextBlock Text="Open in DxO" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="1" Classes="Secondary" Command="{Binding ShowInExplorerCommand}"
+                            IsVisible="{Binding IsSingleMode}" Padding="10,8" Margin="8,0,0,0" ToolTip.Tip="Show in Explorer">
+                        <icons:MaterialIcon Kind="FolderOutline" Width="16" Height="16" />
+                    </Button>
+                    <Button Grid.Column="2" Classes="Secondary" Padding="10,8" Margin="8,0,0,0" ToolTip.Tip="More actions">
+                        <icons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16" />
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Header="Copy RAW to edit folder" Command="{Binding CopyToEditCommand}">
+                                    <MenuItem.Icon><icons:MaterialIcon Kind="FileMoveOutline" Width="16" Height="16" /></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Copy JPG to print folder" Command="{Binding CopyToPrintCommand}">
+                                    <MenuItem.Icon><icons:MaterialIcon Kind="PrinterOutline" Width="16" Height="16" /></MenuItem.Icon>
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="Delete picture…" Command="{Binding DeleteAssetCommand}" Foreground="{DynamicResource Status.Danger}">
+                                    <MenuItem.Icon><icons:MaterialIcon Kind="DeleteOutline" Width="16" Height="16" Foreground="{DynamicResource Status.Danger}" /></MenuItem.Icon>
+                                </MenuItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </Grid>
+
+                <Rectangle Height="1" Fill="{DynamicResource Border.Subtle}" />
+
+                <!-- Curation: status, rating, label -->
+                <Grid ColumnDefinitions="64,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Classes="field-label" Text="Status" />
+                    <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource Surface.Card}"
+                            CornerRadius="{DynamicResource Radius.Control}" Padding="2">
+                        <UniformGrid Columns="3">
+                            <Button Classes="segment pick"
+                                    Classes.active="{Binding DisplayedStatus, Converter={StaticResource EnumEquals}, ConverterParameter=Flagged}"
+                                    Command="{Binding SetCurationStatusCommand}" CommandParameter="{x:Static enums:CurationStatus.Flagged}"
+                                    ToolTip.Tip="Pick">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <icons:MaterialIcon Kind="Flag" Width="14" Height="14" />
+                                    <TextBlock Text="Pick" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="segment neutral"
+                                    Classes.active="{Binding DisplayedStatus, Converter={StaticResource EnumEquals}, ConverterParameter=Unflagged}"
+                                    Command="{Binding SetCurationStatusCommand}" CommandParameter="{x:Static enums:CurationStatus.Unflagged}"
+                                    Content="Neutral" ToolTip.Tip="Neutral" />
+                            <Button Classes="segment reject"
+                                    Classes.active="{Binding DisplayedStatus, Converter={StaticResource EnumEquals}, ConverterParameter=Rejected}"
+                                    Command="{Binding SetCurationStatusCommand}" CommandParameter="{x:Static enums:CurationStatus.Rejected}"
+                                    ToolTip.Tip="Reject">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <icons:MaterialIcon Kind="Close" Width="14" Height="14" />
+                                    <TextBlock Text="Reject" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Grid.Row="1" Classes="field-label" Text="Rating" Margin="0,12,0,0" />
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="0,12,0,0">
+                        <Button Classes="Basic" Padding="2" Command="{Binding ToggleRatingCommand}" CommandParameter="1" ToolTip.Tip="1 star (click again to clear)">
+                            <icons:MaterialIcon Kind="Star" Width="22" Height="22"
+                                                Foreground="{Binding DisplayedRating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=1}" />
+                        </Button>
+                        <Button Classes="Basic" Padding="2" Command="{Binding ToggleRatingCommand}" CommandParameter="2" ToolTip.Tip="2 stars (click again to clear)">
+                            <icons:MaterialIcon Kind="Star" Width="22" Height="22"
+                                                Foreground="{Binding DisplayedRating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=2}" />
+                        </Button>
+                        <Button Classes="Basic" Padding="2" Command="{Binding ToggleRatingCommand}" CommandParameter="3" ToolTip.Tip="3 stars (click again to clear)">
+                            <icons:MaterialIcon Kind="Star" Width="22" Height="22"
+                                                Foreground="{Binding DisplayedRating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=3}" />
+                        </Button>
+                        <Button Classes="Basic" Padding="2" Command="{Binding ToggleRatingCommand}" CommandParameter="4" ToolTip.Tip="4 stars (click again to clear)">
+                            <icons:MaterialIcon Kind="Star" Width="22" Height="22"
+                                                Foreground="{Binding DisplayedRating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=4}" />
+                        </Button>
+                        <Button Classes="Basic" Padding="2" Command="{Binding ToggleRatingCommand}" CommandParameter="5" ToolTip.Tip="5 stars (click again to clear)">
+                            <icons:MaterialIcon Kind="Star" Width="22" Height="22"
+                                                Foreground="{Binding DisplayedRating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=5}" />
+                        </Button>
+                        <TextBlock Classes="field-hint" Text="Mixed" VerticalAlignment="Center" Margin="8,0,0,0"
+                                   IsVisible="{Binding DisplayedRating, Converter={x:Static ObjectConverters.IsNull}}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="2" Classes="field-label" Text="Label" Margin="0,12,0,0" />
+                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Red}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Red}"
+                                ToolTip.Tip="{Binding RedLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Red}" />
+                        </Button>
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Orange}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Orange}"
+                                ToolTip.Tip="{Binding OrangeLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Orange}" />
+                        </Button>
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Yellow}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Yellow}"
+                                ToolTip.Tip="{Binding YellowLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Yellow}" />
+                        </Button>
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Green}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Green}"
+                                ToolTip.Tip="{Binding GreenLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Green}" />
+                        </Button>
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Blue}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Blue}"
+                                ToolTip.Tip="{Binding BlueLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Blue}" />
+                        </Button>
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Pink}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Pink}"
+                                ToolTip.Tip="{Binding PinkLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Pink}" />
+                        </Button>
+                        <Button Classes="dot"
+                                Classes.active="{Binding DisplayedLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Purple}"
+                                Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Purple}"
+                                ToolTip.Tip="{Binding PurpleLabelName}">
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource Label.Purple}" />
+                        </Button>
+                        <TextBlock Classes="field-value" Text="{Binding DisplayedLabelName}" Margin="6,0,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Keywords -->
+                <Rectangle Height="1" Fill="{DynamicResource Border.Subtle}" />
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Button Classes="Basic section-header" Command="{Binding ToggleSectionCommand}" CommandParameter="Keywords">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="ChevronDown" Width="16" Height="16" IsVisible="{Binding IsKeywordsExpanded}" />
+                                <icons:MaterialIcon Kind="ChevronRight" Width="16" Height="16" IsVisible="{Binding !IsKeywordsExpanded}" />
+                                <TextBlock Classes="section-title" Text="Keywords" />
+                                
                             </StackPanel>
                         </Button>
-
-                        <!-- Unflagged -->
-                        <Button Grid.Column="1" Classes="Basic"
-                                Command="{Binding SetCurationStatusCommand}"
-                                CommandParameter="{x:Static enums:CurationStatus.Unflagged}"
-                                Padding="10">
-                            <StackPanel Spacing="5" HorizontalAlignment="Center">
-                                <icons:MaterialIcon Kind="CircleOutline" Width="32" Height="32"
-                                                    Foreground="{Binding SelectedPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Unflagged}" />
-                                <TextBlock Text="Neutral" FontSize="10" HorizontalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-
-                        <!-- Rejected -->
-                        <Button Grid.Column="2" Classes="Basic"
-                                Command="{Binding SetCurationStatusCommand}"
-                                CommandParameter="{x:Static enums:CurationStatus.Rejected}"
-                                Padding="10">
-                            <StackPanel Spacing="5" HorizontalAlignment="Center">
-                                <icons:MaterialIcon Kind="Close" Width="32" Height="32"
-                                                    Foreground="{Binding SelectedPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Rejected}" />
-                                <TextBlock Text="Rejected" FontSize="10" HorizontalAlignment="Center" />
-                            </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="Basic"
+                                Command="{Binding AutoTagPictureCommand}"
+                                ToolTip.Tip="AI auto-tag (replaces existing keywords)"
+                                Padding="4"
+                                VerticalAlignment="Center">
+                            <icons:MaterialIcon Kind="AutoFix" Width="18" Height="18" Foreground="{DynamicResource Accent.Foreground}" />
                         </Button>
                     </Grid>
-                </StackPanel>
+                    <StackPanel Spacing="10" IsVisible="{Binding IsKeywordsExpanded}">
+                            <!-- Grouped Keywords Sections (Taxonomy Parent as Title, Children as Pills) -->
+                            <ItemsControl ItemsSource="{Binding ActiveKeywordGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:KeywordGroupViewModel">
+                                        <StackPanel Spacing="6" Margin="0,0,0,10">
+                                            <!-- Taxonomy Parent Header Row -->
+                                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                                                <!-- Header Title & Expand/Collapse Toggle -->
+                                                <Button Grid.Column="0"
+                                                        Classes="Basic"
+                                                        Command="{Binding ToggleExpandCommand}"
+                                                        Padding="0"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Cursor="Hand">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <icons:MaterialIcon Kind="{Binding ChevronIconKind}"
+                                                                            Width="14"
+                                                                            Height="14"
+                                                                            Foreground="{DynamicResource Text.Primary}"
+                                                                            VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   FontSize="13"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{DynamicResource Text.Primary}"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
 
-                <!-- Rating Section -->
-                <StackPanel Spacing="10" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Text="Rating"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SukiText}" />
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-                        <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="1" Padding="2">
-                            <icons:MaterialIcon Kind="Star" Width="28" Height="28" 
-                                                Foreground="{Binding SelectedPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=1}" />
-                        </Button>
-                        <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="2" Padding="2">
-                            <icons:MaterialIcon Kind="Star" Width="28" Height="28" 
-                                                Foreground="{Binding SelectedPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=2}" />
-                        </Button>
-                        <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="3" Padding="2">
-                            <icons:MaterialIcon Kind="Star" Width="28" Height="28" 
-                                                Foreground="{Binding SelectedPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=3}" />
-                        </Button>
-                        <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="4" Padding="2">
-                            <icons:MaterialIcon Kind="Star" Width="28" Height="28" 
-                                                Foreground="{Binding SelectedPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=4}" />
-                        </Button>
-                        <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="5" Padding="2">
-                            <icons:MaterialIcon Kind="Star" Width="28" Height="28" 
-                                                Foreground="{Binding SelectedPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=5}" />
-                        </Button>
-                        <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="0" Padding="2" Margin="10,0,0,0">
-                            <icons:MaterialIcon Kind="StarOff" Width="22" Height="22" Foreground="{DynamicResource SukiLowText}" />
-                        </Button>
+                                                <!-- Group Options (⋮) -->
+                                                <Button Grid.Column="2"
+                                                        Classes="Basic"
+                                                        Padding="4,2"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        VerticalAlignment="Center"
+                                                        ToolTip.Tip="Group options">
+                                                    <Button.Flyout>
+                                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                            <MenuItem Header="Remove all in group"
+                                                                      Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordGroupCommand}"
+                                                                      CommandParameter="{Binding}">
+                                                                <MenuItem.Icon>
+                                                                    <icons:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15" Foreground="{DynamicResource Status.Danger}" />
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                        </MenuFlyout>
+                                                    </Button.Flyout>
+                                                    <icons:MaterialIcon Kind="DotsVertical"
+                                                                        Width="16"
+                                                                        Height="16"
+                                                                        Foreground="{DynamicResource Text.Secondary}" />
+                                                </Button>
+                                            </Grid>
+
+                                            <!-- Child Tag Pills -->
+                                            <ItemsControl ItemsSource="{Binding Chips}" IsVisible="{Binding IsExpanded}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="vm:KeywordChipViewModel">
+                                                        <Border Background="{DynamicResource Surface.Card}"
+                                                                BorderBrush="{DynamicResource Border.Subtle}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="13"
+                                                                Margin="0,0,6,6"
+                                                                Padding="10,4,6,4"
+                                                                ToolTip.Tip="{Binding Tooltip}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                <!-- Leaf Tag Text -->
+                                                                <TextBlock Text="{Binding LeafName}"
+                                                                           Foreground="{DynamicResource Text.Primary}"
+                                                                           FontSize="12"
+                                                                           FontWeight="Medium"
+                                                                           VerticalAlignment="Center" />
+
+                                                                <!-- Remove Chip Action Button (✕) -->
+                                                                <Button Classes="Basic"
+                                                                        Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordChipCommand}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Padding="2"
+                                                                        MinWidth="14"
+                                                                        MinHeight="14"
+                                                                        Background="Transparent"
+                                                                        BorderThickness="0"
+                                                                        VerticalAlignment="Center"
+                                                                        ToolTip.Tip="Remove tag">
+                                                                    <icons:MaterialIcon Kind="Close"
+                                                                                        Width="11"
+                                                                                        Height="11"
+                                                                                        Foreground="{DynamicResource Text.Secondary}" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Add Keyword AutoCompleteBox -->
+                            <AutoCompleteBox Name="TagInput"
+                                             ItemsSource="{Binding AvailableKeywordSuggestions}"
+                                             Text="{Binding NewTagText, Mode=TwoWay}"
+                                             Watermark="Add keyword (e.g. Vehicles › Car or Hero)..."
+                                             FilterMode="ContainsOrdinal"
+                                             MinimumPrefixLength="0"
+                                             MinimumPopulateDelay="00:00:00"
+                                             GotFocus="TagInput_GotFocus"
+                                             Height="36"
+                                             KeyDown="TagInput_KeyDown">
+                                <AutoCompleteBox.ItemTemplate>
+                                    <DataTemplate DataType="x:String">
+                                        <TextBlock Text="{Binding}" FontSize="12" Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </AutoCompleteBox.ItemTemplate>
+                            </AutoCompleteBox>
+
+                        <!-- Quick tags: inline chips; the group picker only shows when there's a choice -->
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <TextBlock Classes="field-label" Text="Quick tags" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1"
+                                          IsVisible="{Binding HasMultipleTagGroups}"
+                                          ItemsSource="{Binding AvailableTagGroups}"
+                                          SelectedItem="{Binding ActiveTagGroup, Mode=TwoWay}"
+                                          HorizontalAlignment="Right"
+                                          MinWidth="140"
+                                          PlaceholderText="Tag group">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="models:TagGroup">
+                                            <TextBlock Text="{Binding GroupName}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding QuickTagButtons}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel HorizontalAlignment="Left" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:QuickTagButtonViewModel">
+                                        <ToggleButton Classes="quick-tag"
+                                                      Content="{Binding Name}"
+                                                      IsChecked="{Binding IsActive}"
+                                                      Command="{Binding $parent[ItemsControl].((vm:DetailsInspectorViewModel)DataContext).ToggleQuickTagCommand}"
+                                                      CommandParameter="{Binding}"
+                                                      Margin="0,0,6,6" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Color Label Section -->
-                <StackPanel Spacing="10" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Text="Color Label"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SukiText}" />
-                    <ComboBox HorizontalAlignment="Stretch"
-                              ItemsSource="{Binding ColorLabelOptions}"
-                              SelectedItem="{Binding SelectedColorLabelOption}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ColorLabelOption">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <Ellipse Width="12" Height="12" Fill="{Binding Brush}" 
-                                             Stroke="{DynamicResource SukiBorderBrush}"
-                                             StrokeThickness="1" />
-                                    <TextBlock Text="{Binding Name}" 
-                                               VerticalAlignment="Center" 
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource SukiText}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                <!-- Info -->
+                <Rectangle Height="1" Fill="{DynamicResource Border.Subtle}" />
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Button Classes="Basic section-header" Command="{Binding ToggleSectionCommand}" CommandParameter="Info">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="ChevronDown" Width="16" Height="16" IsVisible="{Binding IsInfoExpanded}" />
+                                <icons:MaterialIcon Kind="ChevronRight" Width="16" Height="16" IsVisible="{Binding !IsInfoExpanded}" />
+                                <TextBlock Classes="section-title" Text="Info" />
+                                <TextBlock Classes="section-summary" Text="{Binding InfoSummary}" IsVisible="{Binding !IsInfoExpanded}" />
+                            </StackPanel>
+                        </Button>
+                        
+                    </Grid>
+                    <StackPanel Spacing="10" IsVisible="{Binding IsInfoExpanded}">
+                        <Grid ColumnDefinitions="96,*">
+                            <TextBlock Classes="field-label" Text="Captured" />
+                            <TextBlock Grid.Column="1" Classes="field-value" Text="{Binding SelectedPicture.Picture.CapturedAt, StringFormat='{}{0:d MMM yyyy · HH:mm:ss}'}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="96,*">
+                            <TextBlock Classes="field-label" Text="Dimensions" />
+                            <TextBlock Grid.Column="1" Classes="field-value">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} × {1} px">
+                                        <Binding Path="SelectedPicture.Picture.Width" />
+                                        <Binding Path="SelectedPicture.Picture.Height" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        <Grid ColumnDefinitions="96,*">
+                            <TextBlock Classes="field-label" Text="Orientation" />
+                            <TextBlock Grid.Column="1" Classes="field-value" Text="{Binding SelectedPicture.Orientation}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="96,*">
+                            <TextBlock Classes="field-label" Text="Files" />
+                            <TextBlock Grid.Column="1" Classes="field-value" Text="{Binding SelectedPicture.FileTypesText}" />
+                        </Grid>
+                        <TextBlock Classes="field-hint" Text="Camera, lens and exposure details will appear here once EXIF data is read." />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- Keywords Section -->
-                <StackPanel Spacing="12" IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                        <TextBlock Grid.Column="0"
-                                   Text="Keywords"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource SukiText}" />
-
-                        <Button Grid.Column="2"
-                                Classes="Basic"
-                                Command="{Binding AutoTagPictureCommand}"
-                                ToolTip.Tip="AI Auto-Tag picture (Overrides existing tags)"
-                                Padding="4"
-                                VerticalAlignment="Center">
-                            <icons:MaterialIcon Kind="AutoFix" Width="20" Height="20" Foreground="{DynamicResource Accent.Foreground}" />
+                <!-- Location -->
+                <Rectangle Height="1" Fill="{DynamicResource Border.Subtle}" />
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Button Classes="Basic section-header" Command="{Binding ToggleSectionCommand}" CommandParameter="Location">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="ChevronDown" Width="16" Height="16" IsVisible="{Binding IsLocationExpanded}" />
+                                <icons:MaterialIcon Kind="ChevronRight" Width="16" Height="16" IsVisible="{Binding !IsLocationExpanded}" />
+                                <TextBlock Classes="section-title" Text="Location" />
+                                <TextBlock Classes="section-summary" Text="No location data" IsVisible="{Binding !IsLocationExpanded}" />
+                            </StackPanel>
                         </Button>
+                        
                     </Grid>
+                    <StackPanel Spacing="10" IsVisible="{Binding IsLocationExpanded}">
+                        <TextBlock Classes="field-hint" Text="No location data yet. GPS coordinates and the place name will appear here." />
+                    </StackPanel>
+                </StackPanel>
 
-                    <!-- Grouped Keywords Sections (Taxonomy Parent as Title, Children as Pills) -->
-                    <ItemsControl ItemsSource="{Binding ActiveKeywordGroups}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:KeywordGroupViewModel">
-                                <StackPanel Spacing="6" Margin="0,0,0,10">
-                                    <!-- Taxonomy Parent Header Row -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                                        <!-- Header Title & Expand/Collapse Toggle -->
-                                        <Button Grid.Column="0"
-                                                Classes="Basic"
-                                                Command="{Binding ToggleExpandCommand}"
-                                                Padding="0"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Cursor="Hand">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                <icons:MaterialIcon Kind="{Binding ChevronIconKind}"
-                                                                    Width="14"
-                                                                    Height="14"
-                                                                    Foreground="{DynamicResource Text.Primary}"
-                                                                    VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding Title}"
-                                                           FontSize="13"
-                                                           FontWeight="Bold"
-                                                           Foreground="{DynamicResource Text.Primary}"
-                                                           VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
-
-                                        <!-- Group Options (⋮) -->
-                                        <Button Grid.Column="2"
-                                                Classes="Basic"
-                                                Padding="4,2"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                VerticalAlignment="Center"
-                                                ToolTip.Tip="Group options">
-                                            <Button.Flyout>
-                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                                    <MenuItem Header="Remove all in group"
-                                                              Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordGroupCommand}"
-                                                              CommandParameter="{Binding}">
-                                                        <MenuItem.Icon>
-                                                            <icons:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15" Foreground="{DynamicResource Status.Danger}" />
-                                                        </MenuItem.Icon>
-                                                    </MenuItem>
-                                                </MenuFlyout>
-                                            </Button.Flyout>
-                                            <icons:MaterialIcon Kind="DotsVertical"
-                                                                Width="16"
-                                                                Height="16"
-                                                                Foreground="{DynamicResource Text.Secondary}" />
-                                        </Button>
-                                    </Grid>
-
-                                    <!-- Child Tag Pills -->
-                                    <ItemsControl ItemsSource="{Binding Chips}" IsVisible="{Binding IsExpanded}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Top" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="vm:KeywordChipViewModel">
-                                                <Border Background="{DynamicResource Surface.Card}"
-                                                        BorderBrush="{DynamicResource Border.Subtle}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="13"
-                                                        Margin="0,0,6,6"
-                                                        Padding="10,4,6,4"
-                                                        ToolTip.Tip="{Binding Tooltip}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                        <!-- Leaf Tag Text -->
-                                                        <TextBlock Text="{Binding LeafName}"
-                                                                   Foreground="{DynamicResource Text.Primary}"
-                                                                   FontSize="12"
-                                                                   FontWeight="Medium"
-                                                                   VerticalAlignment="Center" />
-
-                                                        <!-- Remove Chip Action Button (✕) -->
-                                                        <Button Classes="Basic"
-                                                                Command="{Binding $parent[UserControl].((vm:DetailsInspectorViewModel)DataContext).RemoveKeywordChipCommand}"
-                                                                CommandParameter="{Binding}"
-                                                                Padding="2"
-                                                                MinWidth="14"
-                                                                MinHeight="14"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
-                                                                VerticalAlignment="Center"
-                                                                ToolTip.Tip="Remove tag">
-                                                            <icons:MaterialIcon Kind="Close"
-                                                                                Width="11"
-                                                                                Height="11"
-                                                                                Foreground="{DynamicResource Text.Secondary}" />
-                                                        </Button>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <!-- Add Keyword AutoCompleteBox -->
-                    <AutoCompleteBox Name="TagInput"
-                                     ItemsSource="{Binding AvailableKeywordSuggestions}"
-                                     Text="{Binding NewTagText, Mode=TwoWay}"
-                                     Watermark="Add keyword (e.g. Vehicles › Car or Hero)..."
-                                     FilterMode="ContainsOrdinal"
-                                     MinimumPrefixLength="0"
-                                     MinimumPopulateDelay="00:00:00"
-                                     GotFocus="TagInput_GotFocus"
-                                     Height="36"
-                                     KeyDown="TagInput_KeyDown">
-                        <AutoCompleteBox.ItemTemplate>
-                            <DataTemplate DataType="x:String">
-                                <TextBlock Text="{Binding}" FontSize="12" Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
-                            </DataTemplate>
-                        </AutoCompleteBox.ItemTemplate>
-                    </AutoCompleteBox>
-
-                    <!-- Quick Tags Bar -->
-                    <StackPanel Spacing="6" Margin="0,4,0,0">
-                        <TextBlock Text="Quick Tags"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SukiLowText}" />
-
-                        <ComboBox ItemsSource="{Binding AvailableTagGroups}"
-                                  SelectedItem="{Binding ActiveTagGroup, Mode=TwoWay}"
-                                  HorizontalAlignment="Stretch"
-                                  PlaceholderText="Select Tag Group...">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate DataType="models:TagGroup">
-                                    <TextBlock Text="{Binding GroupName}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <ItemsControl ItemsSource="{Binding QuickTagButtons}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel HorizontalAlignment="Left" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:QuickTagButtonViewModel">
-                                    <ToggleButton Content="{Binding Name}"
-                                                  IsChecked="{Binding IsActive}"
-                                                  Command="{Binding $parent[ItemsControl].((vm:DetailsInspectorViewModel)DataContext).ToggleQuickTagCommand}"
-                                                  CommandParameter="{Binding}"
-                                                  Margin="0,0,6,6" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                <!-- AI and quality -->
+                <Rectangle Height="1" Fill="{DynamicResource Border.Subtle}" />
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Button Classes="Basic section-header" Command="{Binding ToggleSectionCommand}" CommandParameter="Quality">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="ChevronDown" Width="16" Height="16" IsVisible="{Binding IsQualityExpanded}" />
+                                <icons:MaterialIcon Kind="ChevronRight" Width="16" Height="16" IsVisible="{Binding !IsQualityExpanded}" />
+                                <TextBlock Classes="section-title" Text="AI and quality" />
+                                <TextBlock Classes="section-summary" Text="{Binding QualitySummary}" IsVisible="{Binding !IsQualityExpanded}" />
+                            </StackPanel>
+                        </Button>
+                        
+                    </Grid>
+                    <StackPanel Spacing="10" IsVisible="{Binding IsQualityExpanded}">
+                        <Grid ColumnDefinitions="96,*">
+                            <TextBlock Classes="field-label" Text="Sharpness" />
+                            <TextBlock Grid.Column="1" Classes="field-value" Text="{Binding SelectedPicture.Picture.Sharpness}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="96,*">
+                            <TextBlock Classes="field-label" Text="Burst" />
+                            <TextBlock Grid.Column="1" Classes="field-value" Text="Best of burst" IsVisible="{Binding SelectedPicture.IsBest}" />
+                            <TextBlock Grid.Column="1" Classes="field-value" Text="—" IsVisible="{Binding !SelectedPicture.IsBest}" />
+                        </Grid>
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedPicture.AiFeedback, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Classes="field-label" Text="AI feedback" />
+                            <TextBlock Classes="field-value" Text="{Binding SelectedPicture.AiFeedback}" TextWrapping="Wrap" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
-
-        <!-- Footer Actions -->
-        <StackPanel Grid.Row="2" Spacing="10" Margin="15,20,15,15"
-                    IsVisible="{Binding SelectedPicture, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <Button Classes="Primary"
-                    Command="{Binding OpenInDxoCommand}"
-                    HorizontalAlignment="Stretch"
-                    Height="40"
-                    ToolTip.Tip="Open selected image in DxO PhotoLab 9">
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                    <icons:MaterialIcon Kind="OpenInApp" Width="18" Height="18" />
-                    <TextBlock Text="Open in DxO" FontWeight="SemiBold" />
-                </StackPanel>
-            </Button>
-
-            <Button Classes="Basic"
-                    Command="{Binding EditMetadataCommand}"
-                    HorizontalAlignment="Stretch"
-                    Height="40">
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                    <icons:MaterialIcon Kind="Pencil" Width="18" Height="18" />
-                    <TextBlock Text="Edit" FontWeight="SemiBold" />
-                </StackPanel>
-            </Button>
-
-            <Button Classes="Danger"
-                    Command="{Binding DeleteAssetCommand}"
-                    HorizontalAlignment="Stretch"
-                    Height="40">
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                    <icons:MaterialIcon Kind="Delete" Width="18" Height="18" />
-                    <TextBlock Text="Delete" FontWeight="SemiBold" />
-                </StackPanel>
-            </Button>
-        </StackPanel>
     </Grid>
 </UserControl>

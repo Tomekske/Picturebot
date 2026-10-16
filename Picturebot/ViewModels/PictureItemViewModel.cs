@@ -82,6 +82,21 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public string Name => Picture.Name;
 
+    /// <summary>File types present for this picture, e.g. "ARW + JPG".</summary>
+    public string FileTypesText {
+        get {
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(Picture.Extension)) {
+                parts.Add(Picture.Extension.TrimStart('.').ToUpperInvariant());
+            }
+            var preview = Picture.SubFolder?.Preview;
+            if (!string.IsNullOrEmpty(preview) && File.Exists(preview)) {
+                parts.Add("JPG");
+            }
+            return parts.Count > 0 ? string.Join(" + ", parts) : "Unknown format";
+        }
+    }
+
     public void AddKeyword(string keyword) {
         if (!string.IsNullOrWhiteSpace(keyword)) {
             var trimmed = keyword.Trim();
