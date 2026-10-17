@@ -24,194 +24,248 @@
         <converters:RatingToBooleanConverter x:Key="RatingToBooleanConverter" />
     </UserControl.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,*">
-        <ItemsControl Grid.Row="0" ItemsSource="{Binding Breadcrumbs}"
-                      Margin="24,0,0,10">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:BreadcrumbItem">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Classes="Basic"
-                                Padding="6,4"
-                                CornerRadius="6"
-                                Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToBreadcrumbCommand}"
-                                CommandParameter="{Binding}"
-                                Cursor="Hand">
-                            <TextBlock Text="{Binding Name}"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource SukiText}" />
-                        </Button>
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <!-- ── Header: breadcrumb (current album/folder as title), stats and actions ── -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="20,4,20,12">
+            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <ItemsControl ItemsSource="{Binding Breadcrumbs}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.Styles>
+                        <Style Selector="TextBlock.crumb">
+                            <Setter Property="FontSize" Value="13" />
+                            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+                        </Style>
+                        <Style Selector="TextBlock.crumb.current">
+                            <Setter Property="FontSize" Value="18" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+                        </Style>
+                    </ItemsControl.Styles>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BreadcrumbItem">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Classes="Basic"
+                                        Padding="4,2"
+                                        Command="{Binding $parent[ItemsControl].((vm:GalleryViewModel)DataContext).NavigateToBreadcrumbCommand}"
+                                        CommandParameter="{Binding}"
+                                        Cursor="Hand">
+                                    <TextBlock Classes="crumb" Classes.current="{Binding IsLast}" Text="{Binding Name}" />
+                                </Button>
+                                <icons:MaterialIcon Kind="ChevronRight"
+                                                    IsVisible="{Binding !IsLast}"
+                                                    VerticalAlignment="Center"
+                                                    Width="16" Height="16"
+                                                    Foreground="{DynamicResource Text.Muted}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding AlbumStatsText}"
+                           IsVisible="{Binding IsShowingAlbum}"
+                           FontSize="12"
+                           Margin="4,0,0,0"
+                           Foreground="{DynamicResource Text.Muted}" />
+            </StackPanel>
 
-                        <icons:MaterialIcon Kind="ChevronRight"
-                                            IsVisible="{Binding !IsLast}"
-                                            VerticalAlignment="Center"
-                                            Margin="2,0"
-                                            Width="18" Height="18"
-                                            Foreground="{DynamicResource SukiLowText}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Classes="Secondary"
+                        IsVisible="{Binding IsShowingAlbum}"
+                        Command="{Binding AiCurateBurstCommand}"
+                        ToolTip.Tip="Compare the selected pictures with Gemini and suggest the best one">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:MaterialIcon Kind="Creation" Width="16" Height="16" Foreground="{DynamicResource Accent.Foreground}" />
+                        <TextBlock Text="AI Curate" VerticalAlignment="Center" />
                     </StackPanel>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                </Button>
+                <Button Classes="Primary"
+                        IsVisible="{Binding IsShowingAlbum}"
+                        Command="{Binding PlayCarouselCommand}"
+                        ToolTip.Tip="Slideshow">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:MaterialIcon Kind="Play" Width="16" Height="16" />
+                        <TextBlock Text="Slideshow" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="Secondary" Padding="10,8" ToolTip.Tip="More actions">
+                    <Button.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                            <Binding Path="IsShowingAlbum" />
+                            <Binding Path="CanEditOrDeleteCurrentNode" />
+                        </MultiBinding>
+                    </Button.IsVisible>
+                    <icons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="Open folder in Explorer" Command="{Binding OpenInExplorerCommand}" IsVisible="{Binding IsShowingAlbum}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="FolderOpenOutline" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Open in DxO PhotoLab" Command="{Binding OpenInDxoCommand}" IsVisible="{Binding IsShowingAlbum}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="OpenInApp" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <Separator IsVisible="{Binding IsShowingAlbum}" />
+                            <MenuItem Header="Sync status with Picked folder" Command="{Binding SyncCurationStatusWithPickedFolderCommand}" IsVisible="{Binding IsShowingAlbum}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="FolderSyncOutline" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Sync highlights" Command="{Binding SynchronizeHighlightsCommand}" IsVisible="{Binding IsShowingAlbum}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="StarOutline" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Create XMP files" Command="{Binding CreateXmpFilesCommand}" IsVisible="{Binding IsShowingAlbum}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="FileExportOutline" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Remove tags from album…" Command="{Binding OpenBulkRemoveTagsDialogCommand}" IsVisible="{Binding IsShowingAlbum}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="TagMinus" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <Separator IsVisible="{Binding CanEditOrDeleteCurrentNode}" />
+                            <MenuItem Header="Edit…" Command="{Binding EditCurrentNodeCommand}" IsVisible="{Binding CanEditOrDeleteCurrentNode}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="PencilOutline" Width="16" Height="16" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Delete…" Command="{Binding DeleteCurrentNodeCommand}" IsVisible="{Binding CanEditOrDeleteCurrentNode}"
+                                      Foreground="{DynamicResource Status.Danger}">
+                                <MenuItem.Icon><icons:MaterialIcon Kind="DeleteOutline" Width="16" Height="16" Foreground="{DynamicResource Status.Danger}" /></MenuItem.Icon>
+                            </MenuItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
 
+        <!-- ── View and filter bar (albums and search results) ── -->
         <Border Grid.Row="1"
-                Margin="20,0,20,15"
-                Padding="8,4"
-                Background="{DynamicResource SukiGlassCardBackground}"
-                BorderBrush="{DynamicResource SukiBorderBrush}"
+                IsVisible="{Binding IsShowingAlbum}"
+                Margin="20,0,20,8"
+                Padding="8,6"
+                Background="{DynamicResource Surface.Panel}"
+                BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1"
-                CornerRadius="8">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                    <Button Classes="Basic" ToolTip.Tip="Open in File Explorer (O)"
-                            Command="{Binding OpenInExplorerCommand}"
-                            IsEnabled="{Binding CanPlayCarousel}">
-                        <icons:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
-                    </Button>
-                    <Button Classes="Basic" ToolTip.Tip="Open in DxO PhotoLab"
-                            Command="{Binding OpenInDxoCommand}"
-                            IsEnabled="{Binding CanPlayCarousel}">
-                        <icons:MaterialIcon Kind="OpenInApp" Width="20" Height="20" />
-                    </Button>
-                    <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
+                CornerRadius="{DynamicResource Radius.Dialog}">
+            <Border.Styles>
+                <Style Selector="Button.segment">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="CornerRadius" Value="5" />
+                    <Setter Property="Padding" Value="10,4" />
+                    <Setter Property="FontSize" Value="12" />
+                </Style>
+                <Style Selector="Button.segment:pointerover">
+                    <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+                </Style>
+                <Style Selector="Button.segment.active, Button.segment.active:pointerover">
+                    <Setter Property="Background" Value="{DynamicResource Accent.Selected}" />
+                    <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+                </Style>
+                <Style Selector="Rectangle.bar-divider">
+                    <Setter Property="Width" Value="1" />
+                    <Setter Property="Height" Value="18" />
+                    <Setter Property="Fill" Value="{DynamicResource Border.Subtle}" />
+                    <Setter Property="Margin" Value="6,0" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                </Style>
+            </Border.Styles>
+            <!-- WrapPanel: on narrow windows the bar wraps to a second line instead of overlapping -->
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Grouping -->
+                <Border Background="{DynamicResource Surface.Card}" CornerRadius="{DynamicResource Radius.Control}" Padding="2" VerticalAlignment="Center" Margin="0,2">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Classes="segment" Classes.active="{Binding !IsBurstViewEnabled}"
+                                Command="{Binding SetGroupingModeCommand}" CommandParameter="Date"
+                                ToolTip.Tip="Group by capture date">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <icons:MaterialIcon Kind="CalendarMonthOutline" Width="14" Height="14" />
+                                <TextBlock Text="Date" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="segment" Classes.active="{Binding IsBurstViewEnabled}"
+                                Command="{Binding SetGroupingModeCommand}" CommandParameter="Burst"
+                                IsEnabled="{Binding !IsGlobalSearchActive}"
+                                ToolTip.Tip="Group bursts of similar shots">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <icons:MaterialIcon Kind="LayersOutline" Width="14" Height="14" />
+                                <TextBlock Text="Burst" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+                <Button Classes="Basic"
+                        IsVisible="{Binding IsBurstViewEnabled}"
+                        Command="{Binding AutoFlagBestPicturesCommand}"
+                        Padding="8,4"
+                        Margin="4,2,0,2"
+                        ToolTip.Tip="Pick the sharpest shot of every burst">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <icons:MaterialIcon Kind="AutoFix" Width="14" Height="14" Foreground="{DynamicResource Accent.Foreground}" />
+                        <TextBlock Text="Pick best in bursts" FontSize="12" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
 
-                    <Button Classes="Basic" ToolTip.Tip="Play Carousel (F)"
-                            Command="{Binding PlayCarouselCommand}"
-                            IsEnabled="{Binding CanPlayCarousel}">
-                        <icons:MaterialIcon Kind="Play" Width="20" Height="20" />
-                    </Button>
-                    <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
-                    <Button Classes="Basic" ToolTip.Tip="Add Picture">
-                        <icons:MaterialIcon Kind="Plus" Width="20" Height="20" />
-                    </Button>
-                    <ToggleButton Classes="Basic"
-                                  ToolTip.Tip="Toggle Burst Grouping"
-                                  IsChecked="{Binding IsBurstViewEnabled, Mode=TwoWay}"
-                                  Command="{Binding ToggleGroupingModeCommand}"
-                                  IsEnabled="{Binding CanPlayCarousel}">
-                        <Panel>
-                            <icons:MaterialIcon Kind="CalendarMonth"
-                                                IsVisible="{Binding IsBurstViewEnabled}"
-                                                Width="20" Height="20" />
-                            <icons:MaterialIcon Kind="LayersOutline"
-                                                IsVisible="{Binding !IsBurstViewEnabled}"
-                                                Width="20" Height="20" />
-                        </Panel>
-                    </ToggleButton>
-                    <Separator Width="1" Height="20"
-                               IsVisible="{Binding IsBurstViewEnabled}"
-                               Background="{DynamicResource SukiBorderBrush}" Margin="4,0" />
+                <!-- Sort -->
+                <ComboBox ItemsSource="{Binding SortOptions}"
+                          SelectedItem="{Binding SelectedSort, Mode=TwoWay}"
+                          MinWidth="130"
+                          Margin="8,2,0,2"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="Sort pictures within each group">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GallerySortOption">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="SortVariant" Width="14" Height="14" Foreground="{DynamicResource Text.Secondary}" />
+                                <TextBlock Text="{Binding Name}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
-                    <Button Classes="Basic" ToolTip.Tip="Auto Flag Picture"
-                            IsVisible="{Binding IsBurstViewEnabled}"
-                            Command="{Binding AutoFlagBestPicturesCommand}">
-                        <icons:MaterialIcon Kind="AutoFix" Width="20" Height="20"
-                                            Foreground="{DynamicResource Accent.Foreground}" />
-                    </Button>
+                <Rectangle Classes="bar-divider" />
 
-                    <Button Classes="Basic" ToolTip.Tip="AI Curate Selected Pictures (Multimodal Vision Evaluation)"
-                            IsVisible="{Binding IsShowingAlbum}"
-                            Command="{Binding AiCurateBurstCommand}">
-                        <icons:MaterialIcon Kind="Creation" Width="20" Height="20"
-                                            Foreground="{DynamicResource Accent.Foreground}" />
-                    </Button>
-
-                    <views:FilterToolbarView DataContext="{Binding FilterToolbar}" VerticalAlignment="Center" Margin="4,0" />
-                    <Button Classes="Basic" ToolTip.Tip="Sort">
-                        <icons:MaterialIcon Kind="SortVariant" Width="20" Height="20" />
-                    </Button>
-                    <Separator Width="1" Height="20" Background="{DynamicResource SukiBorderBrush}" Margin="4,0" IsVisible="{Binding IsShowingAlbum}" />
-                    <Button Classes="Basic" ToolTip.Tip="Actions" IsVisible="{Binding IsShowingAlbum}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <icons:MaterialIcon Kind="LightningBolt" Width="20" Height="20" Foreground="{DynamicResource Accent.Foreground}" />
-                            <icons:MaterialIcon Kind="ChevronDown" Width="16" Height="16" />
-                        </StackPanel>
-                        <Button.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                <MenuItem Header="Sync Curation Status with 'Picked' Folder"
-                                          Command="{Binding SyncCurationStatusWithPickedFolderCommand}">
-                                    <MenuItem.Icon>
-                                        <icons:MaterialIcon Kind="FolderSyncOutline" Width="18" Height="18" />
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Synchronize Highlights"
-                                          Command="{Binding SynchronizeHighlightsCommand}">
-                                    <MenuItem.Icon>
-                                        <icons:MaterialIcon Kind="StarOutline" Width="18" Height="18" />
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Create XMP files"
-                                          Command="{Binding CreateXmpFilesCommand}">
-                                    <MenuItem.Icon>
-                                        <icons:MaterialIcon Kind="FileExportOutline" Width="18" Height="18" />
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                            </MenuFlyout>
-                        </Button.Flyout>
-                    </Button>
-
-                    <!-- Bulk Delete Tag Action -->
-                    <Button Classes="Basic" ToolTip.Tip="Bulk Delete Tag from Album" IsVisible="{Binding IsShowingAlbum}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <icons:MaterialIcon Kind="TagMinus" Width="20" Height="20" Foreground="{DynamicResource Status.Danger}" />
-                            <icons:MaterialIcon Kind="ChevronDown" Width="14" Height="14" />
-                        </StackPanel>
-                        <Button.Flyout>
-                            <Flyout Placement="BottomEdgeAlignedLeft" Opened="BulkDeleteFlyout_Opened">
-                                <Border Width="260" Padding="12" Background="{DynamicResource SukiCardBackground}" CornerRadius="8">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Text="Bulk Delete Tag" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource SukiText}" />
-                                        <TextBlock Text="Select tag(s) to remove from all XMP files in this album:" FontSize="11" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap" />
-
-                                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
-                                            <ItemsControl ItemsSource="{Binding AlbumTagsForBulkDelete}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:BulkDeleteTagItemViewModel">
-                                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2">
-                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <TextBlock Text="{Binding TagName}" FontWeight="SemiBold" Foreground="{DynamicResource SukiText}" />
-                                                                <TextBlock Text="{Binding Count, StringFormat='({0})'}" Foreground="{DynamicResource SukiLowText}" FontSize="11" VerticalAlignment="Center" />
-                                                            </StackPanel>
-                                                        </CheckBox>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </ScrollViewer>
-
-                                        <TextBlock Text="No tags found in this album" IsVisible="{Binding !AlbumTagsForBulkDelete.Count}" Foreground="{DynamicResource SukiLowText}" FontStyle="Italic" FontSize="12" />
-
-                                        <Button Classes="Danger" Command="{Binding ExecuteBulkDeleteTagsCommand}" IsEnabled="{Binding AlbumTagsForBulkDelete.Count}" HorizontalAlignment="Stretch" Height="34">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                                <icons:MaterialIcon Kind="Delete" Width="16" Height="16" />
-                                                <TextBlock Text="Delete Selected Tags" FontWeight="SemiBold" FontSize="12" />
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Border>
-                            </Flyout>
-                        </Button.Flyout>
-                    </Button>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" IsVisible="{Binding CanEditOrDeleteCurrentNode}">
-                    <Button Classes="Basic" ToolTip.Tip="Edit"
-                            Command="{Binding EditCurrentNodeCommand}">
-                        <icons:MaterialIcon Kind="PencilOutline" Width="20" Height="20" />
-                    </Button>
-
-                    <Button Classes="Basic" ToolTip.Tip="Delete" Foreground="{DynamicResource Status.Danger}"
-                            Command="{Binding DeleteCurrentNodeCommand}">
-                        <icons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
-                    </Button>
-                </StackPanel>
-            </Grid>
+                <!-- Filters -->
+                <views:FilterToolbarView DataContext="{Binding FilterToolbar}" VerticalAlignment="Center" Margin="0,2" />
+            </WrapPanel>
         </Border>
 
-        <Panel Grid.Row="2">
+        <!-- ── Active filter pills and result count ── -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="22,0,22,10" IsVisible="{Binding IsShowingAlbum}">
+            <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <ItemsControl ItemsSource="{Binding FilterToolbar.ActivePills}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ActiveFilterPill">
+                            <Border Background="{DynamicResource Accent.Subtle}" CornerRadius="12" Padding="10,3,4,3" Margin="0,0,6,4">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="{Binding Text}" FontSize="12" Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
+                                    <Button Classes="Basic" Padding="2" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove filter">
+                                        <icons:MaterialIcon Kind="Close" Width="12" Height="12" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Classes="Basic"
+                        IsVisible="{Binding FilterToolbar.HasActivePills}"
+                        Command="{Binding FilterToolbar.ClearAllCommand}"
+                        Padding="6,3"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Clear all filters (Shift+R)">
+                    <TextBlock Text="Clear all" FontSize="12" Foreground="{DynamicResource Accent.Foreground}" />
+                </Button>
+            </WrapPanel>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ResultCountText}"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource Text.Secondary}" />
+        </Grid>
+
+        <Panel Grid.Row="3">
 
             <!-- Empty State for Folders -->
             <StackPanel VerticalAlignment="Center"
@@ -233,17 +287,25 @@
                         HorizontalAlignment="Center"
                         Spacing="10">
                 <StackPanel.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="IsShowingAlbum" />
-                        <Binding Path="!PicturesList.Count" />
-                        <Binding Path="!IsLoading" />
-                    </MultiBinding>
+                    <Binding Path="IsAlbumEmpty" />
                 </StackPanel.IsVisible>
                 <icons:MaterialIcon Kind="ImageAlbum" Width="64" Height="64" Foreground="{DynamicResource SukiLowText}" />
                 <TextBlock Text="This album is empty" FontSize="20" FontWeight="SemiBold"
                            Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>
 
+
+            <!-- Empty State: filters hide every picture -->
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="10"
+                        IsVisible="{Binding IsFilteredEmpty}">
+                <icons:MaterialIcon Kind="FilterOffOutline" Width="56" Height="56" Foreground="{DynamicResource Text.Muted}" />
+                <TextBlock Text="No pictures match these filters" FontSize="18" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Foreground="{DynamicResource Text.Secondary}" />
+                <Button Classes="Secondary" Content="Clear filters" HorizontalAlignment="Center"
+                        Command="{Binding FilterToolbar.ClearAllCommand}" />
+            </StackPanel>
 
             <ScrollViewer IsVisible="{Binding !IsShowingAlbum}" Padding="20,10,20,20">
                 <StackPanel Spacing="30">

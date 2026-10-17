@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:controls="using:Picturebot.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:DataType="vm:GalleryViewModel"
+             x:Class="Picturebot.Views.BulkRemoveTagsDialog">
+
+    <controls:DialogLayout Title="Remove Tags from Album" Size="Small" CloseCommand="{Binding CloseDialogCommand}">
+        <controls:DialogLayout.HeaderIcon>
+            <icons:MaterialIcon Kind="TagMinus" Width="20" Height="20" Foreground="{DynamicResource Status.Danger}" />
+        </controls:DialogLayout.HeaderIcon>
+        <controls:DialogLayout.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="Secondary" Content="Cancel" Command="{Binding CloseDialogCommand}" />
+                <Button Classes="Danger" Content="Remove Selected Tags" Command="{Binding ExecuteBulkDeleteTagsCommand}"
+                        IsEnabled="{Binding AlbumTagsForBulkDelete.Count}" />
+            </StackPanel>
+        </controls:DialogLayout.Footer>
+
+        <StackPanel Spacing="12">
+            <TextBlock Text="Select the tags to remove from every picture (and XMP file) in this album."
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource Text.Secondary}" />
+
+            <ItemsControl ItemsSource="{Binding AlbumTagsForBulkDelete}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BulkDeleteTagItemViewModel">
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding TagName}" FontWeight="SemiBold" Foreground="{DynamicResource Text.Primary}" />
+                                <TextBlock Text="{Binding Count, StringFormat='({0})'}" Foreground="{DynamicResource Text.Secondary}"
+                                           FontSize="12" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </CheckBox>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="This album has no tags."
+                       IsVisible="{Binding !AlbumTagsForBulkDelete.Count}"
+                       Foreground="{DynamicResource Text.Muted}"
+                       FontSize="13" />
+        </StackPanel>
+    </controls:DialogLayout>
+</UserControl>

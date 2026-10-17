@@ -214,9 +214,4 @@ public partial class GalleryView : UserControl {
         }
     }
 
-    private void BulkDeleteFlyout_Opened(object? sender, EventArgs e) {
-        if (DataContext is GalleryViewModel vm) {
-            vm.PopulateAlbumTagsForBulkDeleteCommand.Execute(null);
-        }
-    }
 }

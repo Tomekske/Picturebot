@@ -3,10 +3,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:converters="using:Picturebot.Converters"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="40"
              x:Class="Picturebot.Views.FilterToolbarView"
              x:DataType="vm:FilterToolbarViewModel">
+
+    <UserControl.Resources>
+        <converters:RatingToBrushConverter x:Key="RatingToBrush" />
+    </UserControl.Resources>
 
     <UserControl.Styles>
         <!-- Base Style for Filter ToggleButtons (Chips) -->
@@ -29,6 +34,21 @@
                     <BrushTransition Property="Background" Duration="0:0:0.12"/>
                 </Transitions>
             </Setter>
+        </Style>
+
+        <!-- Rating filter stars -->
+        <Style Selector="Button.RatingStar">
+            <Setter Property="Padding" Value="2,0" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- Color dot chips are narrower than the icon chips -->
+        <Style Selector="ToggleButton.DotChip">
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="CornerRadius" Value="9"/>
         </Style>
 
         <!-- Template Override for Hover and Checked transitions -->
@@ -129,6 +149,12 @@
         <Style Selector="ToggleButton.StarChip:checked Path">
             <Setter Property="Fill" Value="{DynamicResource Status.Rating}" />
         </Style>
+        <Style Selector="ToggleButton.StarChip icons|MaterialIcon">
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        </Style>
+        <Style Selector="ToggleButton.StarChip:checked icons|MaterialIcon">
+            <Setter Property="Foreground" Value="{DynamicResource Status.Rating}" />
+        </Style>
         <Style Selector="ToggleButton.StarChip:checked TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource Status.Rating}" />
         </Style>
@@ -196,142 +222,79 @@
         <!-- Vertical Separator -->
         <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
 
-        <!-- Color Label Chips Group -->
-        <StackPanel Orientation="Horizontal" Spacing="2">
-            <!-- Green -->
-            <ToggleButton Classes="FilterChip" 
-                          IsChecked="{Binding IsGreenActive}"
-                          ToolTip.Tip="Filter Green">
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Green}"/>
-            </ToggleButton>
+        <!-- Rating filter: five stars, click star N for "N stars or more", click again to clear -->
+        <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+            <Button Classes="Basic RatingStar" Command="{Binding ToggleMinRatingCommand}" CommandParameter="1"
+                    ToolTip.Tip="1 star or more (click again to clear)">
+                <icons:MaterialIcon Kind="Star" Width="15" Height="15"
+                                    Foreground="{Binding ActiveMinRating, Converter={StaticResource RatingToBrush}, ConverterParameter=1}" />
+            </Button>
+            <Button Classes="Basic RatingStar" Command="{Binding ToggleMinRatingCommand}" CommandParameter="2"
+                    ToolTip.Tip="2 stars or more (click again to clear)">
+                <icons:MaterialIcon Kind="Star" Width="15" Height="15"
+                                    Foreground="{Binding ActiveMinRating, Converter={StaticResource RatingToBrush}, ConverterParameter=2}" />
+            </Button>
+            <Button Classes="Basic RatingStar" Command="{Binding ToggleMinRatingCommand}" CommandParameter="3"
+                    ToolTip.Tip="3 stars or more (click again to clear)">
+                <icons:MaterialIcon Kind="Star" Width="15" Height="15"
+                                    Foreground="{Binding ActiveMinRating, Converter={StaticResource RatingToBrush}, ConverterParameter=3}" />
+            </Button>
+            <Button Classes="Basic RatingStar" Command="{Binding ToggleMinRatingCommand}" CommandParameter="4"
+                    ToolTip.Tip="4 stars or more (click again to clear)">
+                <icons:MaterialIcon Kind="Star" Width="15" Height="15"
+                                    Foreground="{Binding ActiveMinRating, Converter={StaticResource RatingToBrush}, ConverterParameter=4}" />
+            </Button>
+            <Button Classes="Basic RatingStar" Command="{Binding ToggleMinRatingCommand}" CommandParameter="5"
+                    ToolTip.Tip="5 stars (click again to clear)">
+                <icons:MaterialIcon Kind="Star" Width="15" Height="15"
+                                    Foreground="{Binding ActiveMinRating, Converter={StaticResource RatingToBrush}, ConverterParameter=5}" />
+            </Button>
+        </StackPanel>
 
-            <!-- Blue -->
-            <ToggleButton Classes="FilterChip" 
-                          IsChecked="{Binding IsBlueActive}"
-                          ToolTip.Tip="Filter Blue">
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Blue}"/>
-            </ToggleButton>
+        <!-- Vertical Separator -->
+        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
 
-            <!-- Yellow / Orange -->
-            <ToggleButton Classes="FilterChip" 
-                          IsChecked="{Binding IsYellowOrangeActive}"
-                          ToolTip.Tip="Filter Yellow / Orange">
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Yellow}"/>
-            </ToggleButton>
-
-            <!-- Red -->
-            <ToggleButton Classes="FilterChip" 
+        <!-- Color Label Chips Group (same order as the Details panel) -->
+        <StackPanel Orientation="Horizontal" Spacing="0">
+            <ToggleButton Classes="FilterChip DotChip"
                           IsChecked="{Binding IsRedActive}"
-                          ToolTip.Tip="Filter Red">
+                          ToolTip.Tip="Red label">
                 <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Red}"/>
             </ToggleButton>
-
-            <!-- Purple -->
-            <ToggleButton Classes="FilterChip" 
+            <ToggleButton Classes="FilterChip DotChip"
+                          IsChecked="{Binding IsOrangeActive}"
+                          ToolTip.Tip="Orange label">
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Orange}"/>
+            </ToggleButton>
+            <ToggleButton Classes="FilterChip DotChip"
+                          IsChecked="{Binding IsYellowActive}"
+                          ToolTip.Tip="Yellow label">
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Yellow}"/>
+            </ToggleButton>
+            <ToggleButton Classes="FilterChip DotChip"
+                          IsChecked="{Binding IsGreenActive}"
+                          ToolTip.Tip="Green label">
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Green}"/>
+            </ToggleButton>
+            <ToggleButton Classes="FilterChip DotChip"
+                          IsChecked="{Binding IsBlueActive}"
+                          ToolTip.Tip="Blue label">
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Blue}"/>
+            </ToggleButton>
+            <ToggleButton Classes="FilterChip DotChip"
+                          IsChecked="{Binding IsPinkActive}"
+                          ToolTip.Tip="Pink label">
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Pink}"/>
+            </ToggleButton>
+            <ToggleButton Classes="FilterChip DotChip"
                           IsChecked="{Binding IsPurpleActive}"
-                          ToolTip.Tip="Filter Purple">
+                          ToolTip.Tip="Purple label">
                 <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.Purple}"/>
             </ToggleButton>
-
-            <!-- Neutral / Grey -->
-            <ToggleButton Classes="FilterChip" 
+            <ToggleButton Classes="FilterChip DotChip"
                           IsChecked="{Binding IsNoneActive}"
-                          ToolTip.Tip="Filter Neutral / Grey">
+                          ToolTip.Tip="No label">
                 <Ellipse Width="10" Height="10" Fill="{DynamicResource Label.None}"/>
-            </ToggleButton>
-        </StackPanel>
-
-        <!-- Vertical Separator -->
-        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
-
-        <!-- Rating Stars Group -->
-        <StackPanel Orientation="Horizontal" Spacing="1">
-            <!-- Rating 0 -->
-            <ToggleButton Classes="StarChip" 
-                          IsChecked="{Binding IsStar0Active}"
-                          ToolTip.Tip="Filter 0 Stars">
-                <StackPanel Orientation="Horizontal" Spacing="3">
-                    <Path Data="M12,15.39L8.24,17.66L9.25,13.38L5.91,10.5L10.29,10.13L12,6.1L13.71,10.13L18.09,10.5L14.75,13.38L15.76,17.66L12,15.39M22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z" 
-                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="0" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
-                </StackPanel>
-            </ToggleButton>
-
-            <!-- Rating 1 -->
-            <ToggleButton Classes="StarChip" 
-                          IsChecked="{Binding IsStar1Active}"
-                          ToolTip.Tip="Filter Rating >= 1 Star">
-                <StackPanel Orientation="Horizontal" Spacing="3">
-                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
-                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
-                </StackPanel>
-            </ToggleButton>
-
-            <!-- Rating 2 -->
-            <ToggleButton Classes="StarChip" 
-                          IsChecked="{Binding IsStar2Active}"
-                          ToolTip.Tip="Filter Rating >= 2 Stars">
-                <StackPanel Orientation="Horizontal" Spacing="3">
-                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
-                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="2" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
-                </StackPanel>
-            </ToggleButton>
-
-            <!-- Rating 3 -->
-            <ToggleButton Classes="StarChip" 
-                          IsChecked="{Binding IsStar3Active}"
-                          ToolTip.Tip="Filter Rating >= 3 Stars">
-                <StackPanel Orientation="Horizontal" Spacing="3">
-                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
-                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="3" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
-                </StackPanel>
-            </ToggleButton>
-
-            <!-- Rating 4 -->
-            <ToggleButton Classes="StarChip" 
-                          IsChecked="{Binding IsStar4Active}"
-                          ToolTip.Tip="Filter Rating >= 4 Stars">
-                <StackPanel Orientation="Horizontal" Spacing="3">
-                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
-                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="4" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
-                </StackPanel>
-            </ToggleButton>
-
-            <!-- Rating 5 -->
-            <ToggleButton Classes="StarChip" 
-                          IsChecked="{Binding IsStar5Active}"
-                          ToolTip.Tip="Filter Rating >= 5 Stars">
-                <StackPanel Orientation="Horizontal" Spacing="3">
-                    <Path Data="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" 
-                          Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="5" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
-                </StackPanel>
-            </ToggleButton>
-        </StackPanel>
-
-        <!-- Vertical Separator -->
-        <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0" VerticalAlignment="Center"/>
-
-        <!-- Orientation Group -->
-        <StackPanel Orientation="Horizontal" Spacing="2">
-            <!-- Landscape -->
-            <ToggleButton Classes="FilterChip" 
-                          IsChecked="{Binding IsLandscapeActive}"
-                          ToolTip.Tip="Filter Landscape">
-                <Path Data="M19,5H5C3.9,5,3,5.9,3,7V17C3,18.1,3.9,19,5,19H19C20.1,19,21,18.1,21,17V7C21,5.9,20.1,5,19,5M19,17H5V7H19V17Z" 
-                      Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource Text.Primary}"/>
-            </ToggleButton>
-
-            <!-- Portrait -->
-            <ToggleButton Classes="FilterChip" 
-                          IsChecked="{Binding IsPortraitActive}"
-                          ToolTip.Tip="Filter Portrait">
-                <Path Data="M17,3H7C5.9,3,5,3.9,5,5V19C5,20.1,5.9,21,7,21H17C18.1,21,19,20.1,19,19V5C19,3.9,18.1,3,17,3M17,19H7V5H17V19Z" 
-                      Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource Text.Primary}"/>
             </ToggleButton>
         </StackPanel>
 
@@ -368,7 +331,7 @@
             </StackPanel>
             <Button.Flyout>
                 <Flyout Placement="BottomEdgeAlignedLeft">
-                    <Border x:DataType="vm:FilterToolbarViewModel" Width="290" Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Border x:DataType="vm:FilterToolbarViewModel" Width="290" Padding="8">
                         <StackPanel Spacing="10">
                             <!-- Search query TextBox -->
                             <TextBox Text="{Binding TagSearchText, Mode=TwoWay}" Watermark="Search tags..." Height="32" VerticalContentAlignment="Center"/>
@@ -429,13 +392,39 @@
             </Button.Flyout>
         </Button>
 
-        <!-- Clear Reset Button -->
-        <Button Classes="ResetBtn" 
-                Command="{Binding ClearAllCommand}"
-                IsVisible="{Binding IsAnyFilterActive}"
-                ToolTip.Tip="Clear All Filters (Shift+R)"
-                Margin="4,0,0,0">
-            <icons:MaterialIcon Kind="Close" Width="12" Height="12" Foreground="{DynamicResource Text.Primary}"/>
+        <!-- More filters (orientation; room for camera, lens, date range later) -->
+        <Button Classes="Basic" Padding="8,2" Margin="4,0,0,0" VerticalAlignment="Center" ToolTip.Tip="More filters">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <icons:MaterialIcon Kind="TuneVariant" Width="14" Height="14" />
+                <TextBlock Text="More" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+            <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedLeft">
+                    <StackPanel Spacing="8" Margin="4">
+                        <TextBlock Text="Rating" FontSize="12" Foreground="{DynamicResource Text.Secondary}" />
+                        <CheckBox IsChecked="{Binding IsStar0Active}" Content="Unrated only" FontSize="12" />
+                        <TextBlock Text="Orientation" FontSize="12" Foreground="{DynamicResource Text.Secondary}" />
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                    <!-- Landscape -->
+                    <ToggleButton Classes="FilterChip"
+                    IsChecked="{Binding IsLandscapeActive}"
+                    ToolTip.Tip="Filter Landscape">
+                    <Path Data="M19,5H5C3.9,5,3,5.9,3,7V17C3,18.1,3.9,19,5,19H19C20.1,19,21,18.1,21,17V7C21,5.9,20.1,5,19,5M19,17H5V7H19V17Z"
+                    Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource Text.Primary}"/>
+                    </ToggleButton>
+
+                    <!-- Portrait -->
+                    <ToggleButton Classes="FilterChip"
+                    IsChecked="{Binding IsPortraitActive}"
+                    ToolTip.Tip="Filter Portrait">
+                    <Path Data="M17,3H7C5.9,3,5,3.9,5,5V19C5,20.1,5.9,21,7,21H17C18.1,21,19,20.1,19,19V5C19,3.9,18.1,3,17,3M17,19H7V5H17V19Z"
+                    Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource Text.Primary}"/>
+                    </ToggleButton>
+                    </StackPanel>
+
+                    </StackPanel>
+                </Flyout>
+            </Button.Flyout>
         </Button>
     </StackPanel>
 </UserControl>

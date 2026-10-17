@@ -120,4 +120,24 @@
     <Style Selector="TreeViewItem /template/ Border#SelectionBorder:pointerover">
         <Setter Property="Background" Value="{DynamicResource Accent.Subtle}" />
     </Style>
+
+    <!-- Flyouts: SukiUI's FlyoutPresenter draws a transparent root, so give every flyout the panel surface -->
+    <Style Selector="FlyoutPresenter">
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="CornerRadius" Value="{DynamicResource Radius.Dialog}" />
+    </Style>
+    <Style Selector="FlyoutPresenter /template/ Border#LayoutRoot">
+        <Setter Property="Background" Value="{DynamicResource Surface.Panel}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BoxShadow" Value="0 8 24 0 #66000000" />
+    </Style>
+
+    <!-- Dropdown items: primary text, brand-tint check mark instead of the low-contrast main blue -->
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style Selector="ComboBoxItem /template/ PathIcon#CheckSelected">
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
 </Styles>
