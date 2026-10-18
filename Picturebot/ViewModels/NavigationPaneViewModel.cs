@@ -30,10 +30,10 @@ public partial class NavigationPaneViewModel : ViewModelBase,
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly IImportAlbumsService _importAlbumsService;
-    private readonly IImportPicturesCommand _importCommand;
     private readonly INodeService _nodeService;
     private readonly ISettingsService _settingsService;
     private readonly INavigationService _navigationService;
+    private readonly IRecentLocationsService _recentLocations;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
 
     [ObservableProperty]
@@ -55,17 +55,17 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         IAlbumService albumService,
         IImportAlbumsService importAlbumsService,
         ISettingsService settingsService,
-        IImportPicturesCommand importCommand,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
-        INavigationService navigationService) {
+        INavigationService navigationService,
+        IRecentLocationsService recentLocations) {
         _nodeService = nodeService;
         _folderService = folderService;
         _albumService = albumService;
         _importAlbumsService = importAlbumsService;
         _settingsService = settingsService;
-        _importCommand = importCommand;
         _scopeFactory = scopeFactory;
         _navigationService = navigationService;
+        _recentLocations = recentLocations;
         _ = LoadFoldersAsync();
         RefreshKeywordSuggestions();
 
@@ -103,56 +103,61 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         _ = LoadFoldersAsync();
     }
 
+    /// <summary>
+    ///     New Album/Folder dialog with the location picker. Opens at the given node, or at what the
+    ///     gallery shows; for an album that is its parent folder.
+    /// </summary>
     [RelayCommand]
-    public async Task OpenCreateFolderDialogAsync() {
-        var folders = await _folderService.FindAllAsync();
+    public void OpenNewNodeDialog(NavigationNodeViewModel? at) {
+        var anchorNode = at?.Node ?? _navigationService.CurrentNode;
+        var startFolderId = anchorNode switch {
+            Folder folder => folder.Id,
+            Album album => album.ParentId,
+            _ => null
+        };
 
-        var vm = new CreateFolderDialogViewModel(_folderService, result => {
-            if (result != null) {
-                Log.Information("Folder created: {result}", result.Name);
+        var vm = new NewNodeDialogViewModel(
+            _folderService,
+            _settingsService,
+            _scopeFactory,
+            _recentLocations,
+            Folders.Select(f => f.Node),
+            startFolderId,
+            startAsAlbum: true,
+            result => {
+                if (result.CreatedFolders.Count > 0 || result.Node != null) {
+                    WeakReferenceMessenger.Default.Send(new NodeCreatedMessage(result.Node ?? result.CreatedFolders[^1]));
+                }
 
-                // Broadcast creation to refresh the tree
-                WeakReferenceMessenger.Default.Send(new NodeCreatedMessage(result));
+                if (result.Error != null) {
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Import failed")
+                        .WithContent(result.Error)
+                        .Dismiss().ByClicking()
+                        .Queue();
+                    return;
+                }
 
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Success")
-                    .WithContent($"Folder '{result.Name}' has been created.")
-                    .Dismiss().ByClicking()
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
-            }
-        }, folders);
+                if (result.Node is Album album) {
+                    WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(album));
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"Album '{album.Name}' import has completed.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+                } else if (result.Node is Folder folder) {
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"Folder '{folder.Name}' has been created.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+                }
+            });
 
         MainWindow.DialogManager.CreateDialog()
-            .WithContent(new CreateFolderDialog { DataContext = vm })
-            .TryShow();
-    }
-
-    [RelayCommand]
-    public async Task OpenAddAlbumDialogAsync() {
-        var folders = await _folderService.FindAllAsync();
-
-        var vm = new AddAlbumDialogViewModel(_albumService, _importCommand, _settingsService, _scopeFactory, folders, result => {
-            if (result != null) {
-                Log.Information("Album creation process started/finished for: {result}", result.Name);
-
-                // Broadcast creation to refresh the tree
-                WeakReferenceMessenger.Default.Send(new NodeCreatedMessage(result));
-
-                // Automatically navigate to the new album
-                WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(result));
-
-                MainWindow.ToastManager.CreateToast()
-                    .WithTitle("Success")
-                    .WithContent($"Album '{result.Name}' import has completed.")
-                    .Dismiss().ByClicking()
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
-            }
-        });
-
-        MainWindow.DialogManager.CreateDialog()
-            .WithContent(new AddAlbumDialog { DataContext = vm })
+            .WithContent(new NewNodeDialog { DataContext = vm })
             .TryShow();
     }
 

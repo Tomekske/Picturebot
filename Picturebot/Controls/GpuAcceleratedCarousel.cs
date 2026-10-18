@@ -1,32 +1,33 @@
 using Avalonia;
-using Avalonia.Collections;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Rendering.Composition;
-using Avalonia.Rendering.Composition.Animations;
-using Avalonia.Threading;
+using Avalonia.Styling;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Numerics;
+using System.Threading;
 
 namespace Picturebot.Controls;
 
+/// <summary>
+/// Shows one picture of <see cref="Items"/> at a time and slides between them.
+/// Two image slots take turns (current and incoming), so every move costs the same,
+/// including wrapping from the first picture to the last.
+/// </summary>
 public class GpuAcceleratedCarousel : TemplatedControl {
-    public static readonly StyledProperty<IEnumerable?> ItemsProperty =
-        AvaloniaProperty.Register<GpuAcceleratedCarousel, IEnumerable?>(nameof(Items));
+    public static readonly StyledProperty<IList?> ItemsProperty =
+        AvaloniaProperty.Register<GpuAcceleratedCarousel, IList?>(nameof(Items));
 
     public static readonly StyledProperty<int> SelectedIndexProperty =
         AvaloniaProperty.Register<GpuAcceleratedCarousel, int>(nameof(SelectedIndex), 0);
 
-    public static readonly StyledProperty<double> ZoomProperty =
-        AvaloniaProperty.Register<GpuAcceleratedCarousel, double>(nameof(Zoom), 1.0);
+    private static readonly TimeSpan SlideDuration = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(250);
 
-    public IEnumerable? Items {
+    public IList? Items {
         get => GetValue(ItemsProperty);
         set => SetValue(ItemsProperty, value);
     }
@@ -36,35 +37,25 @@ public class GpuAcceleratedCarousel : TemplatedControl {
         set => SetValue(SelectedIndexProperty, value);
     }
 
-    public double Zoom {
-        get => GetValue(ZoomProperty);
-        set => SetValue(ZoomProperty, value);
-    }
-
-    private Panel? _itemsContainer;
-    private Compositor? _compositor;
-    private readonly List<Control> _activeItems = new();
+    private Image? _front; // shows SelectedIndex, resting at X = 0
+    private Image? _back;  // parked off-screen, used for the next incoming picture
+    private int _frontIndex = -1;
+    private int _backIndex = -1;
+    private CancellationTokenSource? _slideCts;
 
     static GpuAcceleratedCarousel() {
         SelectedIndexProperty.Changed.AddClassHandler<GpuAcceleratedCarousel>((x, e) => x.OnSelectedIndexChanged(e));
-        ZoomProperty.Changed.AddClassHandler<GpuAcceleratedCarousel>((x, e) => x.OnZoomChanged(e));
         ItemsProperty.Changed.AddClassHandler<GpuAcceleratedCarousel>((x, e) => x.OnItemsChanged(e));
     }
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e) {
         base.OnApplyTemplate(e);
-        _itemsContainer = e.NameScope.Find<Panel>("PART_ItemsContainer");
-        
-        if (_itemsContainer != null) {
-            _itemsContainer.Opacity = 0; // Hide until first layout/offset is set
+        _front = e.NameScope.Find<Image>("PART_SlotA");
+        _back = e.NameScope.Find<Image>("PART_SlotB");
+        foreach (var slot in new[] { _front, _back }) {
+            if (slot != null) slot.RenderTransform = new TranslateTransform();
         }
-
-        var selfVisual = ElementComposition.GetElementVisual(this);
-        if (selfVisual != null) {
-            _compositor = selfVisual.Compositor;
-        }
-
-        InvalidateItems();
+        ShowWithoutAnimation(SelectedIndex);
     }
 
     private void OnItemsChanged(AvaloniaPropertyChangedEventArgs e) {
@@ -74,121 +65,122 @@ public class GpuAcceleratedCarousel : TemplatedControl {
         if (e.NewValue is INotifyCollectionChanged newCollection) {
             newCollection.CollectionChanged += OnCollectionChanged;
         }
-        InvalidateItems();
+        ShowWithoutAnimation(SelectedIndex);
     }
 
+    // Previews load lazily: when the picture a slot is showing arrives, swap it in.
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        if (e.Action == NotifyCollectionChangedAction.Replace && e.NewItems != null && _itemsContainer != null) {
-            for (int i = 0; i < e.NewItems.Count; i++) {
-                int index = e.NewStartingIndex + i;
-                if (index < _itemsContainer.Children.Count && _itemsContainer.Children[index] is Image img) {
-                    var newSource = e.NewItems[i] as IImage;
-                    if (img.Source != newSource) {
-                        img.Source = newSource;
-                        if (newSource != null) {
-                            AnimateImageIn(img);
-                        }
-                    }
-                }
+        if (e.Action != NotifyCollectionChangedAction.Replace || e.NewItems == null) {
+            ShowWithoutAnimation(SelectedIndex);
+            return;
+        }
+
+        for (var i = 0; i < e.NewItems.Count; i++) {
+            var index = e.NewStartingIndex + i;
+            var source = e.NewItems[i] as IImage;
+            if (index == _frontIndex && _front != null && _front.Source != source) {
+                _front.Source = source;
+                if (source != null) FadeIn(_front);
+            } else if (index == _backIndex && _back != null) {
+                _back.Source = source;
             }
-        } else {
-            InvalidateItems();
         }
-    }
-
-    private void AnimateImageIn(Control target) {
-        var visual = ElementComposition.GetElementVisual(target);
-        if (visual == null || _compositor == null) return;
-
-        visual.Opacity = 0.0f;
-        var animation = _compositor.CreateScalarKeyFrameAnimation();
-        animation.InsertKeyFrame(1.0f, 1.0f);
-        animation.Duration = TimeSpan.FromMilliseconds(400);
-        visual.StartAnimation("Opacity", animation);
-    }
-
-    private void InvalidateItems() {
-        if (_itemsContainer == null) return;
-
-        _itemsContainer.Children.Clear();
-        _activeItems.Clear();
-
-        if (Items == null) return;
-
-        foreach (var item in Items) {
-            var image = new Image {
-                Source = item as IImage,
-                Stretch = Stretch.Uniform,
-                Opacity = item == null ? 0 : 1 // Hide until loaded
-            };
-            
-            RenderOptions.SetBitmapInterpolationMode(image, BitmapInterpolationMode.HighQuality);
-            
-            _itemsContainer.Children.Add(image);
-            _activeItems.Add(image);
-        }
-
-        Dispatcher.UIThread.Post(() => TransitionTo(SelectedIndex, false), DispatcherPriority.Loaded);
     }
 
     private void OnSelectedIndexChanged(AvaloniaPropertyChangedEventArgs e) {
-        TransitionTo((int)(e.NewValue ?? 0));
-    }
-
-    private void OnZoomChanged(AvaloniaPropertyChangedEventArgs e) {
-        ApplyZoom((double)(e.NewValue ?? 1.0));
-    }
-
-    public void TransitionTo(int index, bool animate = true) {
-        if (_compositor == null || _itemsContainer == null || _activeItems.Count == 0) return;
-
-        index = Math.Clamp(index, 0, _activeItems.Count - 1);
-        float itemWidth = (float)Bounds.Width;
-        
-        if (itemWidth <= 0) return; // Wait for valid bounds
-
-        float targetOffset = -index * itemWidth;
-
-        var visual = ElementComposition.GetElementVisual(_itemsContainer);
-        if (visual == null) return;
-
-        if (animate) {
-            var animation = _compositor.CreateVector3KeyFrameAnimation();
-            animation.InsertKeyFrame(1.0f, new Vector3(targetOffset, 0, 0));
-            animation.Duration = TimeSpan.FromMilliseconds(500);
-            animation.IterationCount = 1;
-            
-            visual.StartAnimation("Offset", animation);
-        } else {
-            visual.Offset = new Vector3(targetOffset, 0, 0);
-            
-            // First time stabilization: Fade in the whole container
-            if (_itemsContainer.Opacity == 0) {
-                var fadeIn = _compositor.CreateScalarKeyFrameAnimation();
-                fadeIn.InsertKeyFrame(1.0f, 1.0f);
-                fadeIn.Duration = TimeSpan.FromMilliseconds(250);
-                visual.StartAnimation("Opacity", fadeIn);
-                _itemsContainer.Opacity = 1; 
-            }
+        var count = Items?.Count ?? 0;
+        var to = (int)(e.NewValue ?? 0);
+        if (count == 0 || _front == null || _back == null || _frontIndex < 0 || Bounds.Width <= 0) {
+            ShowWithoutAnimation(to);
+            return;
         }
+        if (to == _frontIndex) return;
+
+        // Direction on the circular list: wrapping counts as a single step
+        var from = _frontIndex;
+        int direction;
+        if (to == (from + 1) % count) direction = 1;
+        else if (to == (from - 1 + count) % count) direction = -1;
+        else direction = to > from ? 1 : -1;
+
+        SlideTo(to, direction);
     }
 
-    private void ApplyZoom(double zoom) {
-        if (_itemsContainer == null) return;
-        var visual = ElementComposition.GetElementVisual(_itemsContainer);
-        if (visual == null) return;
+    private void SlideTo(int index, int direction) {
+        if (_front == null || _back == null) return;
 
-        // Ensure we scale from the center of the current item
-        visual.CenterPoint = new Vector3((float)(Bounds.Width / 2 + SelectedIndex * Bounds.Width), (float)(Bounds.Height / 2), 0);
+        _slideCts?.Cancel();
+        _slideCts = new CancellationTokenSource();
+        var token = _slideCts.Token;
+        var width = Bounds.Width;
 
-        var animation = _compositor!.CreateVector3KeyFrameAnimation();
-        animation.InsertKeyFrame(1.0f, new Vector3((float)zoom, (float)zoom, 1.0f));
-        animation.Duration = TimeSpan.FromMilliseconds(300);
-        visual.StartAnimation("Scale", animation);
+        // Incoming picture enters from the side we're moving towards; the current one leaves the other way
+        var incoming = _back;
+        var outgoing = _front;
+        incoming.Source = ItemAt(index);
+        incoming.Opacity = 1;
+
+        _ = Slide(incoming, direction * width, 0, token);
+        _ = Slide(outgoing, 0, -direction * width, token);
+
+        _back = outgoing;
+        _backIndex = _frontIndex;
+        _front = incoming;
+        _frontIndex = index;
+    }
+
+    // Local X is set to the end value first, so a cancelled or finished animation rests there.
+    private static System.Threading.Tasks.Task Slide(Image slot, double fromX, double toX, CancellationToken token) {
+        if (slot.RenderTransform is TranslateTransform t) t.X = toX;
+        var animation = new Animation {
+            Duration = SlideDuration,
+            Easing = new CubicEaseOut(),
+            Children = {
+                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(TranslateTransform.XProperty, fromX) } },
+                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(TranslateTransform.XProperty, toX) } }
+            }
+        };
+        return animation.RunAsync(slot, token);
+    }
+
+    private static void FadeIn(Image slot) {
+        slot.Opacity = 1;
+        var animation = new Animation {
+            Duration = FadeDuration,
+            Children = {
+                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(OpacityProperty, 0d) } },
+                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(OpacityProperty, 1d) } }
+            }
+        };
+        _ = animation.RunAsync(slot);
+    }
+
+    private void ShowWithoutAnimation(int index) {
+        if (_front == null || _back == null) return;
+
+        _slideCts?.Cancel();
+        var count = Items?.Count ?? 0;
+        _frontIndex = count == 0 ? -1 : Math.Clamp(index, 0, count - 1);
+        _backIndex = -1;
+
+        _front.Source = _frontIndex >= 0 ? ItemAt(_frontIndex) : null;
+        _back.Source = null;
+        ParkSlots();
+    }
+
+    private void ParkSlots() {
+        if (_front?.RenderTransform is TranslateTransform f) f.X = 0;
+        if (_back?.RenderTransform is TranslateTransform b) b.X = Bounds.Width;
+    }
+
+    private IImage? ItemAt(int index) {
+        var items = Items;
+        return items != null && index >= 0 && index < items.Count ? items[index] as IImage : null;
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e) {
         base.OnSizeChanged(e);
-        TransitionTo(SelectedIndex, false);
+        _slideCts?.Cancel();
+        ParkSlots();
     }
 }

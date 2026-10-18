@@ -3,197 +3,176 @@
              xmlns:vm="using:Picturebot.ViewModels"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:DataType="vm:AiCurationResultDialogViewModel"
-             x:Class="Picturebot.Views.AiCurationResultDialog"
-             Width="660">
+             xmlns:controls="using:Picturebot.Controls"
+             x:Class="Picturebot.Views.AiCurationResultDialog">
 
-    <StackPanel Spacing="16" Margin="4">
-        <!-- Header -->
-        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,2,0,4">
-            <icons:MaterialIcon Kind="AutoFix" Width="26" Height="26" Foreground="#A855F7" VerticalAlignment="Center" />
-            <TextBlock Text="AI Curation Suggestions"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#FFFFFF"
-                       VerticalAlignment="Center" />
-        </StackPanel>
+    <controls:DialogLayout Title="AI Curation Suggestions" Size="Large" CloseCommand="{Binding CancelCommand}">
+        <controls:DialogLayout.HeaderIcon>
+            <icons:MaterialIcon Kind="AutoFix" Width="20" Height="20" Foreground="{DynamicResource Accent.Foreground}" />
+        </controls:DialogLayout.HeaderIcon>
+        <controls:DialogLayout.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelCommand}" />
+                <Button Classes="Primary" Content="Confirm Suggestions" Command="{Binding ApplyCommand}" />
+            </StackPanel>
+        </controls:DialogLayout.Footer>
 
-        <!-- Subtitle / Instruction Box -->
-        <Border Background="#1A1A22"
-                BorderBrush="#2D2D3A"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="14,12">
-            <TextBlock FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" LineHeight="18">
-                Review Gemini evaluations. Best Pick is marked <Span Foreground="#4ADE80" FontWeight="Bold">Green (5 Stars)</Span> and Alternatives <Span Foreground="#FB923C" FontWeight="Bold">Orange (0 Stars)</Span>.
-                To change the Best Pick, simply click another photo before confirming.
-            </TextBlock>
-        </Border>
+        <StackPanel Spacing="16">
+            <!-- Subtitle / Instruction Box -->
+            <Border Background="{DynamicResource Surface.Panel}"
+                    BorderBrush="{DynamicResource Border.Subtle}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,12">
+                <TextBlock FontSize="12" Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" LineHeight="18">
+                    Review Gemini evaluations. Best Pick is marked <Span Foreground="{DynamicResource Status.Picked}" FontWeight="Bold">Green (5 Stars)</Span> and Alternatives <Span Foreground="{DynamicResource Label.Orange}" FontWeight="Bold">Orange (0 Stars)</Span>.
+                    To change the Best Pick, simply click another photo before confirming.
+                </TextBlock>
+            </Border>
 
-        <!-- Results List -->
-        <Border BorderBrush="#2A2A34"
-                BorderThickness="1"
-                CornerRadius="10"
-                MinHeight="200"
-                MaxHeight="540"
-                Background="#13131A">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
-                <ItemsControl ItemsSource="{Binding Groups}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:AiCurationGroupResultViewModel">
-                            <StackPanel Spacing="10" Margin="0,0,0,16">
-                                <!-- Burst Header if present -->
-                                <Border Background="#1E1E28"
-                                        CornerRadius="6"
-                                        Padding="10,6"
-                                        IsVisible="{Binding Header, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                    <TextBlock Text="{Binding Header}"
-                                               FontWeight="Bold"
-                                               FontSize="12"
-                                               Foreground="#CBD5E1" />
-                                </Border>
+            <!-- Results List -->
+            <Border BorderBrush="{DynamicResource Border.Subtle}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    MinHeight="200"
+                    MaxHeight="540"
+                    Background="{DynamicResource Surface.App}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AiCurationGroupResultViewModel">
+                                <StackPanel Spacing="10" Margin="0,0,0,16">
+                                    <!-- Burst Header if present -->
+                                    <Border Background="{DynamicResource Surface.Panel}"
+                                            CornerRadius="6"
+                                            Padding="10,6"
+                                            IsVisible="{Binding Header, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <TextBlock Text="{Binding Header}"
+                                                   FontWeight="Bold"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource Text.Primary}" />
+                                    </Border>
 
-                                <!-- Pictures in this Burst -->
-                                <ItemsControl ItemsSource="{Binding Items}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:AiCurationItemResultViewModel">
-                                            <Grid ColumnDefinitions="28, *" Margin="0,0,0,10">
-                                                <!-- Index Number Outside Card -->
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{Binding Index}"
-                                                           FontSize="14"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="#64748B"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center" />
+                                    <!-- Pictures in this Burst -->
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:AiCurationItemResultViewModel">
+                                                <Grid ColumnDefinitions="28, *" Margin="0,0,0,10">
+                                                    <!-- Index Number Outside Card -->
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding Index}"
+                                                               FontSize="14"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource Text.Muted}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center" />
 
-                                                <!-- Picture Card -->
-                                                <Border Grid.Column="1"
-                                                        Background="{Binding CardBackground}"
-                                                        BorderBrush="{Binding CardBorderBrush}"
-                                                        BorderThickness="1.5"
-                                                        CornerRadius="10"
-                                                        Padding="12">
-                                                    <Grid ColumnDefinitions="Auto, *, Auto">
-                                                        <!-- Thumbnail -->
-                                                        <Border Grid.Column="0"
-                                                                Width="68"
-                                                                Height="68"
-                                                                CornerRadius="8"
-                                                                ClipToBounds="True"
-                                                                Background="#0F0F14"
-                                                                Margin="0,0,14,0"
-                                                                VerticalAlignment="Center">
-                                                            <Panel>
-                                                                <icons:MaterialIcon Kind="ImageOutline"
-                                                                                    Width="28"
-                                                                                    Height="28"
-                                                                                    Foreground="#333340"
-                                                                                    HorizontalAlignment="Center"
-                                                                                    VerticalAlignment="Center"
-                                                                                    IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
-                                                                <Image Source="{Binding Thumbnail}"
-                                                                       Stretch="UniformToFill"
-                                                                       IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                            </Panel>
-                                                        </Border>
-
-                                                        <!-- Name & Feedback -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5" Margin="0,0,12,0">
-                                                            <TextBlock Text="{Binding Name}"
-                                                                       FontWeight="Bold"
-                                                                       FontSize="13.5"
-                                                                       Foreground="#FFFFFF"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Text="{Binding Feedback}"
-                                                                       FontSize="11.5"
-                                                                       Foreground="#94A3B8"
-                                                                       TextWrapping="Wrap"
-                                                                       LineHeight="16" />
-                                                        </StackPanel>
-
-                                                        <!-- Badges & Action -->
-                                                        <Grid Grid.Column="2" RowDefinitions="Auto, *" VerticalAlignment="Stretch">
-                                                            <!-- Pill Badge -->
-                                                            <Border Grid.Row="0"
-                                                                    Background="{Binding BadgeBackground}"
-                                                                    CornerRadius="5"
-                                                                    Padding="10,4"
-                                                                    HorizontalAlignment="Right"
-                                                                    VerticalAlignment="Top">
-                                                                <TextBlock Text="{Binding BadgeText}"
-                                                                           FontSize="10.5"
-                                                                           FontWeight="Black"
-                                                                           Foreground="{Binding BadgeForeground}" />
+                                                    <!-- Picture Card -->
+                                                    <Border Grid.Column="1"
+                                                            Background="{Binding CardBackground}"
+                                                            BorderBrush="{Binding CardBorderBrush}"
+                                                            BorderThickness="1.5"
+                                                            CornerRadius="10"
+                                                            Padding="12">
+                                                        <Grid ColumnDefinitions="Auto, *, Auto">
+                                                            <!-- Thumbnail -->
+                                                            <Border Grid.Column="0"
+                                                                    Width="68"
+                                                                    Height="68"
+                                                                    CornerRadius="8"
+                                                                    ClipToBounds="True"
+                                                                    Background="{DynamicResource Surface.App}"
+                                                                    Margin="0,0,14,0"
+                                                                    VerticalAlignment="Center">
+                                                                <Panel>
+                                                                    <icons:MaterialIcon Kind="ImageOutline"
+                                                                                        Width="28"
+                                                                                        Height="28"
+                                                                                        Foreground="{DynamicResource Surface.Raised}"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
+                                                                    <Image Source="{Binding Thumbnail}"
+                                                                           Stretch="UniformToFill"
+                                                                           IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                                </Panel>
                                                             </Border>
 
-                                                            <!-- Action Button / Confirmed Tag -->
-                                                            <StackPanel Grid.Row="1"
+                                                            <!-- Name & Feedback -->
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5" Margin="0,0,12,0">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           FontWeight="Bold"
+                                                                           FontSize="13.5"
+                                                                           Foreground="{DynamicResource Text.Primary}"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Feedback}"
+                                                                           FontSize="11.5"
+                                                                           Foreground="{DynamicResource Text.Secondary}"
+                                                                           TextWrapping="Wrap"
+                                                                           LineHeight="16" />
+                                                            </StackPanel>
+
+                                                            <!-- Badges & Action -->
+                                                            <Grid Grid.Column="2" RowDefinitions="Auto, *" VerticalAlignment="Stretch">
+                                                                <!-- Pill Badge -->
+                                                                <Border Grid.Row="0"
+                                                                        Background="{Binding BadgeBackground}"
+                                                                        CornerRadius="5"
+                                                                        Padding="10,4"
                                                                         HorizontalAlignment="Right"
-                                                                        VerticalAlignment="Bottom"
-                                                                        Margin="0,8,0,0">
-                                                                <!-- Best Pick Confirmed State -->
-                                                                <Border IsVisible="{Binding IsBest}"
-                                                                        Background="#14281B"
-                                                                        BorderBrush="#23532C"
-                                                                        BorderThickness="1"
-                                                                        CornerRadius="6"
-                                                                        Padding="10,6">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <icons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="#4ADE80" />
-                                                                        <TextBlock Text="Confirm Pick" FontSize="11" FontWeight="SemiBold" Foreground="#4ADE80" />
-                                                                    </StackPanel>
+                                                                        VerticalAlignment="Top">
+                                                                    <TextBlock Text="{Binding BadgeText}"
+                                                                               FontSize="10.5"
+                                                                               FontWeight="Black"
+                                                                               Foreground="{Binding BadgeForeground}" />
                                                                 </Border>
 
-                                                                <!-- Alternative Select Button -->
-                                                                <Button IsVisible="{Binding CanSetAsBest}"
-                                                                        Command="{Binding SelectAsBestCommand}"
-                                                                        Background="#22C55E"
-                                                                        Foreground="White"
-                                                                        CornerRadius="6"
-                                                                        Padding="10,6"
-                                                                        Cursor="Hand">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <icons:MaterialIcon Kind="SquareEditOutline" Width="14" Height="14" Foreground="White" />
-                                                                        <TextBlock Text="Set as Best Pick" FontSize="11" FontWeight="SemiBold" Foreground="White" />
-                                                                    </StackPanel>
-                                                                </Button>
-                                                            </StackPanel>
+                                                                <!-- Action Button / Confirmed Tag -->
+                                                                <StackPanel Grid.Row="1"
+                                                                            HorizontalAlignment="Right"
+                                                                            VerticalAlignment="Bottom"
+                                                                            Margin="0,8,0,0">
+                                                                    <!-- Best Pick Confirmed State -->
+                                                                    <Border IsVisible="{Binding IsBest}"
+                                                                            Background="{DynamicResource Status.Picked.Subtle}"
+                                                                            BorderBrush="{DynamicResource Status.Picked.Border}"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="6"
+                                                                            Padding="10,6">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                            <icons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource Status.Picked}" />
+                                                                            <TextBlock Text="Confirm Pick" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Status.Picked}" />
+                                                                        </StackPanel>
+                                                                    </Border>
+
+                                                                    <!-- Alternative Select Button -->
+                                                                    <Button IsVisible="{Binding CanSetAsBest}"
+                                                                            Command="{Binding SelectAsBestCommand}"
+                                                                            Background="{DynamicResource Status.Picked}"
+                                                                            Foreground="{DynamicResource Text.Primary}"
+                                                                            CornerRadius="6"
+                                                                            Padding="10,6"
+                                                                            Cursor="Hand">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                            <icons:MaterialIcon Kind="SquareEditOutline" Width="14" Height="14" Foreground="{DynamicResource Text.Primary}" />
+                                                                            <TextBlock Text="Set as Best Pick" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Text.Primary}" />
+                                                                        </StackPanel>
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </Grid>
                                                         </Grid>
-                                                    </Grid>
-                                                </Border>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Border>
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
 
-        <!-- Action Footer -->
-        <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4,0,0">
-            <Button Grid.Column="1"
-                    Classes="Basic"
-                    Content="Cancel"
-                    Command="{Binding CancelCommand}"
-                    Foreground="#94A3B8"
-                    FontSize="13"
-                    Width="90"
-                    Margin="0,0,12,0" />
-
-            <Button Grid.Column="2"
-                    Classes="Flat"
-                    Content="Confirm Suggestions"
-                    Command="{Binding ApplyCommand}"
-                    Background="#22C55E"
-                    Foreground="White"
-                    FontWeight="Bold"
-                    FontSize="13"
-                    CornerRadius="8"
-                    Padding="20,10"
-                    Cursor="Hand" />
-        </Grid>
-    </StackPanel>
+        </StackPanel>
+    </controls:DialogLayout>
 </UserControl>

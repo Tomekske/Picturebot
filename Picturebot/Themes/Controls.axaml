@@ -1,0 +1,223 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        App-wide control styles on top of SukiUI. Included after SukiTheme in App.axaml.
+        Styles here beat Suki's ControlThemes, so they also need explicit pseudo-class states.
+    -->
+
+    <!-- Icon / ghost buttons (Classes="Basic"): bright icons, brand tint on hover.
+         A Foreground set directly on a button (e.g. a red delete icon) still wins. -->
+    <Style Selector="Button.Basic, ToggleButton.Basic">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Default}" />
+    </Style>
+    <Style Selector="Button.Basic:pointerover, Button.Basic:flyout-open, ToggleButton.Basic:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Hover}" />
+    </Style>
+    <Style Selector="Button.Basic:pressed, ToggleButton.Basic:pressed">
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+    <Style Selector="ToggleButton.Basic:checked">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Hover}" />
+    </Style>
+    <Style Selector="Button.Basic:disabled, ToggleButton.Basic:disabled">
+        <Setter Property="Foreground" Value="{DynamicResource Icon.Disabled}" />
+    </Style>
+
+    <!--
+        Action buttons (same shape as the Settings dialog buttons):
+          Primary   - the one filled brand action per dialog/view (Save, Create, Confirm)
+          Secondary - neutral raised action (Cancel, Discard, Browse)
+          Danger    - destructive action (Delete)
+        Size and shape come from the shared style below; don't set Width/Height/CornerRadius per button.
+    -->
+    <Style Selector="Button.Primary, Button.Secondary, Button.Danger">
+        <Setter Property="CornerRadius" Value="{DynamicResource Radius.Control}" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Primary -->
+    <Style Selector="Button.Primary">
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.Primary:pointerover, Button.Primary:flyout-open">
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill.Hover}" />
+    </Style>
+    <Style Selector="Button.Primary:pointerover /template/ Border#RootBorder, Button.Primary:pressed /template/ Border#RootBorder">
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill.Hover}" />
+    </Style>
+    <Style Selector="Button.Primary:pressed">
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill.Pressed}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+    </Style>
+
+    <!-- Secondary -->
+    <Style Selector="Button.Secondary">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+        <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="Button.Secondary:pointerover, Button.Secondary:flyout-open, Button.Secondary:pressed">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    </Style>
+    <Style Selector="Button.Secondary:pointerover /template/ Border#RootBorder, Button.Secondary:pressed /template/ Border#RootBorder">
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    </Style>
+
+    <!-- Danger -->
+    <Style Selector="Button.Danger">
+        <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.Danger:pointerover, Button.Danger:pressed">
+        <Setter Property="Background" Value="{DynamicResource Status.Danger.Fill.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill.Hover}" />
+    </Style>
+    <Style Selector="Button.Danger:pointerover /template/ Border#RootBorder, Button.Danger:pressed /template/ Border#RootBorder">
+        <Setter Property="BorderBrush" Value="{DynamicResource Status.Danger.Fill.Hover}" />
+    </Style>
+
+    <!-- Disabled: clearly inactive, still readable -->
+    <Style Selector="Button.Primary:disabled, Button.Secondary:disabled, Button.Danger:disabled">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <!--
+        Curation controls shared by the details inspector and the slideshow:
+          Button.segment (+ pick / neutral / reject, .active) - Pick/Neutral/Reject segmented control
+          Button.dot (+ .active)                             - color label dot with a selection ring
+        Views may override Width/Height/Padding/FontSize to scale them.
+    -->
+    <Style Selector="Button.segment">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="6,5" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.segment:pointerover">
+        <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style Selector="Button.segment.pick.active">
+        <Setter Property="Background" Value="{DynamicResource Status.Picked.Subtle}" />
+        <Setter Property="Foreground" Value="{DynamicResource Status.Picked}" />
+    </Style>
+    <Style Selector="Button.segment.neutral.active">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style Selector="Button.segment.reject.active">
+        <Setter Property="Background" Value="{DynamicResource Status.Danger.Subtle}" />
+        <Setter Property="Foreground" Value="{DynamicResource Status.Rejected}" />
+    </Style>
+
+    <!-- Ring and dot are two circles in the same box, drawn without layout rounding so they
+         stay concentric at every display scaling (125%, 150%, ...). The ring follows the button size. -->
+    <Style Selector="Button.dot">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel Background="Transparent" UseLayoutRounding="False">
+                    <Ellipse Stroke="{TemplateBinding BorderBrush}"
+                             StrokeThickness="2"
+                             UseLayoutRounding="False" />
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      UseLayoutRounding="False" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Button.dot Ellipse">
+        <Setter Property="UseLayoutRounding" Value="False" />
+    </Style>
+    <Style Selector="Button.dot:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    </Style>
+    <Style Selector="Button.dot.active, Button.dot.active:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource Text.Primary}" />
+    </Style>
+
+    <!-- Text inputs: focus border, floating placeholder and selection use readable brand tints -->
+    <Style Selector="TextBox /template/ Border#PART_TypingGlow">
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+    <Style Selector="TextBox /template/ TextBlock#PART_FloatingPlaceholder">
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+    <Style Selector="TextBox">
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent.Selected}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}" />
+    </Style>
+
+    <!-- Tree selection: brand secondary color instead of Suki's raw primary -->
+    <Style Selector="TreeViewItem:selected /template/ Border#SelectionBorder, TreeViewItem:selected /template/ Border#SelectionBorder:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Accent.Selected}" />
+    </Style>
+    <Style Selector="TreeViewItem /template/ Border#SelectionBorder:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Accent.Subtle}" />
+    </Style>
+
+    <!-- Flyouts: SukiUI's FlyoutPresenter template draws no opaque background (and has no part to style),
+         so replace the template: every flyout gets the panel surface, a border and a shadow. -->
+    <Style Selector="FlyoutPresenter">
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="CornerRadius" Value="{DynamicResource Radius.Dialog}" />
+        <Setter Property="Background" Value="{DynamicResource Surface.Panel}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <!-- Margin leaves room for the shadow inside the popup window -->
+                <Border Name="LayoutRoot"
+                        Margin="6,4,6,10"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        BoxShadow="0 6 18 0 #66000000">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="Stretch"
+                                      VerticalContentAlignment="Stretch" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Dropdown items: primary text, brand-tint check mark instead of the low-contrast main blue -->
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style Selector="ComboBoxItem /template/ PathIcon#CheckSelected">
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+    </Style>
+</Styles>

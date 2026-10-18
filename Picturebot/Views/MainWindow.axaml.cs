@@ -110,16 +110,11 @@ public partial class MainWindow : SukiWindow {
             }
         }
 
-        // Global Selection Shortcuts: Escape (Deselect All) / Ctrl+A (Select All)
+        // Global Selection Shortcuts: Escape (collapse to the focused picture) / Ctrl+A (Select All)
         if (DataContext is MainWindowViewModel mainVm && mainVm.GalleryVM != null) {
             if (e.Key == Key.Escape) {
-                var galleryVm = mainVm.GalleryVM;
-                foreach (var pic in galleryVm.AllPictures) {
-                    pic.IsSelected = false;
-                }
-                galleryVm.SelectedPictures.Clear();
-                galleryVm.UpdateActiveMode();
-                WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+                // Drops a multi-selection; the focused picture stays selected so the details pane keeps its content.
+                mainVm.GalleryVM.CollapseSelection();
                 e.Handled = true;
                 return;
             }

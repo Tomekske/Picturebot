@@ -228,12 +228,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
     private string _redLabelShortcut = "Ctrl+NumPad1";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLightActive))]
-    [NotifyPropertyChangedFor(nameof(IsDarkActive))]
-    [NotifyPropertyChangedFor(nameof(IsSystemActive))]
-    private int _themeIndex;
-
-    [ObservableProperty]
     private string _yellowLabelName = "Yellow";
 
     [ObservableProperty]
@@ -343,9 +337,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         _settingsService = null!;
     }
 
-    public bool IsLightActive => ThemeIndex == 0;
-    public bool IsDarkActive => ThemeIndex == 1;
-    public bool IsSystemActive => ThemeIndex == 2;
 
     private void LoadSettings() {
         if (_settingsService == null) {
@@ -444,12 +435,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
         RefreshTagSuggestions();
         RefreshAvailableTaxonomyBranches();
         OnPropertyChanged(nameof(GroupsHeaderTitle));
-
-        ThemeIndex = settings.ThemeMode switch {
-            ThemeMode.Light => 0,
-            ThemeMode.Dark => 1,
-            _ => 2
-        };
     }
 
     private static void NormalizeNodeNames(HierarchyNode node) {
@@ -458,15 +443,6 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             NormalizeNodeNames(child);
         }
     }
-
-    [RelayCommand]
-    private void SetLightTheme() => ThemeIndex = 0;
-
-    [RelayCommand]
-    private void SetDarkTheme() => ThemeIndex = 1;
-
-    [RelayCommand]
-    private void SetSystemTheme() => ThemeIndex = 2;
 
     [RelayCommand]
     public void SelectGeneralTab() {
@@ -690,11 +666,8 @@ public partial class SettingsDialogViewModel : ViewModelBase {
                 TagIds = new ObservableCollection<Guid>(g.Children.Where(c => c.TagId.HasValue).Select(c => c.TagId!.Value))
             }).ToList(),
             ActiveTagGroupId = (SelectedGroupTreeNode?.IsGroup == true ? SelectedGroupTreeNode.GroupModel?.GroupId : SelectedGroupTreeNode?.ParentGroup?.GroupModel?.GroupId) ?? TagGroupTreeNodes.FirstOrDefault()?.GroupModel?.GroupId,
-            ThemeMode = ThemeIndex switch {
-                0 => ThemeMode.Light,
-                1 => ThemeMode.Dark,
-                _ => ThemeMode.System
-            }
+            // Picturebot is dark-only
+            ThemeMode = ThemeMode.Dark
         };
     }
 

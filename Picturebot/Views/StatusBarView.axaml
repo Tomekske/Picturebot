@@ -24,7 +24,7 @@
                 ToolTip.Tip="Settings"
                 CornerRadius="4"
                 Padding="0">
-            <ic:SymbolIcon Symbol="Settings" FontSize="14" Foreground="#888888" />
+            <ic:SymbolIcon Symbol="Settings" FontSize="14" Foreground="{DynamicResource Icon.Default}" />
         </Button>
 
         <!-- Status items aligned to the bottom-right -->
@@ -41,7 +41,7 @@
                         VerticalAlignment="Center"
                         IsVisible="{Binding IsAiCurating}">
                 <Panel Width="16" Height="16" VerticalAlignment="Center">
-                    <icons:MaterialIcon Kind="Loading" Width="14" Height="14" Foreground="#A855F7">
+                    <icons:MaterialIcon Kind="Loading" Width="14" Height="14" Foreground="{DynamicResource Accent.Foreground}">
                         <icons:MaterialIcon.Styles>
                             <Style Selector="icons|MaterialIcon">
                                 <Style.Animations>
@@ -60,37 +60,37 @@
                 </Panel>
                 <TextBlock Text="{Binding AiCurationStatusText}"
                            FontSize="11"
-                           Foreground="#D8B4FE"
+                           Foreground="{DynamicResource Accent.Foreground}"
                            VerticalAlignment="Center" />
-                <Separator Width="1" Height="14" Background="#3f3f3f" Margin="6,0,0,0" />
+                <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" Margin="6,0,0,0" />
             </StackPanel>
 
             <!-- Sync Status -->
             <views:SyncStatusView DataContext="{Binding SyncStatusVM}" />
 
-            <Separator Width="1" Height="14" Background="#3f3f3f" />
+            <Separator Width="1" Height="14" Background="{DynamicResource Border.Subtle}" />
 
             <!-- DEV Badge (Visible only in non-Production environments) -->
             <Border IsVisible="{Binding ShowDevBadge}"
-                    Background="#e67e22"
+                    Background="{DynamicResource Status.Warning}"
                     CornerRadius="3"
                     Padding="6,2">
                 <TextBlock Text="DEV"
                            FontSize="10"
                            FontWeight="Black"
-                           Foreground="White" />
+                           Foreground="{DynamicResource Text.Primary}" />
             </Border>
 
             <!-- Version Indicator -->
-            <Border Background="#1e1e1e"
-                    BorderBrush="#3f3f3f"
+            <Border Background="{DynamicResource Surface.Card}"
+                    BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1"
                     CornerRadius="3"
                     Padding="8,2">
                 <TextBlock Text="{Binding AppVersion}"
                            FontSize="11"
                            FontFamily="Consolas, Monospace"
-                           Foreground="#cccccc" />
+                           Foreground="{DynamicResource Text.Primary}" />
             </Border>
         </StackPanel>
     </Grid>

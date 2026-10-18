@@ -6,70 +6,121 @@
              xmlns:icons="using:Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
              x:DataType="vm:ProcessingQueueViewModel"
+             xmlns:controls="using:Picturebot.Controls"
              x:Class="Picturebot.Views.ProcessingQueueView">
-    <StackPanel Spacing="15" Margin="20">
-        <DockPanel LastChildFill="False">
-            <StackPanel Orientation="Horizontal" Spacing="10" DockPanel.Dock="Left">
-                <icons:MaterialIcon Kind="TrayArrowDown" Width="24" Height="24"
-                                    Foreground="{DynamicResource SukiPrimaryColor}" />
-                <TextBlock Text="Processing Queue" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" />
-            </StackPanel>
+    <UserControl.Styles>
+        <Style Selector="icons|MaterialIcon.Spinning">
+            <Style.Animations>
+                <Animation Duration="0:0:2" IterationCount="Infinite">
+                    <KeyFrame KeyTime="0:0:0">
+                        <Setter Property="RotateTransform.Angle" Value="0" />
+                    </KeyFrame>
+                    <KeyFrame KeyTime="0:0:2">
+                        <Setter Property="RotateTransform.Angle" Value="360" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </UserControl.Styles>
 
-            <!-- NEW: Close Button -->
-            <Button Classes="Basic"
-                    Command="{Binding CloseDialogCommand}"
-                    DockPanel.Dock="Right"
-                    Padding="4"
-                    ToolTip.Tip="Close Dialog">
-                <icons:MaterialIcon Kind="Close" Width="20" Height="20" />
-            </Button>
-        </DockPanel>
+    <controls:DialogLayout Title="Processing Queue" Size="Small" CloseCommand="{Binding CloseDialogCommand}">
+        <controls:DialogLayout.HeaderIcon>
+            <icons:MaterialIcon Kind="TrayArrowDown" Width="20" Height="20" Foreground="{DynamicResource Accent.Foreground}" />
+        </controls:DialogLayout.HeaderIcon>
 
-        <Separator Height="1" Background="{DynamicResource SukiBorderBrush}" />
+        <StackPanel Spacing="12">
+            <!-- Running imports: their pictures are not in the processing queue yet -->
+            <ItemsControl ItemsSource="{Binding Imports}" IsVisible="{Binding HasImports}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="8" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ImportActivityItem">
+                        <Border Padding="10" Background="{DynamicResource Accent.Subtle}"
+                                BorderBrush="{DynamicResource Accent.Foreground}" BorderThickness="1"
+                                CornerRadius="{DynamicResource Radius.Control}">
+                            <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto">
+                                <icons:MaterialIcon Grid.RowSpan="2" Classes="Spinning" Kind="Sync" Width="18" Height="18"
+                                                    Margin="0,0,10,0" VerticalAlignment="Center"
+                                                    Foreground="{DynamicResource Accent.Foreground}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Title}" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Detail}" FontSize="12"
+                                           Foreground="{DynamicResource Text.Secondary}" />
+                                <ProgressBar Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2" Margin="0,8,0,0" Height="3"
+                                             Minimum="0" Maximum="100" Value="{Binding Percentage}"
+                                             IsIndeterminate="{Binding IsIndeterminate}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-        <ScrollViewer MaxHeight="300">
-            <StackPanel Spacing="8">
-                <!-- Curation Sync Section -->
-                <Border Padding="10" IsVisible="{Binding HasCurationItems}"
-                        Background="{DynamicResource SukiPrimaryColor10}"
-                        BorderBrush="{DynamicResource SukiPrimaryColor}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <icons:MaterialIcon Kind="Sync" Width="20" Height="20" Margin="0,0,10,0"
-                                            Foreground="{DynamicResource SukiPrimaryColor}" />
-                        <TextBlock Grid.Column="1" Text="Curation Sync" FontWeight="Bold"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="2" Text="{Binding CurationQueueCount, StringFormat='{}{0} pending'}"
-                                   FontSize="12" FontWeight="SemiBold"
-                                   VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
+            <!-- Curation sync -->
+            <Border Padding="10" IsVisible="{Binding HasCurationItems}"
+                    Background="{DynamicResource Surface.Raised}"
+                    CornerRadius="{DynamicResource Radius.Control}">
+                <Grid ColumnDefinitions="Auto, *, Auto">
+                    <icons:MaterialIcon Kind="Sync" Width="18" Height="18" Margin="0,0,10,0"
+                                        Foreground="{DynamicResource Accent.Foreground}" />
+                    <TextBlock Grid.Column="1" Text="Curation sync" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding CurationQueueCount, StringFormat='{}{0} waiting'}"
+                               FontSize="12" Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
 
-                <ItemsControl ItemsSource="{Binding QueueItems}">
+            <!-- Every picture the worker still has to do, in its order; the ones in progress spin -->
+            <StackPanel Spacing="6" IsVisible="{Binding HasQueue}">
+                <TextBlock Text="Processing metadata" FontWeight="SemiBold" />
+                <ItemsControl ItemsSource="{Binding Pictures}" MaxHeight="340">
+                    <ItemsControl.Template>
+                        <ControlTemplate>
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:AlbumQueueItem">
-                            <Border Padding="10" Margin="0,0,0,8"
-                                    Background="{DynamicResource SukiGlassCardBackground}"
-                                    CornerRadius="8">
-                                <Grid ColumnDefinitions="*, Auto">
-                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"
-                                               VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1" Text="{Binding PendingCount, StringFormat='{}{0} items'}"
-                                               FontSize="12" Foreground="{DynamicResource SukiLowText}"
-                                               VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
+                        <DataTemplate x:DataType="vm:QueuePictureItem">
+                            <Grid ColumnDefinitions="Auto, *" Height="40" Margin="0,0,12,0">
+                                <Panel Width="16" Height="16" Margin="5,0,11,0" VerticalAlignment="Center">
+                                    <icons:MaterialIcon Classes="Spinning" Kind="Sync" Width="16" Height="16"
+                                                        Foreground="{DynamicResource Accent.Foreground}"
+                                                        IsVisible="{Binding IsProcessing}" />
+                                    <icons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
+                                                        Foreground="{DynamicResource Text.Muted}"
+                                                        IsVisible="{Binding !IsProcessing}" />
+                                </Panel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding AlbumName}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource Text.Muted}" />
+                                </StackPanel>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
-        </ScrollViewer>
 
-        <TextBlock IsVisible="{Binding !QueueItems.Count}"
-                   Text="No albums in queue."
-                   HorizontalAlignment="Center"
-                   Margin="20"
-                   Foreground="{DynamicResource SukiLowText}" />
-    </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasFailures}">
+                <icons:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16"
+                                    Foreground="{DynamicResource Status.Danger}" />
+                <TextBlock Text="{Binding FailedCount, StringFormat='{}{0} failed after 3 attempts — see the log for details'}"
+                           FontSize="12" Foreground="{DynamicResource Status.Danger}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <TextBlock IsVisible="{Binding IsEmpty}"
+                       Text="Nothing in the queue."
+                       HorizontalAlignment="Center"
+                       Margin="20"
+                       Foreground="{DynamicResource Text.Muted}" />
+        </StackPanel>
+    </controls:DialogLayout>
 </UserControl>

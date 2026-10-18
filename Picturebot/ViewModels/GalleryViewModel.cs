@@ -111,6 +111,69 @@ public partial class GalleryViewModel : ViewModelBase,
 
     public bool CanEditOrDeleteCurrentNode => !IsLibraryRoot && !IsGlobalSearchActive && _currentNode != null;
 
+    // ── Header stats and result counts ──
+    public int AlbumPictureCount => _allPictures.Count;
+    public int PickedCount => _allPictures.Count(p => p.CurationStatus == CurationStatus.Flagged);
+    public int VisibleCount => PicturesList.Count;
+    public string AlbumStatsText => IsGlobalSearchActive
+        ? $"{AlbumPictureCount:N0} results"
+        : $"{AlbumPictureCount:N0} pictures · {PickedCount:N0} picked";
+    public string ResultCountText => $"Showing {VisibleCount:N0} of {AlbumPictureCount:N0}";
+    /// <summary>The album has pictures, but the active filters hide all of them.</summary>
+    public bool IsFilteredEmpty => IsShowingAlbum && !IsLoading && AlbumPictureCount > 0 && VisibleCount == 0;
+    /// <summary>The album (or search) really has no pictures.</summary>
+    public bool IsAlbumEmpty => IsShowingAlbum && !IsLoading && AlbumPictureCount == 0;
+    /// <summary>
+    ///     The details pane is shown for an open album with pictures, independent of the selection,
+    ///     so the grid width (and thumbnail size) doesn't jump when the selection changes.
+    /// </summary>
+    public bool ShowDetailsPane => IsShowingAlbum && (IsLoading || AlbumPictureCount > 0);
+
+    private void RefreshCounts() {
+        OnPropertyChanged(nameof(AlbumPictureCount));
+        OnPropertyChanged(nameof(ShowDetailsPane));
+        OnPropertyChanged(nameof(PickedCount));
+        OnPropertyChanged(nameof(VisibleCount));
+        OnPropertyChanged(nameof(AlbumStatsText));
+        OnPropertyChanged(nameof(ResultCountText));
+        OnPropertyChanged(nameof(IsFilteredEmpty));
+        OnPropertyChanged(nameof(IsAlbumEmpty));
+    }
+
+    partial void OnIsLoadingChanged(bool value) => RefreshCounts();
+    partial void OnPicturesListChanged(ObservableCollection<PictureItemViewModel> value) => RefreshCounts();
+    partial void OnIsShowingAlbumChanged(bool value) => RefreshCounts();
+
+    // ── Grouping and sorting ──
+    public IReadOnlyList<GallerySortOption> SortOptions { get; } = new[] {
+        new GallerySortOption(GallerySort.CaptureTime, "Capture time"),
+        new GallerySortOption(GallerySort.Name, "File name"),
+        new GallerySortOption(GallerySort.Rating, "Rating"),
+        new GallerySortOption(GallerySort.Sharpness, "Sharpness")
+    };
+
+    [ObservableProperty]
+    private GallerySortOption? _selectedSort;
+
+    partial void OnSelectedSortChanged(GallerySortOption? value) => _ = RefreshGalleryGrouping();
+
+    [RelayCommand]
+    private async Task SetGroupingMode(string mode) {
+        var burst = string.Equals(mode, "Burst", StringComparison.OrdinalIgnoreCase);
+        if (IsBurstViewEnabled == burst) return;
+        IsBurstViewEnabled = burst;
+        await RefreshGalleryGrouping();
+    }
+
+    private IEnumerable<PictureItemViewModel> SortWithinGroup(IEnumerable<PictureItemViewModel> pictures) {
+        return (SelectedSort?.Sort ?? GallerySort.CaptureTime) switch {
+            GallerySort.Name => pictures.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase),
+            GallerySort.Rating => pictures.OrderByDescending(p => p.Rating).ThenBy(p => p.Picture.CapturedAt),
+            GallerySort.Sharpness => pictures.OrderByDescending(p => p.Picture.Sharpness).ThenBy(p => p.Picture.CapturedAt),
+            _ => pictures.OrderBy(p => p.Picture.CapturedAt)
+        };
+    }
+
     [ObservableProperty]
     private ObservableCollection<Node> _albumItems = new();
 
@@ -198,6 +261,7 @@ public partial class GalleryViewModel : ViewModelBase,
         _scopeFactory = scopeFactory;
 
         _filterToolbar = new FilterToolbarViewModel(ApplyFilters);
+        _selectedSort = SortOptions[0];
 
         _refreshTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(500),
@@ -348,6 +412,50 @@ public partial class GalleryViewModel : ViewModelBase,
                 else if (updatedNode is Album) AlbumItems.Remove(itemToRemove);
             }
         }
+    }
+
+    /// <summary>
+    ///     While an album is open one picture is always selected: keep the focused picture if it is still visible,
+    ///     otherwise select the first visible picture.
+    /// </summary>
+    public void EnsureSelection() {
+        if (!IsShowingAlbum) return;
+
+        var visible = GroupedPictures.SelectMany(g => g.Pictures).ToList();
+        if (visible.Count == 0) return;
+
+        var focusedVisible = SelectedPicture != null && visible.Contains(SelectedPicture);
+        if (focusedVisible && SelectedPictures.Contains(SelectedPicture!)) return;
+
+        SelectOnly(focusedVisible ? SelectedPicture! : visible[0]);
+    }
+
+    /// <summary>
+    ///     Escape / select none: drops a multi-selection but keeps the focused picture selected.
+    /// </summary>
+    public void CollapseSelection() {
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = false;
+        }
+        SelectedPictures.Clear();
+        EnsureSelection();
+    }
+
+    private void SelectOnly(PictureItemViewModel picture) {
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = pic == picture;
+        }
+        SelectedPictures.Clear();
+        SelectedPictures.Add(picture);
+        SelectedPicture = picture;
+        UpdateActiveMode();
+        WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(picture));
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel> { picture }));
+    }
+
+    // Runs after every regrouping (album load, filter, sort, burst view), once the new groups are in place.
+    partial void OnGroupedPicturesChanged(ObservableCollection<PictureGroupViewModel> value) {
+        Dispatcher.UIThread.Post(EnsureSelection);
     }
 
     public void ClearSelection() {
@@ -718,8 +826,8 @@ public partial class GalleryViewModel : ViewModelBase,
             var dateStr = group.Key.ToString("yyyy-MM-dd");
             var count = group.Count();
             var header = $"{dateStr} ({count})";
-            var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt);
-            
+            var sortedGroup = SortWithinGroup(group).ToList();
+
             foreach (var pic in sortedGroup) {
                 pic.GroupName = null;
                 pic.BurstIndex = 0;
@@ -1542,8 +1650,9 @@ public partial class GalleryViewModel : ViewModelBase,
         switch (color) {
             case ColorLabel.Green: FilterToolbar.IsGreenActive = isActive; break;
             case ColorLabel.Blue: FilterToolbar.IsBlueActive = isActive; break;
-            case ColorLabel.Yellow: FilterToolbar.IsYellowOrangeActive = isActive; break;
-            case ColorLabel.Orange: FilterToolbar.IsYellowOrangeActive = isActive; break;
+            case ColorLabel.Yellow: FilterToolbar.IsYellowActive = isActive; break;
+            case ColorLabel.Orange: FilterToolbar.IsOrangeActive = isActive; break;
+            case ColorLabel.Pink: FilterToolbar.IsPinkActive = isActive; break;
             case ColorLabel.Red: FilterToolbar.IsRedActive = isActive; break;
             case ColorLabel.Purple: FilterToolbar.IsPurpleActive = isActive; break;
             case ColorLabel.None: FilterToolbar.IsNoneActive = isActive; break;
@@ -1583,7 +1692,10 @@ public partial class GalleryViewModel : ViewModelBase,
         }
 
         if (FilterRatings.Any()) {
-            filtered = filtered.Where(p => p.Rating >= FilterRatings.Min());
+            // The 0★ chip means "unrated"; the others mean "at least N stars".
+            filtered = FilterRatings.Contains(0)
+                ? filtered.Where(p => p.Rating == 0)
+                : filtered.Where(p => p.Rating >= FilterRatings.Min());
         }
 
         if (FilterColors.Any()) {
@@ -1643,10 +1755,7 @@ public partial class GalleryViewModel : ViewModelBase,
         if (listChanged || (GroupedPictures.Count == 0 && filteredList.Count > 0)) {
             PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
 
-            if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
-                SelectedPicture = PicturesList.FirstOrDefault();
-            }
-
+            // A hidden selection is replaced by the first visible picture in EnsureSelection after regrouping.
             _ = RefreshGalleryGrouping();
         }
 
@@ -1673,6 +1782,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
         OnPropertyChanged(nameof(IsLandscapeFilterActive));
         OnPropertyChanged(nameof(IsPortraitFilterActive));
+        RefreshCounts();
     }
 
     private void UpdateBreadcrumbs(Node? node) {
@@ -1726,6 +1836,11 @@ public partial class GalleryViewModel : ViewModelBase,
 
         foreach (var pic in _allPictures) {
             pic.IsSelected = targetState;
+        }
+
+        if (!targetState) {
+            CollapseSelection();
+            return;
         }
 
         SelectedPictures.Clear();
@@ -1842,6 +1957,14 @@ public partial class GalleryViewModel : ViewModelBase,
         Log.Information("Processing completed for current album {Id}, refreshing gallery.", message.Value);
         Dispatcher.UIThread.Post(() => {
             _ = RefreshGalleryGrouping();
+
+            // Cards loaded before processing show the RAW's embedded preview; switch them to the generated thumbnails.
+            var pictures = _allPictures.ToList();
+            _ = Task.Run(async () => {
+                foreach (var picture in pictures) {
+                    await picture.UpgradeToGeneratedThumbnailAsync(320);
+                }
+            });
         });
     }
 
@@ -2147,6 +2270,7 @@ public partial class GalleryViewModel : ViewModelBase,
 
                         // Re-apply filters on chunk
                         var filteredChunkList = ApplyFilterPredicate(chunkVms).ToList();
+                        RefreshCounts();
 
                         // Add to flat PicturesList
                         foreach (var picVm in filteredChunkList) {
@@ -2203,6 +2327,11 @@ public partial class GalleryViewModel : ViewModelBase,
                     if (_currentNode?.Id == album.Id) {
                         IsLoading = false;
                         NotifyFilterStates();
+                        RefreshCounts();
+                        // Chunks are appended in capture order; apply a non-default sort once loading is done.
+                        if (SelectedSort != null && SelectedSort.Sort != GallerySort.CaptureTime) {
+                            _ = RefreshGalleryGrouping();
+                        }
                     }
                 });
             }
@@ -2236,6 +2365,20 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     public ObservableCollection<BulkDeleteTagItemViewModel> AlbumTagsForBulkDelete { get; } = new();
+
+    /// <summary>Opens the "Remove tags from album" dialog (album ⋯ menu).</summary>
+    [RelayCommand]
+    private void OpenBulkRemoveTagsDialog() {
+        PopulateAlbumTagsForBulkDelete();
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new BulkRemoveTagsDialog { DataContext = this })
+            .TryShow();
+    }
+
+    [RelayCommand]
+    private void CloseDialog() {
+        MainWindow.DialogManager.DismissDialog();
+    }
 
     [RelayCommand]
     public void PopulateAlbumTagsForBulkDelete() {
@@ -2326,6 +2469,7 @@ public partial class GalleryViewModel : ViewModelBase,
         WeakReferenceMessenger.Default.Send(new PictureKeywordsChangedMessage(affectedVms));
 
         PopulateAlbumTagsForBulkDelete();
+        MainWindow.DialogManager.DismissDialog();
 
         var tagSummary = string.Join(", ", selectedTags);
         var albumName = (_currentNode as Album)?.Name ?? "Search Results";
@@ -2638,3 +2782,12 @@ public class BreadcrumbItem(string name, Node? node) {
     public Node? Node { get; } = node;
     public bool IsLast { get; set; }
 }
+
+public enum GallerySort {
+    CaptureTime,
+    Name,
+    Rating,
+    Sharpness
+}
+
+public record GallerySortOption(GallerySort Sort, string Name);

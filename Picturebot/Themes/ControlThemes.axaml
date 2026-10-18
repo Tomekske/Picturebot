@@ -1,0 +1,89 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:suki="https://github.com/kikipoulet/SukiUI"
+                    xmlns:controls="using:Picturebot.Controls"
+                    xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+
+    <!--
+        Dialog frame: replaces SukiUI's glass card (25px corners, own padding) with the same frame
+        as the Settings dialog. Dialog content provides its own layout via controls:DialogLayout.
+    -->
+    <ControlTheme x:Key="{x:Type suki:SukiDialog}" TargetType="suki:SukiDialog">
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border CornerRadius="{DynamicResource Radius.Dialog}"
+                        Background="{DynamicResource Surface.Panel}"
+                        BorderBrush="{DynamicResource Border.Subtle}"
+                        BorderThickness="1"
+                        BoxShadow="0 16 48 0 #80000000"
+                        MinWidth="360"
+                        ClipToBounds="True">
+                    <ContentPresenter Content="{TemplateBinding Content}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <!-- Standard dialog layout: header (title + close), body, footer (actions). Mirrors SettingsDialog. -->
+    <ControlTheme x:Key="{x:Type controls:DialogLayout}" TargetType="controls:DialogLayout">
+        <Setter Property="Padding" Value="24,20" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DockPanel LastChildFill="True">
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" Height="48" ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <ContentPresenter Content="{TemplateBinding HeaderIcon}"
+                                              VerticalAlignment="Center"
+                                              IsVisible="{TemplateBinding HeaderIcon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Text="{TemplateBinding Title}"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource Text.Primary}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="Basic"
+                                Command="{TemplateBinding CloseCommand}"
+                                IsVisible="{TemplateBinding CloseCommand, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                ToolTip.Tip="Close"
+                                Padding="6"
+                                Margin="0,0,10,0"
+                                VerticalAlignment="Center">
+                            <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
+                        </Button>
+                        <Rectangle Grid.ColumnSpan="2" Height="1" Fill="{DynamicResource Border.Subtle}" VerticalAlignment="Bottom" />
+                    </Grid>
+
+                    <!-- Footer -->
+                    <Grid DockPanel.Dock="Bottom" Height="56"
+                          IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Rectangle Height="1" Fill="{DynamicResource Border.Subtle}" VerticalAlignment="Top" />
+                        <ContentPresenter Content="{TemplateBinding Footer}"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          Margin="16,0" />
+                    </Grid>
+
+                    <!-- Body: scrolls when the dialog reaches its max height (85% of the window) -->
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Padding="{TemplateBinding Padding}" />
+                    </ScrollViewer>
+                </DockPanel>
+            </ControlTemplate>
+        </Setter>
+
+        <!-- Width tiers: Small (confirmations), Medium (forms, default), Large (rich content) -->
+        <Setter Property="Width" Value="{DynamicResource Dialog.Width.Medium}" />
+        <Style Selector="^[Size=Small]">
+            <Setter Property="Width" Value="{DynamicResource Dialog.Width.Small}" />
+        </Style>
+        <Style Selector="^[Size=Large]">
+            <Setter Property="Width" Value="{DynamicResource Dialog.Width.Large}" />
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>

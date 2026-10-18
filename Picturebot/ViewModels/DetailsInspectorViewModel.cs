@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Database.Domain.Entities;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,6 +18,7 @@ using Domain.Models;
 using Graph.Domain.Interfaces;
 using PictureWorker.Domain.Interfaces;
 using Picturebot.Messages;
+using Picturebot.Themes;
 using Picturebot.Utilities;
 using Serilog;
 
@@ -26,7 +28,9 @@ using SukiUI.Toasts;
 
 namespace Picturebot.ViewModels;
 
-public record ColorLabelOption(ColorLabel Label, string Name, string HexColor);
+public record ColorLabelOption(ColorLabel Label, string Name) {
+    public IBrush Brush => ThemeBrushes.ForLabel(Label);
+}
 
 public partial class QuickTagButtonViewModel : ObservableObject {
     [ObservableProperty]
@@ -45,16 +49,40 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     private readonly IImageEmbeddingService? _embeddingService;
     private readonly ITaxonomyService? _taxonomyService;
     private readonly IFewShotTagDiscoveryService? _tagDiscoveryService;
-    private CancellationTokenSource? _cts;
+    private readonly ICopyService? _copyService;
 
     [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
-    private Bitmap? _previewImage;
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    [NotifyPropertyChangedFor(nameof(InfoSummary))]
+    [NotifyPropertyChangedFor(nameof(QualitySummary))]
+    private PictureItemViewModel? _selectedPicture;
+
+    // ── Display state for the inspector (null = the selected pictures differ → "Mixed") ──
+    [ObservableProperty]
+    private CurationStatus? _displayedStatus;
 
     [ObservableProperty]
-    private PictureItemViewModel? _selectedPicture;
+    private int? _displayedRating;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayedLabelName))]
+    private ColorLabel? _displayedLabel;
+
+    // ── Collapsible sections (open/closed state kept for the session) ──
+    [ObservableProperty]
+    private bool _isKeywordsExpanded = true;
+
+    [ObservableProperty]
+    private bool _isInfoExpanded;
+
+    [ObservableProperty]
+    private bool _isLocationExpanded;
+
+    [ObservableProperty]
+    private bool _isQualityExpanded;
 
     [ObservableProperty]
     private ColorLabelOption? _selectedColorLabelOption;
@@ -88,7 +116,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         IGlobalExemplarCentroidService? centroidService = null,
         IImageEmbeddingService? embeddingService = null,
         ITaxonomyService? taxonomyService = null,
-        IFewShotTagDiscoveryService? tagDiscoveryService = null) {
+        IFewShotTagDiscoveryService? tagDiscoveryService = null,
+        ICopyService? copyService = null) {
         _nodeService = nodeService;
         _curationQueue = curationQueue;
         _settingsService = settingsService;
@@ -97,6 +126,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         _embeddingService = embeddingService;
         _taxonomyService = taxonomyService;
         _tagDiscoveryService = tagDiscoveryService;
+        _copyService = copyService;
         _settingsService.PropertyChanged += OnSettingsChanged;
         WeakReferenceMessenger.Default.RegisterAll(this);
         RefreshTagGroups();
@@ -125,19 +155,98 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
     public string PurpleLabelName => _settingsService.Current.PurpleLabelName;
 
     public List<ColorLabelOption> ColorLabelOptions => new() {
-        new(ColorLabel.None, "None", "Transparent"),
-        new(ColorLabel.Red, RedLabelName, "#B71C1C"),
-        new(ColorLabel.Orange, OrangeLabelName, "#E67E22"),
-        new(ColorLabel.Yellow, YellowLabelName, "#FDD835"),
-        new(ColorLabel.Green, GreenLabelName, "#33CC33"),
-        new(ColorLabel.Blue, BlueLabelName, "#3333CC"),
-        new(ColorLabel.Pink, PinkLabelName, "#F06292"),
-        new(ColorLabel.Purple, PurpleLabelName, "#CC33CC")
+        new(ColorLabel.None, "None"),
+        new(ColorLabel.Red, RedLabelName),
+        new(ColorLabel.Orange, OrangeLabelName),
+        new(ColorLabel.Yellow, YellowLabelName),
+        new(ColorLabel.Green, GreenLabelName),
+        new(ColorLabel.Blue, BlueLabelName),
+        new(ColorLabel.Pink, PinkLabelName),
+        new(ColorLabel.Purple, PurpleLabelName)
     };
 
     public ActiveMode ActiveMode => SelectedPictures.Count >= 2 ? ActiveMode.MultiMode : ActiveMode.SingleMode;
     public bool IsMultiMode => SelectedPictures.Count >= 2;
     public bool IsSingleMode => SelectedPictures.Count <= 1;
+    public bool HasSelection => SelectedPicture != null;
+
+    public string DisplayedLabelName => DisplayedLabel switch {
+        null => "Mixed",
+        ColorLabel.None => "No label",
+        ColorLabel.Red => RedLabelName,
+        ColorLabel.Orange => OrangeLabelName,
+        ColorLabel.Yellow => YellowLabelName,
+        ColorLabel.Green => GreenLabelName,
+        ColorLabel.Blue => BlueLabelName,
+        ColorLabel.Pink => PinkLabelName,
+        ColorLabel.Purple => PurpleLabelName,
+        _ => string.Empty
+    };
+
+    /// <summary>One-line summary shown on the collapsed Info section.</summary>
+    public string InfoSummary {
+        get {
+            var pic = SelectedPicture?.Picture;
+            if (pic == null) return string.Empty;
+            return pic.Width > 0 && pic.Height > 0
+                ? $"{pic.Width} × {pic.Height} · {SelectedPicture!.FileTypesText}"
+                : SelectedPicture!.FileTypesText;
+        }
+    }
+
+    /// <summary>One-line summary shown on the collapsed AI and quality section.</summary>
+    public string QualitySummary {
+        get {
+            if (SelectedPicture == null) return string.Empty;
+            var summary = $"Sharpness {SelectedPicture.Picture.Sharpness}";
+            return SelectedPicture.IsBest ? summary + " · best of burst" : summary;
+        }
+    }
+
+    private readonly List<PictureItemViewModel> _watchedPictures = new();
+
+    private List<PictureItemViewModel> GetTargets() {
+        if (SelectedPictures.Any()) return SelectedPictures.ToList();
+        return SelectedPicture != null ? new List<PictureItemViewModel> { SelectedPicture } : new List<PictureItemViewModel>();
+    }
+
+    // Track every selected picture so the status / rating / label rows stay correct,
+    // also when the gallery or a shortcut changes them.
+    private void WatchSelection() {
+        foreach (var pic in _watchedPictures) {
+            pic.PropertyChanged -= OnWatchedPicturePropertyChanged;
+        }
+        _watchedPictures.Clear();
+        foreach (var pic in GetTargets()) {
+            pic.PropertyChanged += OnWatchedPicturePropertyChanged;
+            _watchedPictures.Add(pic);
+        }
+        RefreshDisplayedValues();
+    }
+
+    private void OnWatchedPicturePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+        if (e.PropertyName is nameof(PictureItemViewModel.CurationStatus)
+            or nameof(PictureItemViewModel.Rating)
+            or nameof(PictureItemViewModel.ColorLabel)) {
+            RefreshDisplayedValues();
+        } else if (e.PropertyName == nameof(PictureItemViewModel.IsBest)) {
+            OnPropertyChanged(nameof(QualitySummary));
+        }
+    }
+
+    private void RefreshDisplayedValues() {
+        var targets = GetTargets();
+        if (targets.Count == 0) {
+            DisplayedStatus = null;
+            DisplayedRating = null;
+            DisplayedLabel = null;
+            return;
+        }
+        var first = targets[0];
+        DisplayedStatus = targets.All(p => p.CurationStatus == first.CurationStatus) ? first.CurationStatus : null;
+        DisplayedRating = targets.All(p => p.Rating == first.Rating) ? first.Rating : null;
+        DisplayedLabel = targets.All(p => p.ColorLabel == first.ColorLabel) ? first.ColorLabel : null;
+    }
 
     public void Receive(PictureSelectedMessage message) {
         SelectedPicture = message.Value;
@@ -152,6 +261,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             OnPropertyChanged(nameof(IsMultiMode));
             OnPropertyChanged(nameof(IsSingleMode));
         }
+        WatchSelection();
     }
 
     private bool _isUpdatingFromSelectionChanged;
@@ -171,6 +281,7 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             OnPropertyChanged(nameof(ActiveMode));
             OnPropertyChanged(nameof(IsMultiMode));
             OnPropertyChanged(nameof(IsSingleMode));
+            WatchSelection();
         } finally {
             _isUpdatingFromSelectionChanged = false;
         }
@@ -178,15 +289,13 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
 
     private PictureItemViewModel? _activePicture;
 
-    async partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
+    partial void OnSelectedPictureChanged(PictureItemViewModel? value) {
         if (_activePicture != null) {
             _activePicture.PropertyChanged -= OnPicturePropertyChanged;
         }
 
         _activePicture = value;
-
-        PreviewImage?.Dispose();
-        PreviewImage = null;
+        WatchSelection();
 
         if (value == null) {
             SelectedColorLabelOption = null;
@@ -205,7 +314,6 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         SelectedColorLabelOption = ColorLabelOptions.FirstOrDefault(o => o.Label == value.ColorLabel);
         UpdateActiveKeywords();
         UpdateQuickTagStates();
-        await LoadPreviewAsync(value);
     }
 
     private void OnPicturePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
@@ -391,6 +499,8 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             AvailableTagGroups.Add(g);
         }
 
+        OnPropertyChanged(nameof(HasMultipleTagGroups));
+
         var activeId = _settingsService.Current.ActiveTagGroupId;
         ActiveTagGroup = AvailableTagGroups.FirstOrDefault(g => g.GroupId == activeId) ?? AvailableTagGroups.FirstOrDefault();
     }
@@ -485,34 +595,6 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
         }
     }
 
-    private async Task LoadPreviewAsync(PictureItemViewModel picVm) {
-        var previewPath = picVm.Picture.SubFolder?.Preview;
-        if (string.IsNullOrEmpty(previewPath) || !File.Exists(previewPath)) {
-            Log.Warning("No preview available for {Name}", picVm.Name);
-            PreviewImage?.Dispose();
-            PreviewImage = null;
-            return;
-        }
-
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
-
-        try {
-            var loadedBitmap = await ImageHelper.LoadAndOrientAsync(previewPath, 600, picVm.Picture.RawExifOrientation);
-            if (token.IsCancellationRequested || SelectedPicture != picVm) {
-                loadedBitmap?.Dispose();
-                return;
-            }
-            PreviewImage?.Dispose();
-            PreviewImage = loadedBitmap;
-        } catch (OperationCanceledException) {
-            // Loading was cancelled
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to load preview for {Name} at {Path}", picVm.Name, previewPath);
-        }
-    }
-
     [RelayCommand]
     private async Task SetCurationStatus(CurationStatus status) {
         var targetVms = SelectedPictures.Any() ? SelectedPictures.ToList() : (SelectedPicture != null ? new List<PictureItemViewModel> { SelectedPicture } : new List<PictureItemViewModel>());
@@ -569,6 +651,96 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
             }
         }
         await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private void ToggleSection(string section) {
+        switch (section) {
+            case "Keywords": IsKeywordsExpanded = !IsKeywordsExpanded; break;
+            case "Info": IsInfoExpanded = !IsInfoExpanded; break;
+            case "Location": IsLocationExpanded = !IsLocationExpanded; break;
+            case "Quality": IsQualityExpanded = !IsQualityExpanded; break;
+        }
+    }
+
+    /// <summary>The quick-tag group picker is only shown when there is a choice to make.</summary>
+    public bool HasMultipleTagGroups => AvailableTagGroups.Count > 1;
+
+    /// <summary>Clicking the current rating again clears it (0 stars).</summary>
+    [RelayCommand]
+    private async Task ToggleRating(string ratingStr) {
+        if (!int.TryParse(ratingStr, out var rating)) return;
+        var target = DisplayedRating == rating ? 0 : rating;
+        await SetRating(target.ToString());
+    }
+
+    /// <summary>Clicking the active label again removes it.</summary>
+    [RelayCommand]
+    private async Task ToggleColorLabel(ColorLabel label) {
+        var target = DisplayedLabel == label ? ColorLabel.None : label;
+        await SetColorLabel(target);
+    }
+
+    [RelayCommand]
+    private void ShowInExplorer() {
+        if (SelectedPicture == null) return;
+        var path = ResolveRawOrImagePath(SelectedPicture.Picture, _settingsService.Current?.LibraryPath);
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) {
+            ShowToast("File Not Found", "Could not locate the file for this picture.");
+            return;
+        }
+
+        try {
+            Process.Start("explorer.exe", $"/select,\"{path}\"");
+        } catch (Exception ex) {
+            Log.Error(ex, "Failed to show {Path} in Explorer", path);
+            ShowToast("Error", "Failed to open File Explorer.");
+        }
+    }
+
+    [RelayCommand]
+    private Task CopyToEdit() => CopyPicturesAsync(true);
+
+    [RelayCommand]
+    private Task CopyToPrint() => CopyPicturesAsync(false);
+
+    private async Task CopyPicturesAsync(bool toEdit) {
+        var targets = GetTargets();
+        if (targets.Count == 0 || _copyService == null) return;
+
+        int copied = 0, skipped = 0, failed = 0;
+        foreach (var picVm in targets) {
+            try {
+                var ok = toEdit
+                    ? await _copyService.CopyToEditAsync(picVm.Picture)
+                    : await _copyService.CopyToPrintAsync(picVm.Picture);
+                if (ok) copied++; else skipped++;
+            } catch (Exception ex) {
+                failed++;
+                Log.Error(ex, "Failed to copy {Name} to {Target} folder", picVm.Name, toEdit ? "edit" : "print");
+            }
+        }
+
+        var what = toEdit ? "RAW to the edit folder" : "JPG to the print folder";
+        if (copied > 0) {
+            ShowToast("Copied", $"Copied {copied} picture(s) {what}.");
+        } else if (failed > 0) {
+            ShowToast("Copy failed", "The file(s) could not be copied. Check the log for details.");
+        } else if (skipped > 0) {
+            ShowToast("Nothing copied", "The file already exists there, or the destination folder isn't set in Settings.");
+        }
+    }
+
+    private static void ShowToast(string title, string content) {
+        try {
+            MainWindow.ToastManager.CreateToast()
+                .WithTitle(title)
+                .WithContent(content)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+        } catch {
+            // No toast host in tests/headless runs
+        }
     }
 
     public static string GetDxoExecutablePath() {
@@ -688,11 +860,6 @@ public partial class DetailsInspectorViewModel : ViewModelBase, IRecipient<Pictu
                 .Dismiss().ByClicking()
                 .Queue();
         }
-    }
-
-    [RelayCommand]
-    private void EditMetadata() {
-        Log.Information("Edit metadata for {Name}", SelectedPicture?.Name);
     }
 
     [RelayCommand]

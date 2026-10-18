@@ -35,6 +35,19 @@ public partial class TagFilterItemViewModel : ViewModelBase
     }
 }
 
+/// <summary>A removable chip describing one active filter ("Picked", "★ ≥ 3", "Selected label", a tag).</summary>
+public class ActiveFilterPill
+{
+    public ActiveFilterPill(string text, Action remove)
+    {
+        Text = text;
+        RemoveCommand = new RelayCommand(remove);
+    }
+
+    public string Text { get; }
+    public IRelayCommand RemoveCommand { get; }
+}
+
 public partial class FilterToolbarViewModel : ViewModelBase
 {
     private readonly Action? _onFilterChanged;
@@ -85,7 +98,13 @@ public partial class FilterToolbarViewModel : ViewModelBase
     private bool _isBlueActive;
 
     [ObservableProperty]
-    private bool _isYellowOrangeActive;
+    private bool _isYellowActive;
+
+    [ObservableProperty]
+    private bool _isOrangeActive;
+
+    [ObservableProperty]
+    private bool _isPinkActive;
 
     [ObservableProperty]
     private bool _isRedActive;
@@ -122,7 +141,7 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
     public bool IsAnyFilterActive =>
         IsFlaggedActive || IsNeutralActive || IsRejectedActive ||
-        IsGreenActive || IsBlueActive || IsYellowOrangeActive || IsRedActive || IsPurpleActive || IsNoneActive ||
+        IsGreenActive || IsBlueActive || IsYellowActive || IsOrangeActive || IsPinkActive || IsRedActive || IsPurpleActive || IsNoneActive ||
         IsStar0Active || IsStar1Active || IsStar2Active || IsStar3Active || IsStar4Active || IsStar5Active ||
         IsLandscapeActive || IsPortraitActive ||
         IsTagFilterActive;
@@ -133,7 +152,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
     partial void OnIsGreenActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsBlueActiveChanged(bool value) => UpdateCollectionsAndNotify();
-    partial void OnIsYellowOrangeActiveChanged(bool value) => UpdateCollectionsAndNotify();
+    partial void OnIsYellowActiveChanged(bool value) => UpdateCollectionsAndNotify();
+    partial void OnIsOrangeActiveChanged(bool value) => UpdateCollectionsAndNotify();
+    partial void OnIsPinkActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsRedActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsPurpleActiveChanged(bool value) => UpdateCollectionsAndNotify();
     partial void OnIsNoneActiveChanged(bool value) => UpdateCollectionsAndNotify();
@@ -189,11 +210,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
         FilterColors.Clear();
         if (IsGreenActive) FilterColors.Add(ColorLabel.Green);
         if (IsBlueActive) FilterColors.Add(ColorLabel.Blue);
-        if (IsYellowOrangeActive)
-        {
-            FilterColors.Add(ColorLabel.Yellow);
-            FilterColors.Add(ColorLabel.Orange);
-        }
+        if (IsYellowActive) FilterColors.Add(ColorLabel.Yellow);
+        if (IsOrangeActive) FilterColors.Add(ColorLabel.Orange);
+        if (IsPinkActive) FilterColors.Add(ColorLabel.Pink);
         if (IsRedActive) FilterColors.Add(ColorLabel.Red);
         if (IsPurpleActive) FilterColors.Add(ColorLabel.Purple);
         if (IsNoneActive) FilterColors.Add(ColorLabel.None);
@@ -203,12 +222,110 @@ public partial class FilterToolbarViewModel : ViewModelBase
         if (IsLandscapeActive) FilterOrientations.Add(Orientation.Landscape);
         if (IsPortraitActive) FilterOrientations.Add(Orientation.Portrait);
 
+        RebuildActivePills();
+        OnPropertyChanged(nameof(ActiveMinRating));
+
         OnPropertyChanged(nameof(IsTagFilterActive));
         OnPropertyChanged(nameof(ActiveTagFiltersCountText));
         OnPropertyChanged(nameof(IsAnyFilterActive));
         OnPropertyChanged(nameof(AreAllTagsSelected));
         OnPropertyChanged(nameof(SelectAllButtonText));
         _onFilterChanged?.Invoke();
+    }
+
+    /// <summary>Removable chips for every active filter, shown above the gallery.</summary>
+    public ObservableCollection<ActiveFilterPill> ActivePills { get; } = new();
+
+    private void RebuildActivePills()
+    {
+        ActivePills.Clear();
+        if (IsFlaggedActive) ActivePills.Add(new ActiveFilterPill("Picked", () => IsFlaggedActive = false));
+        if (IsNeutralActive) ActivePills.Add(new ActiveFilterPill("Neutral", () => IsNeutralActive = false));
+        if (IsRejectedActive) ActivePills.Add(new ActiveFilterPill("Rejected", () => IsRejectedActive = false));
+
+        if (IsStar0Active) ActivePills.Add(new ActiveFilterPill("Unrated", () => IsStar0Active = false));
+        if (IsStar1Active) ActivePills.Add(new ActiveFilterPill("★ ≥ 1", () => IsStar1Active = false));
+        if (IsStar2Active) ActivePills.Add(new ActiveFilterPill("★ ≥ 2", () => IsStar2Active = false));
+        if (IsStar3Active) ActivePills.Add(new ActiveFilterPill("★ ≥ 3", () => IsStar3Active = false));
+        if (IsStar4Active) ActivePills.Add(new ActiveFilterPill("★ ≥ 4", () => IsStar4Active = false));
+        if (IsStar5Active) ActivePills.Add(new ActiveFilterPill("★ 5", () => IsStar5Active = false));
+
+        if (IsRedActive) ActivePills.Add(new ActiveFilterPill("Red label", () => IsRedActive = false));
+        if (IsOrangeActive) ActivePills.Add(new ActiveFilterPill("Orange label", () => IsOrangeActive = false));
+        if (IsYellowActive) ActivePills.Add(new ActiveFilterPill("Yellow label", () => IsYellowActive = false));
+        if (IsGreenActive) ActivePills.Add(new ActiveFilterPill("Green label", () => IsGreenActive = false));
+        if (IsBlueActive) ActivePills.Add(new ActiveFilterPill("Blue label", () => IsBlueActive = false));
+        if (IsPinkActive) ActivePills.Add(new ActiveFilterPill("Pink label", () => IsPinkActive = false));
+        if (IsPurpleActive) ActivePills.Add(new ActiveFilterPill("Purple label", () => IsPurpleActive = false));
+        if (IsNoneActive) ActivePills.Add(new ActiveFilterPill("No label", () => IsNoneActive = false));
+
+        if (IsLandscapeActive) ActivePills.Add(new ActiveFilterPill("Landscape", () => IsLandscapeActive = false));
+        if (IsPortraitActive) ActivePills.Add(new ActiveFilterPill("Portrait", () => IsPortraitActive = false));
+
+        foreach (var path in GetSelectedFilterPaths().OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        {
+            var tagPath = path;
+            ActivePills.Add(new ActiveFilterPill($"Tag: {tagPath.Replace("|", " › ")}", () => RemoveTagFilter(tagPath)));
+        }
+
+        OnPropertyChanged(nameof(HasActivePills));
+    }
+
+    public bool HasActivePills => ActivePills.Count > 0;
+
+    private void RemoveTagFilter(string path)
+    {
+        foreach (var node in RootNodes.SelectMany(r => r.GetAllNodes()))
+        {
+            if (string.Equals(node.FullPath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                node.SetCheckedRecursive(false);
+            }
+        }
+        foreach (var tag in AllTags.Where(t => string.Equals(t.Name, path, StringComparison.OrdinalIgnoreCase)))
+        {
+            tag.IsSelected = false;
+        }
+        UpdateCollectionsAndNotify();
+    }
+
+    /// <summary>Active "at least N stars" filter (0 = none). Drives the five-star filter control.</summary>
+    public int ActiveMinRating =>
+        IsStar5Active ? 5 : IsStar4Active ? 4 : IsStar3Active ? 3 : IsStar2Active ? 2 : IsStar1Active ? 1 : 0;
+
+    /// <summary>Click star N to filter "N stars or more"; click the active star again to clear.</summary>
+    [RelayCommand]
+    private void ToggleMinRating(string value)
+    {
+        if (!int.TryParse(value, out var rating) || rating < 1 || rating > 5) return;
+        var clear = ActiveMinRating == rating;
+
+        _isUpdating = true;
+        try
+        {
+            IsStar1Active = false;
+            IsStar2Active = false;
+            IsStar3Active = false;
+            IsStar4Active = false;
+            IsStar5Active = false;
+            if (!clear)
+            {
+                IsStar0Active = false;
+                switch (rating)
+                {
+                    case 1: IsStar1Active = true; break;
+                    case 2: IsStar2Active = true; break;
+                    case 3: IsStar3Active = true; break;
+                    case 4: IsStar4Active = true; break;
+                    case 5: IsStar5Active = true; break;
+                }
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
+            UpdateCollectionsAndNotify();
+        }
     }
 
     public void SetFlaggedOnly()
@@ -222,7 +339,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
             IsGreenActive = false;
             IsBlueActive = false;
-            IsYellowOrangeActive = false;
+            IsYellowActive = false;
+            IsOrangeActive = false;
+            IsPinkActive = false;
             IsRedActive = false;
             IsPurpleActive = false;
             IsNoneActive = false;
@@ -260,7 +379,9 @@ public partial class FilterToolbarViewModel : ViewModelBase
 
             IsGreenActive = false;
             IsBlueActive = false;
-            IsYellowOrangeActive = false;
+            IsYellowActive = false;
+            IsOrangeActive = false;
+            IsPinkActive = false;
             IsRedActive = false;
             IsPurpleActive = false;
             IsNoneActive = false;
@@ -449,6 +570,7 @@ public partial class FilterToolbarViewModel : ViewModelBase
         }
 
         RefreshVisibleTags();
+        RebuildActivePills();
         OnPropertyChanged(nameof(IsTagFilterActive));
         OnPropertyChanged(nameof(ActiveTagFiltersCountText));
         OnPropertyChanged(nameof(AreAllTagsSelected));

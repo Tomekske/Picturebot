@@ -7,6 +7,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
+using Avalonia.Styling;
+using SukiUI;
+using SukiUI.Models;
 using Domain.Enums;
 using Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +26,7 @@ public class App : Application {
 
     public override void Initialize() {
         AvaloniaXamlLoader.Load(this);
+        ApplyBrandTheme();
 
         // Setup Configuration (can also be called from Program.cs)
         var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? AppEnvironment.Production;
@@ -57,6 +62,18 @@ public class App : Application {
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Registers the Picturebot brand colors with SukiUI and locks the app to dark mode.
+    /// Colors must stay in sync with Themes/Tokens.axaml (Color.Accent.Fill / Color.Accent.Secondary).
+    /// </summary>
+    private static void ApplyBrandTheme() {
+        var sukiTheme = SukiTheme.GetInstance();
+        var brandTheme = new SukiColorTheme("Picturebot", Color.Parse("#FF2553"), Color.Parse("#FFB608"));
+        sukiTheme.AddColorTheme(brandTheme);
+        sukiTheme.ChangeColorTheme(brandTheme);
+        sukiTheme.ChangeBaseTheme(ThemeVariant.Dark);
     }
 
     private void DisableAvaloniaDataAnnotationValidation() {

@@ -10,7 +10,10 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Domain.Enums;
+using Domain.Interfaces;
+using Domain.Models;
 using Graph.Domain.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Utilities;
 using Picturebot.Views;
 using Serilog;
@@ -45,6 +48,26 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private int _sharpness;
 
+    // The sharpest frame of a real burst (singletons are always "best", so they don't count)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SharpnessTip))]
+    private bool _isSharpestInBurst;
+
+    public string SharpnessTip => IsSharpestInBurst
+        ? "Sharpness: sharpest in burst"
+        : "Sharpness: higher is sharper";
+
+    // Label names from Settings, shown as tooltips on the label dots
+    private static SettingsModel? Settings => App.Services?.GetService<ISettingsService>()?.Current;
+
+    public string RedLabelName => Settings?.RedLabelName ?? "Red";
+    public string OrangeLabelName => Settings?.OrangeLabelName ?? "Orange";
+    public string YellowLabelName => Settings?.YellowLabelName ?? "Yellow";
+    public string GreenLabelName => Settings?.GreenLabelName ?? "Green";
+    public string BlueLabelName => Settings?.BlueLabelName ?? "Blue";
+    public string PinkLabelName => Settings?.PinkLabelName ?? "Pink";
+    public string PurpleLabelName => Settings?.PurpleLabelName ?? "Purple";
+
     public CarouselDialogViewModel(IEnumerable<PictureItemViewModel> pictures, PictureItemViewModel? selectedPicture,
         INodeService nodeService, ICurationQueue curationQueue, ICopyService copyService, Action? closeAction = null) {
         _nodeService = nodeService;
@@ -71,6 +94,7 @@ public partial class CarouselDialogViewModel : ViewModelBase {
     private void UpdateState() {
         CounterText = $"{CurrentIndex + 1} / {_pictures.Count}";
         Sharpness = CurrentPicture.Picture.Sharpness;
+        IsSharpestInBurst = CurrentPicture.IsBest && CurrentPicture.BurstTotal > 1;
 
         if (CurrentPicture.BurstTotal > 1) {
             CurrentGroupName = $"Burst {CurrentPicture.BurstIndex} ({CurrentPicture.BurstPosition}/{CurrentPicture.BurstTotal})";
@@ -87,9 +111,10 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         var token = _cts.Token;
 
         try {
-            // Load current, prev, and next
-            var indicesToLoad = new[] { CurrentIndex, CurrentIndex - 1, CurrentIndex + 1 }
-                .Where(i => i >= 0 && i < _pictures.Count)
+            // Load current, prev, and next; wraps around so the last picture is ready when on the first
+            var count = _pictures.Count;
+            var indicesToLoad = new[] { CurrentIndex, (CurrentIndex - 1 + count) % count, (CurrentIndex + 1) % count }
+                .Distinct()
                 .ToList();
 
             foreach (var i in indicesToLoad) {
@@ -104,7 +129,8 @@ public partial class CarouselDialogViewModel : ViewModelBase {
 
             // Cleanup distant previews to save memory
             for (int i = 0; i < Previews.Count; i++) {
-                if (Previews[i] != null && Math.Abs(i - CurrentIndex) > 5) {
+                var distance = Math.Abs(i - CurrentIndex);
+                if (Previews[i] != null && Math.Min(distance, count - distance) > 5) {
                     Previews[i]?.Dispose();
                     Previews[i] = null;
                 }
@@ -179,6 +205,21 @@ public partial class CarouselDialogViewModel : ViewModelBase {
         } catch (Exception ex) {
             Log.Error(ex, "Failed to update rating in carousel for {Name}", CurrentPicture.Name);
         }
+    }
+
+    /// <summary>Clicking the active star again clears the rating (same as the details inspector).</summary>
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
+    private async Task ToggleRating(string ratingStr) {
+        if (!int.TryParse(ratingStr, out var rating)) return;
+        var target = CurrentPicture.Rating == rating ? 0 : rating;
+        await SetRating(target.ToString());
+    }
+
+    /// <summary>Clicking the active label again removes it.</summary>
+    [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]
+    private async Task ToggleColorLabel(ColorLabel label) {
+        var target = CurrentPicture.ColorLabel == label ? ColorLabel.None : label;
+        await SetColorLabel(target);
     }
 
     [RelayCommand(CanExecute = nameof(CanExecuteShortcuts))]

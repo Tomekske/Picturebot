@@ -82,6 +82,21 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public string Name => Picture.Name;
 
+    /// <summary>File types present for this picture, e.g. "ARW + JPG".</summary>
+    public string FileTypesText {
+        get {
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(Picture.Extension)) {
+                parts.Add(Picture.Extension.TrimStart('.').ToUpperInvariant());
+            }
+            var preview = Picture.SubFolder?.Preview;
+            if (!string.IsNullOrEmpty(preview) && File.Exists(preview)) {
+                parts.Add("JPG");
+            }
+            return parts.Count > 0 ? string.Join(" + ", parts) : "Unknown format";
+        }
+    }
+
     public void AddKeyword(string keyword) {
         if (!string.IsNullOrWhiteSpace(keyword)) {
             var trimmed = keyword.Trim();
@@ -172,6 +187,32 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
             // Loading was cancelled
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load thumbnail for {Name} via registry", Name);
+        }
+    }
+
+    /// <summary>
+    ///     Swaps a fallback thumbnail (the RAW's embedded preview, often letterboxed with black bars) for the
+    ///     generated one once processing has written it. The old bitmap stays visible until the new one is ready.
+    /// </summary>
+    public async Task UpgradeToGeneratedThumbnailAsync(int targetHeight) {
+        var generated = Picture.SubFolder?.Thumbnail;
+        if (string.IsNullOrEmpty(generated) || _resolvedThumbnailPath == generated || !File.Exists(generated)) {
+            return;
+        }
+
+        _resolvedThumbnailPath = generated;
+        if (Thumbnail == null) {
+            // Not loaded yet (off-screen); the normal load will pick up the generated thumbnail.
+            return;
+        }
+
+        try {
+            var bitmap = await ThumbnailRegistry.Instance.QueueRequestAsync(generated, targetHeight, IsVisible ? 0 : 1, Picture.RawExifOrientation, CancellationToken.None);
+            if (bitmap != null && _resolvedThumbnailPath == generated) {
+                Thumbnail = bitmap;
+            }
+        } catch (Exception ex) {
+            Log.Warning(ex, "Failed to load generated thumbnail for {Name}", Name);
         }
     }
 

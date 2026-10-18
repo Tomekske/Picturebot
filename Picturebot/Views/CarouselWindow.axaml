@@ -10,9 +10,9 @@
         mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="Picturebot.Views.CarouselWindow"
         x:DataType="vm:CarouselDialogViewModel"
-        Title="Carousel"
+        Title="Slideshow"
         Icon="/Assets/icon.ico"
-        Background="Black"
+        Background="{DynamicResource Photo.Backdrop}"
         SystemDecorations="None"
         WindowState="FullScreen"
         WindowStartupLocation="CenterScreen"
@@ -20,181 +20,208 @@
         Focusable="True">
 
     <Window.Resources>
-        <converters:CurationStatusToBrushConverter x:Key="CurationStatusToBrushConverter" />
-        <converters:ColorLabelToBrushConverter x:Key="ColorLabelToBrushConverter" />
         <converters:RatingToBrushConverter x:Key="RatingToBrushConverter" />
-        <converters:RatingToBooleanConverter x:Key="RatingToBooleanConverter" />
-        <converters:ColorLabelToStrokeThicknessConverter x:Key="ColorLabelToStrokeThicknessConverter" />
+        <converters:EnumEqualsConverter x:Key="EnumEquals" />
     </Window.Resources>
 
-    <Grid>
-        <Canvas Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+    <!-- Layout: top bar (68) and curation bar (76) float over the backdrop; the photo margins
+         leave exactly that room plus a gap, so the photo sits centered between them. -->
+    <Window.Styles>
+        <!-- Floating chrome surfaces -->
+        <Style Selector="Border.chrome">
+            <Setter Property="Background" Value="{DynamicResource Surface.Overlay}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{DynamicResource Radius.Dialog}" />
+        </Style>
+        <Style Selector="Rectangle.divider">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Fill" Value="{DynamicResource Border.Subtle}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
 
+        <!-- Previous / next: quiet until hovered -->
+        <Style Selector="Button.nav">
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="28" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.nav:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+            <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+        </Style>
+
+        <!-- Curation controls: the inspector's controls, scaled up for fullscreen viewing -->
+        <Style Selector="Button.segment">
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinWidth" Value="96" />
+        </Style>
+        <Style Selector="Button.dot">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+        </Style>
+    </Window.Styles>
+
+    <Grid>
         <controls:GpuAcceleratedCarousel
                Items="{Binding Previews}"
                SelectedIndex="{Binding CurrentIndex}"
-               Margin="100,80,100,200"
+               Margin="96,84,96,100"
                VerticalAlignment="Stretch"
                HorizontalAlignment="Stretch" />
 
-        <Button HorizontalAlignment="Left" VerticalAlignment="Top"
-                Classes="Basic" Margin="30"
-                Command="{Binding CloseCommand}"
-                Foreground="White"
-                ZIndex="100">
-            <icons:MaterialIcon Kind="Close" Width="40" Height="40" />
-        </Button>
+        <!-- Top bar: close | counter, sharpness, burst -->
+        <Grid VerticalAlignment="Top" Margin="24,20" Height="48" ColumnDefinitions="Auto,*,Auto" ZIndex="100">
+            <Button Grid.Column="0" Classes="Basic" Padding="8" VerticalAlignment="Center"
+                    Command="{Binding CloseCommand}" ToolTip.Tip="Close (Esc)">
+                <icons:MaterialIcon Kind="Close" Width="24" Height="24" />
+            </Button>
 
-        <StackPanel HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="30" Spacing="12" ZIndex="100">
-            <!-- Main Metadata Badge -->
-            <Border Background="#CC000000" CornerRadius="20" Padding="20,10" BorderBrush="#33FFFFFF"
-                    BorderThickness="1">
-                <StackPanel Orientation="Horizontal" Spacing="20">
-                    <TextBlock Text="{Binding CounterText}"
-                               FontSize="18"
-                               Foreground="White" FontWeight="Bold" />
-                    <Separator Width="1" Height="20" Background="#66FFFFFF" />
-                    <TextBlock Text="{Binding Sharpness, StringFormat='Sharpness: {0}'}"
-                               FontSize="18"
-                               Foreground="White" FontWeight="SemiBold" />
+            <Border Grid.Column="2" Classes="chrome" Padding="14,8" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{Binding CounterText}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
+
+                    <Rectangle Classes="divider" Height="16" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="6" Background="Transparent"
+                                ToolTip.Tip="{Binding SharpnessTip}">
+                        <icons:MaterialIcon Kind="ImageFilterCenterFocus" Width="16" Height="16" VerticalAlignment="Center"
+                                            Foreground="{DynamicResource Text.Secondary}"
+                                            IsVisible="{Binding !IsSharpestInBurst}" />
+                        <icons:MaterialIcon Kind="ImageFilterCenterFocus" Width="16" Height="16" VerticalAlignment="Center"
+                                            Foreground="{DynamicResource Accent.Foreground}"
+                                            IsVisible="{Binding IsSharpestInBurst}" />
+                        <TextBlock Text="{Binding Sharpness}" FontSize="14"
+                                   Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <Rectangle Classes="divider" Height="16"
+                               IsVisible="{Binding CurrentGroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                IsVisible="{Binding CurrentGroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <icons:MaterialIcon Kind="BurstMode" Width="16" Height="16" VerticalAlignment="Center"
+                                            Foreground="{DynamicResource Text.Secondary}" />
+                        <TextBlock Text="{Binding CurrentGroupName}" FontSize="14"
+                                   Foreground="{DynamicResource Text.Primary}" VerticalAlignment="Center" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
+        </Grid>
 
-            <!-- Burst Context Badge (Secondary) -->
-            <Border Background="#CC000000" CornerRadius="15" Padding="15,8" BorderBrush="#33FFFFFF"
-                    BorderThickness="1"
-                    HorizontalAlignment="Right"
-                    IsVisible="{Binding CurrentGroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <icons:MaterialIcon Kind="BurstMode" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding CurrentGroupName}"
-                               FontSize="16"
-                               Foreground="White" FontWeight="Bold"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-            </Border>
-        </StackPanel>
-
-        <Button HorizontalAlignment="Left" VerticalAlignment="Center"
-                Classes="Basic" Margin="20,0,0,0"
-                Command="{Binding PreviousCommand}"
-                Foreground="#88FFFFFF"
-                ZIndex="100">
-            <icons:MaterialIcon Kind="ChevronLeft" Width="80" Height="80" />
+        <Button Classes="nav" HorizontalAlignment="Left" Margin="24,0,0,0" ZIndex="100"
+                Command="{Binding PreviousCommand}" ToolTip.Tip="Previous (←)">
+            <icons:MaterialIcon Kind="ChevronLeft" Width="40" Height="40" />
         </Button>
 
-        <Button HorizontalAlignment="Right" VerticalAlignment="Center"
-                Classes="Basic" Margin="0,0,20,0"
-                Command="{Binding NextCommand}"
-                Foreground="#88FFFFFF"
-                ZIndex="100">
-            <icons:MaterialIcon Kind="ChevronRight" Width="80" Height="80" />
+        <Button Classes="nav" HorizontalAlignment="Right" Margin="0,0,24,0" ZIndex="100"
+                Command="{Binding NextCommand}" ToolTip.Tip="Next (→)">
+            <icons:MaterialIcon Kind="ChevronRight" Width="40" Height="40" />
         </Button>
 
-        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                Margin="0,0,0,50"
-                Background="#EE151515"
-                CornerRadius="30"
-                Padding="15,10"
-                BorderBrush="#44FFFFFF"
-                BorderThickness="1"
-                ZIndex="100">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="Basic"
-                        Command="{Binding SetCurationStatusCommand}"
-                        CommandParameter="{x:Static enums:CurationStatus.Flagged}"
-                        Padding="20,15">
-                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <icons:MaterialIcon Kind="Flag" Width="36" Height="36"
-                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Flagged}" />
-                        <TextBlock Text="Flagged" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+        <!-- Curation bar: status | rating | label (same controls as the details inspector) -->
+        <Border Classes="chrome" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,24" Padding="8" ZIndex="100">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <Border Background="{DynamicResource Surface.Card}" CornerRadius="{DynamicResource Radius.Control}"
+                        Padding="2" VerticalAlignment="Center">
+                    <UniformGrid Columns="3">
+                        <Button Classes="segment pick"
+                                Classes.active="{Binding CurrentPicture.CurationStatus, Converter={StaticResource EnumEquals}, ConverterParameter=Flagged}"
+                                Command="{Binding SetCurationStatusCommand}" CommandParameter="{x:Static enums:CurationStatus.Flagged}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="Flag" Width="16" Height="16" />
+                                <TextBlock Text="Pick" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="segment neutral"
+                                Classes.active="{Binding CurrentPicture.CurationStatus, Converter={StaticResource EnumEquals}, ConverterParameter=Unflagged}"
+                                Command="{Binding SetCurationStatusCommand}" CommandParameter="{x:Static enums:CurationStatus.Unflagged}"
+                                Content="Neutral" />
+                        <Button Classes="segment reject"
+                                Classes.active="{Binding CurrentPicture.CurationStatus, Converter={StaticResource EnumEquals}, ConverterParameter=Rejected}"
+                                Command="{Binding SetCurationStatusCommand}" CommandParameter="{x:Static enums:CurationStatus.Rejected}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
+                                <TextBlock Text="Reject" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </UniformGrid>
+                </Border>
 
-                <Button Classes="Basic"
-                        Command="{Binding SetCurationStatusCommand}"
-                        CommandParameter="{x:Static enums:CurationStatus.Unflagged}"
-                        Padding="20,15">
-                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <icons:MaterialIcon Kind="CircleOutline" Width="36" Height="36"
-                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Unflagged}" />
-                        <TextBlock Text="Neutral" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <Rectangle Classes="divider" />
 
-                <Button Classes="Basic"
-                        Command="{Binding SetCurationStatusCommand}"
-                        CommandParameter="{x:Static enums:CurationStatus.Rejected}"
-                        Padding="20,15">
-                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <icons:MaterialIcon Kind="Close" Width="36" Height="36"
-                                            Foreground="{Binding CurrentPicture.CurationStatus, Converter={StaticResource CurationStatusToBrushConverter}, ConverterParameter=Rejected}" />
-                        <TextBlock Text="Rejected" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <Separator Width="1" Height="40" Background="#44FFFFFF" Margin="10,0" />
-
-                <!-- Star Rating -->
                 <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="1" Padding="6">
-                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                    <Button Classes="Basic" Padding="3" Command="{Binding ToggleRatingCommand}" CommandParameter="1" ToolTip.Tip="1 star (click again to clear)">
+                        <icons:MaterialIcon Kind="Star" Width="26" Height="26"
                                             Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=1}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="2" Padding="6">
-                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                    <Button Classes="Basic" Padding="3" Command="{Binding ToggleRatingCommand}" CommandParameter="2" ToolTip.Tip="2 stars (click again to clear)">
+                        <icons:MaterialIcon Kind="Star" Width="26" Height="26"
                                             Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=2}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="3" Padding="6">
-                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                    <Button Classes="Basic" Padding="3" Command="{Binding ToggleRatingCommand}" CommandParameter="3" ToolTip.Tip="3 stars (click again to clear)">
+                        <icons:MaterialIcon Kind="Star" Width="26" Height="26"
                                             Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=3}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="4" Padding="6">
-                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                    <Button Classes="Basic" Padding="3" Command="{Binding ToggleRatingCommand}" CommandParameter="4" ToolTip.Tip="4 stars (click again to clear)">
+                        <icons:MaterialIcon Kind="Star" Width="26" Height="26"
                                             Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=4}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetRatingCommand}" CommandParameter="5" Padding="6">
-                        <icons:MaterialIcon Kind="Star" Width="32" Height="32" 
+                    <Button Classes="Basic" Padding="3" Command="{Binding ToggleRatingCommand}" CommandParameter="5" ToolTip.Tip="5 stars (click again to clear)">
+                        <icons:MaterialIcon Kind="Star" Width="26" Height="26"
                                             Foreground="{Binding CurrentPicture.Rating, Converter={StaticResource RatingToBrushConverter}, ConverterParameter=5}" />
                     </Button>
                 </StackPanel>
 
-                <Separator Width="1" Height="40" Background="#44FFFFFF" Margin="10,0" />
+                <Rectangle Classes="divider" />
 
-                <!-- Color Labels -->
-                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="5,0">
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Red}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#B71C1C" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Red}" />
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Red}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Red}"
+                            ToolTip.Tip="{Binding RedLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Red}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Orange}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#E67E22" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Orange}" />
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Orange}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Orange}"
+                            ToolTip.Tip="{Binding OrangeLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Orange}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Yellow}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#FDD835" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Yellow}" />
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Yellow}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Yellow}"
+                            ToolTip.Tip="{Binding YellowLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Yellow}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Green}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#33CC33" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Green}" />
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Green}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Green}"
+                            ToolTip.Tip="{Binding GreenLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Green}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Blue}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#3333CC" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Blue}" />
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Blue}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Blue}"
+                            ToolTip.Tip="{Binding BlueLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Blue}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Pink}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#F06292" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Pink}" />
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Pink}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Pink}"
+                            ToolTip.Tip="{Binding PinkLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Pink}" />
                     </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Purple}" Padding="0">
-                        <Ellipse Width="24" Height="24" Fill="#CC33CC" 
-                                 Stroke="White" StrokeThickness="{Binding CurrentPicture.ColorLabel, Converter={StaticResource ColorLabelToStrokeThicknessConverter}, ConverterParameter=Purple}" />
-                    </Button>
-                    <Button Classes="Basic" Command="{Binding SetColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.None}" Padding="6">
-                        <icons:MaterialIcon Kind="LabelOffOutline" Width="24" Height="24" Foreground="White" />
+                    <Button Classes="dot"
+                            Classes.active="{Binding CurrentPicture.ColorLabel, Converter={StaticResource EnumEquals}, ConverterParameter=Purple}"
+                            Command="{Binding ToggleColorLabelCommand}" CommandParameter="{x:Static enums:ColorLabel.Purple}"
+                            ToolTip.Tip="{Binding PurpleLabelName}">
+                        <Ellipse Width="16" Height="16" Fill="{DynamicResource Label.Purple}" />
                     </Button>
                 </StackPanel>
             </StackPanel>

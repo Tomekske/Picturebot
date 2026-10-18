@@ -2,8 +2,8 @@ using Avalonia.Controls;
 
 namespace Picturebot.Views;
 
-public partial class CreateFolderDialog : UserControl {
-    public CreateFolderDialog() {
+public partial class BulkRemoveTagsDialog : UserControl {
+    public BulkRemoveTagsDialog() {
         InitializeComponent();
     }
 }
