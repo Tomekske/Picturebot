@@ -69,7 +69,7 @@ public class ImportPicturesCommand : IImportPicturesCommand {
         foreach (var pair in preGroupedByName) {
             preProcessCount++;
             progress?.Report(new ImportProgress(preProcessCount, preGroupedByName.Count,
-                $"Analyzing metadata for {pair.Key}..."));
+                $"Analyzing metadata for {pair.Key}...", ImportStage.Scanning));
 
             // Prefer JPG for metadata, fallback to RAW
             var fileToInspect = pair.FirstOrDefault(f =>

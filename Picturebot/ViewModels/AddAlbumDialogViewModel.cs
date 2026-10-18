@@ -11,6 +11,7 @@ using Database.Domain.Entities;
 using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
 
@@ -147,18 +148,21 @@ public partial class AddAlbumDialogViewModel : ViewModelBase {
 
         // Close the current input dialog immediately
         MainWindow.DialogManager.DismissDialog();
+        var feedback = ImportFeedback.Start(albumName);
 
         try {
             // Start the import in the background using a dedicated scope for thread-safety.
             var album = await Task.Run(async () => {
                 using var scope = _scopeFactory.CreateScope();
                 var scopedImportCommand = scope.ServiceProvider.GetRequiredService<IImportPicturesCommand>();
-                return await scopedImportCommand.ExecuteAsync(parentId, albumName, libraryPath, sourcePath);
+                return await scopedImportCommand.ExecuteAsync(parentId, albumName, libraryPath, sourcePath, feedback);
             });
 
+            feedback.Completed();
             _onResult(album);
         } catch (Exception ex) {
             Log.Error(ex, "Import failed");
+            feedback.Failed();
             _onResult(null);
         }
     }

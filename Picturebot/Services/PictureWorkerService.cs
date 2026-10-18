@@ -139,12 +139,14 @@ public class PictureWorkerService(
             try {
                 // Persistence: Keep DB updates surgical and dedicated to state changes
                 await UpdateProcessingStateAsync(picture.Id, ProcessingState.Processing);
+                WeakReferenceMessenger.Default.Send(new PictureProcessingStartedMessage(picture.Id));
 
                 var (success, errorMsg) = await ProcessPictureInternalAsync(picture, pathService, settingsService, ct);
 
-                if (!success) {
-                    await HandleProcessingFailureAsync(picture.Id, errorMsg);
-                }
+                var finalState = success
+                    ? ProcessingState.Completed
+                    : await HandleProcessingFailureAsync(picture.Id, errorMsg);
+                WeakReferenceMessenger.Default.Send(new PictureProcessedMessage(new PictureProcessed(picture.Id, albumId, finalState)));
 
                 // Increment in-memory counter
                 var currentSessionTotal = Interlocked.Increment(ref sessionProcessedCount);
@@ -163,7 +165,8 @@ public class PictureWorkerService(
                 throw;
             } catch (Exception ex) {
                 Log.Error(ex, "Failed to process picture {PictureId}", picture.Id);
-                await HandleProcessingFailureAsync(picture.Id, ex.Message);
+                var finalState = await HandleProcessingFailureAsync(picture.Id, ex.Message);
+                WeakReferenceMessenger.Default.Send(new PictureProcessedMessage(new PictureProcessed(picture.Id, albumId, finalState)));
             } finally {
                 semaphore.Release();
             }
@@ -352,20 +355,27 @@ public class PictureWorkerService(
         }
     }
 
-    private async Task HandleProcessingFailureAsync(int pictureId, string? error = null) {
+    /// <summary>
+    ///     Records a failed attempt and returns the state the picture ends up in: Pending to retry, or Failed.
+    /// </summary>
+    private async Task<ProcessingState> HandleProcessingFailureAsync(int pictureId, string? error = null) {
         using var scope = scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var picture = await context.Pictures.FindAsync(pictureId);
-        if (picture != null) {
-            picture.RetryCount++;
-            picture.LastErrorMessage = error ?? "Unknown error";
-            picture.ProcessingState =
-                picture.RetryCount >= MaxRetries ? ProcessingState.Failed : ProcessingState.Pending;
-
-            Log.Warning("Picture {Id} ({Name}) processing failed (Attempt {Count}). Error: {Error}",
-                picture.Id, picture.Name, picture.RetryCount, picture.LastErrorMessage);
-
-            await context.SaveChangesAsync();
+        if (picture == null) {
+            return ProcessingState.Failed;
         }
+
+        picture.RetryCount++;
+        picture.LastErrorMessage = error ?? "Unknown error";
+        picture.ProcessingState =
+            picture.RetryCount >= MaxRetries ? ProcessingState.Failed : ProcessingState.Pending;
+
+        Log.Warning("Picture {Id} ({Name}) processing failed (Attempt {Count}). Error: {Error}",
+            picture.Id, picture.Name, picture.RetryCount, picture.LastErrorMessage);
+
+        await context.SaveChangesAsync();
+
+        return picture.ProcessingState;
     }
 }

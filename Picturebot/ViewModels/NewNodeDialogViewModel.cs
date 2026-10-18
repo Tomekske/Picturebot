@@ -33,6 +33,8 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     private static readonly char[] PathSeparators = ['›', '/', '\\', '>'];
     private static readonly HashSet<string> ImageExtensions =
         new(SupportedImageExtensions.AllExtensions, StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> RawExtensions =
+        new(SupportedImageExtensions.RawExtensions, StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<int, LocationFolder> _byId = new();
     private readonly IFolderService _folderService;
@@ -42,7 +44,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISettingsService _settingsService;
     private CancellationTokenSource? _sourceCountCts;
-    private int? _sourceFileCount;
+    private SourceCounts? _sourceCounts;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
@@ -147,8 +149,9 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     }
 
     partial void OnSourcePathChanged(string value) {
-        _sourceFileCount = null;
+        _sourceCounts = null;
         UpdateSummary();
+        CreateCommand.NotifyCanExecuteChanged();
         _ = CountSourceFilesAsync(value);
     }
 
@@ -306,11 +309,10 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
 
         var pendingCount = PendingChain().Count;
         var detail = IsAlbumMode
-            ? _sourceFileCount switch {
+            ? _sourceCounts switch {
                 null when string.IsNullOrWhiteSpace(SourcePath) => "New album",
                 null => "New album · counting photos…",
-                1 => "New album · 1 image file to import",
-                var n => $"New album · {n} image files to import"
+                var counts => $"New album · {counts.Describe()}"
             }
             : "New folder";
         if (pendingCount > 0) {
@@ -338,8 +340,15 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         if (!string.IsNullOrWhiteSpace(SourcePath) && !Directory.Exists(SourcePath)) {
             return "The source folder doesn't exist.";
         }
-        if (_sourceFileCount == 0) {
+        if (_sourceCounts?.Pictures == 0) {
             return "The source folder has no supported image files.";
+        }
+        if (_sourceCounts is { Unpaired.Count: > 0 } counts) {
+            var examples = string.Join(", ", counts.Unpaired.Take(3));
+            var more = counts.Unpaired.Count > 3 ? $" and {counts.Unpaired.Count - 3} more" : string.Empty;
+            return counts.Unpaired.Count == 1
+                ? $"Every picture needs both a RAW and a JPG. This file has no partner: {examples}."
+                : $"Every picture needs both a RAW and a JPG. {counts.Unpaired.Count} files have no partner: {examples}{more}.";
         }
         return null;
     }
@@ -350,12 +359,25 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
 
         try {
-            var count = await Task.Run(() => Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
-                .Count(f => !Path.GetFileName(f).StartsWith('.') && ImageExtensions.Contains(Path.GetExtension(f))), cts.Token);
+            var counts = await Task.Run(() => {
+                var files = Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(f => !Path.GetFileName(f).StartsWith('.') && ImageExtensions.Contains(Path.GetExtension(f)))
+                    .ToList();
+                // Like the import: files with the same name (a RAW and its JPG) are one picture.
+                var groups = files.GroupBy(f => Path.GetFileNameWithoutExtension(f), StringComparer.OrdinalIgnoreCase).ToList();
+                var unpaired = groups
+                    .Where(g => !g.Any(f => RawExtensions.Contains(Path.GetExtension(f))) ||
+                                g.All(f => RawExtensions.Contains(Path.GetExtension(f))))
+                    .SelectMany(g => g.Select(Path.GetFileName))
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                return new SourceCounts(groups.Count, unpaired);
+            }, cts.Token);
             if (cts.IsCancellationRequested) return;
             await Dispatcher.UIThread.InvokeAsync(() => {
-                _sourceFileCount = count;
+                _sourceCounts = counts;
                 UpdateSummary();
+                CreateCommand.NotifyCanExecuteChanged();
             });
         } catch (Exception ex) when (ex is not OperationCanceledException) {
             Log.Warning(ex, "Could not count images in {Path}", path);
@@ -411,7 +433,8 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
 
     private bool CanCreate() {
         if (IsBusy || HasValidationMessage || string.IsNullOrWhiteSpace(Name)) return false;
-        return !IsAlbumMode || !string.IsNullOrWhiteSpace(SourcePath);
+        // An album also waits for the source count, which is where the RAW/JPG pairing is checked.
+        return !IsAlbumMode || (!string.IsNullOrWhiteSpace(SourcePath) && _sourceCounts != null);
     }
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
@@ -469,16 +492,19 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         var libraryPath = _settingsService.Current.LibraryPath!;
         var sourcePath = SourcePath;
         MainWindow.DialogManager.DismissDialog();
+        var feedback = ImportFeedback.Start(name);
 
         try {
             var album = await Task.Run(async () => {
                 using var scope = _scopeFactory.CreateScope();
                 var importCommand = scope.ServiceProvider.GetRequiredService<IImportPicturesCommand>();
-                return await importCommand.ExecuteAsync(parentId, name, libraryPath, sourcePath);
+                return await importCommand.ExecuteAsync(parentId, name, libraryPath, sourcePath, feedback);
             });
+            feedback.Completed();
             _onResult(new NewNodeResult(album, createdFolders, null));
         } catch (Exception ex) {
             Log.Error(ex, "Import failed");
+            feedback.Failed();
             _onResult(new NewNodeResult(null, createdFolders, ex.Message));
         }
     }
@@ -486,5 +512,15 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     [RelayCommand]
     private void Cancel() {
         MainWindow.DialogManager.DismissDialog();
+    }
+
+    /// <param name="Pictures">Files grouped by name, as the import groups them.</param>
+    /// <param name="Unpaired">Files whose RAW or JPG partner is missing.</param>
+    private record SourceCounts(int Pictures, IReadOnlyList<string> Unpaired) {
+        public string Describe() => Pictures switch {
+            0 => "no pictures to import",
+            1 => "1 picture to import (RAW + JPG)",
+            _ => $"{Pictures} pictures to import (RAW + JPG)"
+        };
     }
 }

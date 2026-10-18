@@ -12,6 +12,7 @@ using Database.Domain.Entities;
 using Domain.Interfaces;
 using Graph.Domain.DTOs;
 using Graph.Domain.Interfaces;
+using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Dialogs;
@@ -124,12 +125,21 @@ public partial class BatchImportAlbumsDialogViewModel : ViewModelBase {
         }
 
         MainWindow.DialogManager.DismissDialog();
+        var parentId = SelectedParent?.Id;
+        var sourcePath = SourcePath;
+        var feedback = ImportFeedback.Start(Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
 
         try {
             // Start the batch import in the background. Recursive import creates album nodes (copy phase).
             _ = Task.Run(async () => {
-                await _importAlbumsService.ImportRecursiveAsync(SelectedParent?.Id, SourcePath, libraryPath);
-                Dispatcher.UIThread.Post(() => _onCompleted());
+                try {
+                    await _importAlbumsService.ImportRecursiveAsync(parentId, sourcePath, libraryPath, feedback);
+                    feedback.Completed();
+                    Dispatcher.UIThread.Post(() => _onCompleted());
+                } catch (Exception ex) {
+                    Log.Error(ex, "Batch import failed");
+                    feedback.Failed();
+                }
             });
 
             Log.Information("Batch import started for: {sourcePath}", SourcePath);
