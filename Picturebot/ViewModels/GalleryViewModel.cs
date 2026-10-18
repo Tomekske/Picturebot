@@ -123,9 +123,15 @@ public partial class GalleryViewModel : ViewModelBase,
     public bool IsFilteredEmpty => IsShowingAlbum && !IsLoading && AlbumPictureCount > 0 && VisibleCount == 0;
     /// <summary>The album (or search) really has no pictures.</summary>
     public bool IsAlbumEmpty => IsShowingAlbum && !IsLoading && AlbumPictureCount == 0;
+    /// <summary>
+    ///     The details pane is shown for an open album with pictures, independent of the selection,
+    ///     so the grid width (and thumbnail size) doesn't jump when the selection changes.
+    /// </summary>
+    public bool ShowDetailsPane => IsShowingAlbum && (IsLoading || AlbumPictureCount > 0);
 
     private void RefreshCounts() {
         OnPropertyChanged(nameof(AlbumPictureCount));
+        OnPropertyChanged(nameof(ShowDetailsPane));
         OnPropertyChanged(nameof(PickedCount));
         OnPropertyChanged(nameof(VisibleCount));
         OnPropertyChanged(nameof(AlbumStatsText));
@@ -406,6 +412,50 @@ public partial class GalleryViewModel : ViewModelBase,
                 else if (updatedNode is Album) AlbumItems.Remove(itemToRemove);
             }
         }
+    }
+
+    /// <summary>
+    ///     While an album is open one picture is always selected: keep the focused picture if it is still visible,
+    ///     otherwise select the first visible picture.
+    /// </summary>
+    public void EnsureSelection() {
+        if (!IsShowingAlbum) return;
+
+        var visible = GroupedPictures.SelectMany(g => g.Pictures).ToList();
+        if (visible.Count == 0) return;
+
+        var focusedVisible = SelectedPicture != null && visible.Contains(SelectedPicture);
+        if (focusedVisible && SelectedPictures.Contains(SelectedPicture!)) return;
+
+        SelectOnly(focusedVisible ? SelectedPicture! : visible[0]);
+    }
+
+    /// <summary>
+    ///     Escape / select none: drops a multi-selection but keeps the focused picture selected.
+    /// </summary>
+    public void CollapseSelection() {
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = false;
+        }
+        SelectedPictures.Clear();
+        EnsureSelection();
+    }
+
+    private void SelectOnly(PictureItemViewModel picture) {
+        foreach (var pic in _allPictures) {
+            pic.IsSelected = pic == picture;
+        }
+        SelectedPictures.Clear();
+        SelectedPictures.Add(picture);
+        SelectedPicture = picture;
+        UpdateActiveMode();
+        WeakReferenceMessenger.Default.Send(new PictureSelectedMessage(picture));
+        WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel> { picture }));
+    }
+
+    // Runs after every regrouping (album load, filter, sort, burst view), once the new groups are in place.
+    partial void OnGroupedPicturesChanged(ObservableCollection<PictureGroupViewModel> value) {
+        Dispatcher.UIThread.Post(EnsureSelection);
     }
 
     public void ClearSelection() {
@@ -1705,10 +1755,7 @@ public partial class GalleryViewModel : ViewModelBase,
         if (listChanged || (GroupedPictures.Count == 0 && filteredList.Count > 0)) {
             PicturesList = new ObservableCollection<PictureItemViewModel>(filteredList);
 
-            if (SelectedPicture != null && !PicturesList.Contains(SelectedPicture)) {
-                SelectedPicture = PicturesList.FirstOrDefault();
-            }
-
+            // A hidden selection is replaced by the first visible picture in EnsureSelection after regrouping.
             _ = RefreshGalleryGrouping();
         }
 
@@ -1789,6 +1836,11 @@ public partial class GalleryViewModel : ViewModelBase,
 
         foreach (var pic in _allPictures) {
             pic.IsSelected = targetState;
+        }
+
+        if (!targetState) {
+            CollapseSelection();
+            return;
         }
 
         SelectedPictures.Clear();
@@ -1905,6 +1957,14 @@ public partial class GalleryViewModel : ViewModelBase,
         Log.Information("Processing completed for current album {Id}, refreshing gallery.", message.Value);
         Dispatcher.UIThread.Post(() => {
             _ = RefreshGalleryGrouping();
+
+            // Cards loaded before processing show the RAW's embedded preview; switch them to the generated thumbnails.
+            var pictures = _allPictures.ToList();
+            _ = Task.Run(async () => {
+                foreach (var picture in pictures) {
+                    await picture.UpgradeToGeneratedThumbnailAsync(320);
+                }
+            });
         });
     }
 

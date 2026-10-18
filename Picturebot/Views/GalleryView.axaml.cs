@@ -52,15 +52,10 @@ public partial class GalleryView : UserControl {
                 return;
             }
 
-            // Deselect All (Escape)
+            // Collapse the selection to the focused picture (Escape)
             if (e.Key == Key.Escape) {
-                var allPics = GetAllPictures(vm);
-                foreach (var pic in allPics) {
-                    pic.IsSelected = false;
-                }
-                vm.SelectedPictures.Clear();
-                vm.UpdateActiveMode();
-                WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(new List<PictureItemViewModel>()));
+                // Drops a multi-selection; the focused picture stays selected so the details pane keeps its content.
+                vm.CollapseSelection();
                 e.Handled = true;
                 return;
             }
@@ -184,6 +179,8 @@ public partial class GalleryView : UserControl {
 
         vm.UpdateActiveMode();
         WeakReferenceMessenger.Default.Send(new PictureSelectionChangedMessage(selectedList));
+        // Ctrl+click on the last selected picture would leave nothing selected; keep one selected instead.
+        vm.EnsureSelection();
     }
 
     private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {

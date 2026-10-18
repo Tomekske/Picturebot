@@ -37,9 +37,9 @@
 
             <views:GalleryView Grid.Column="1" Margin="10" DataContext="{Binding GalleryVM}" />
 
-            <!-- Details only while a picture is selected (selection is cleared when navigating away from an album) -->
+            <!-- Details only while an album with pictures is open; the gallery then always keeps a picture selected -->
             <Border Grid.Column="2" Width="350"
-                    IsVisible="{Binding DetailsInspectorVM.HasSelection}"
+                    IsVisible="{Binding GalleryVM.ShowDetailsPane}"
                     Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1,0,0,0">
                 <views:DetailsInspectorView DataContext="{Binding DetailsInspectorVM}" />
             </Border>
