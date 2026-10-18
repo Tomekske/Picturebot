@@ -70,7 +70,7 @@ public class App : Application {
     /// </summary>
     private static void ApplyBrandTheme() {
         var sukiTheme = SukiTheme.GetInstance();
-        var brandTheme = new SukiColorTheme("Picturebot", Color.Parse("#1C21C7"), Color.Parse("#323694"));
+        var brandTheme = new SukiColorTheme("Picturebot", Color.Parse("#FF2553"), Color.Parse("#FFB608"));
         sukiTheme.AddColorTheme(brandTheme);
         sukiTheme.ChangeColorTheme(brandTheme);
         sukiTheme.ChangeBaseTheme(ThemeVariant.Dark);
