@@ -1,0 +1,310 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Picturebot.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Picturebot.Controls"
+             x:DataType="vm:NewNodeDialogViewModel"
+             x:Class="Picturebot.Views.NewNodeDialog">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.fieldLabel">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="LetterSpacing" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+        </Style>
+
+        <!-- Album | Folder segmented toggle -->
+        <Style Selector="Button.segment">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="14,5" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.segment:pointerover">
+            <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        </Style>
+        <Style Selector="Button.segment.active">
+            <Setter Property="Background" Value="{DynamicResource Accent.Selected}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}" />
+        </Style>
+
+        <!-- Path bar segments -->
+        <Style Selector="Button.crumb">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.crumb:pointerover">
+            <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        </Style>
+        <Style Selector="Button.crumb.last">
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.crumb.pending">
+            <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+            <Setter Property="FontStyle" Value="Italic" />
+        </Style>
+
+        <!-- Location rows -->
+        <Style Selector="Border.row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Accent.Subtle}" />
+        </Style>
+        <!-- Hidden but still taking up space, so the dialog keeps one size in both modes -->
+        <Style Selector=":is(Control).reserved">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="IsEnabled" Value="False" />
+        </Style>
+    </UserControl.Styles>
+
+    <controls:DialogLayout Title="{Binding Title}" CloseCommand="{Binding CancelCommand}">
+        <controls:DialogLayout.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelCommand}" />
+                <Button Classes="Primary" Content="{Binding CreateButtonText}" Command="{Binding CreateCommand}" />
+            </StackPanel>
+        </controls:DialogLayout.Footer>
+
+        <StackPanel Spacing="20">
+
+            <!-- What to create -->
+            <Border Background="{DynamicResource Surface.Card}" CornerRadius="6" Padding="2"
+                    HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button Classes="segment"
+                            Classes.active="{Binding IsAlbumMode}"
+                            Command="{Binding SetModeCommand}"
+                            CommandParameter="Album"
+                            AutomationProperties.Name="Album">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:MaterialIcon Kind="ImageAlbum" Width="14" Height="14" />
+                            <TextBlock Text="Album" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="segment"
+                            Classes.active="{Binding !IsAlbumMode}"
+                            Command="{Binding SetModeCommand}"
+                            CommandParameter="Folder"
+                            AutomationProperties.Name="Folder">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:MaterialIcon Kind="Folder" Width="14" Height="14" />
+                            <TextBlock Text="Folder" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Source (albums only); its space stays reserved in folder mode -->
+            <Grid>
+            <TextBlock IsVisible="{Binding !IsAlbumMode}"
+                       Text="A folder organises albums and other folders. No photos are imported."
+                       TextWrapping="Wrap"
+                       FontSize="12"
+                       Foreground="{DynamicResource Text.Secondary}"
+                       VerticalAlignment="Center" />
+            <StackPanel Spacing="8" Classes.reserved="{Binding !IsAlbumMode}">
+                <TextBlock Classes="fieldLabel" Text="SOURCE FOLDER" />
+                <Grid ColumnDefinitions="*, Auto">
+                    <TextBox Text="{Binding SourcePath}"
+                             Watermark="Folder with the photos to import"
+                             IsReadOnly="True"
+                             Height="40"
+                             VerticalContentAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Classes="Secondary"
+                            Margin="8,0,0,0"
+                            Command="{Binding SelectSourcePathCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:MaterialIcon Kind="FolderOpen" Width="16" Height="16" />
+                            <TextBlock Text="Browse" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+            </Grid>
+
+            <!-- Name -->
+            <StackPanel Spacing="8">
+                <TextBlock Classes="fieldLabel" Text="NAME" />
+                <TextBox Text="{Binding Name}"
+                         Watermark="{Binding NameWatermark}"
+                         Height="40"
+                         VerticalContentAlignment="Center" />
+            </StackPanel>
+
+            <!-- Location picker -->
+            <StackPanel Spacing="8">
+                <TextBlock Classes="fieldLabel" Text="LOCATION" />
+
+                <Border Background="{DynamicResource Surface.Card}"
+                        BorderBrush="{DynamicResource Border.Subtle}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource Radius.Control}">
+                    <Grid RowDefinitions="Auto, Auto, Auto">
+
+                        <!-- Path bar: click a segment to go up -->
+                        <ItemsControl ItemsSource="{Binding PathSegments}" Margin="6,6,6,2">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PathSegment">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="›"
+                                                   IsVisible="{Binding !IsFirst}"
+                                                   Foreground="{DynamicResource Text.Muted}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="1,0" />
+                                        <Button Classes="crumb"
+                                                Classes.last="{Binding IsLast}"
+                                                Classes.pending="{Binding IsPending}"
+                                                Command="{Binding Command}">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <icons:MaterialIcon Kind="Home" Width="14" Height="14"
+                                                                    IsVisible="{Binding IsFirst}" />
+                                                <TextBlock Text="{Binding Name}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Search / create -->
+                        <Border Grid.Row="1"
+                                Margin="8,4,8,8"
+                                Background="{DynamicResource Surface.Panel}"
+                                CornerRadius="{DynamicResource Radius.Control}"
+                                Padding="8,0">
+                            <Grid ColumnDefinitions="Auto, *">
+                                <icons:MaterialIcon Kind="Magnify" Width="16" Height="16"
+                                                    Foreground="{DynamicResource Text.Secondary}"
+                                                    VerticalAlignment="Center" />
+                                <TextBox Grid.Column="1"
+                                         x:Name="QueryBox"
+                                         AutomationProperties.Name="Location search"
+                                         Text="{Binding Query}"
+                                         Watermark="Search all folders, or type a new folder name (a › b creates a path)"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Height="34"
+                                         VerticalContentAlignment="Center"
+                                         KeyDown="QueryBox_KeyDown" />
+                            </Grid>
+                        </Border>
+
+                        <!-- One level at a time, or search results -->
+                        <Grid Grid.Row="2" RowDefinitions="Auto, *"
+                              Margin="0,0,0,6">
+                            <Border Height="1" Background="{DynamicResource Border.Subtle}" />
+                            <ScrollViewer Grid.Row="1" Height="240" Margin="0,4,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ListHeader}"
+                                               Classes="fieldLabel"
+                                               Margin="14,6,14,4" />
+                                    <TextBlock Text="No subfolders here. Type a name above to create one."
+                                               IsVisible="{Binding !HasRows}"
+                                               Foreground="{DynamicResource Text.Muted}"
+                                               FontSize="12"
+                                               Margin="14,8" />
+                                    <ItemsControl ItemsSource="{Binding Rows}" Margin="4,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:LocationRow">
+                                                <Border Classes="row" Tapped="Row_Tapped">
+                                                    <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                                                        <icons:MaterialIcon Kind="{Binding Icon}"
+                                                                            Width="18" Height="18"
+                                                                            Margin="0,0,10,0"
+                                                                            VerticalAlignment="Center"
+                                                                            Foreground="{DynamicResource Icon.Folder}"
+                                                                            IsVisible="{Binding IsFolder}" />
+                                                        <icons:MaterialIcon Kind="{Binding Icon}"
+                                                                            Width="18" Height="18"
+                                                                            Margin="0,0,10,0"
+                                                                            VerticalAlignment="Center"
+                                                                            Foreground="{DynamicResource Accent.Foreground}"
+                                                                            IsVisible="{Binding IsCreate}" />
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Title}"
+                                                                       FontSize="13"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Foreground="{DynamicResource Text.Primary}" />
+                                                            <TextBlock Text="{Binding Subtitle}"
+                                                                       IsVisible="{Binding HasSubtitle}"
+                                                                       FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Foreground="{DynamicResource Text.Secondary}" />
+                                                        </StackPanel>
+                                                        <Border Grid.Column="2"
+                                                                IsVisible="{Binding HasBadge}"
+                                                                Background="{DynamicResource Surface.Raised}"
+                                                                CornerRadius="4"
+                                                                Padding="6,1"
+                                                                Margin="8,0"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Badge}" FontSize="10"
+                                                                       Foreground="{DynamicResource Text.Secondary}" />
+                                                        </Border>
+                                                        <icons:MaterialIcon Grid.Column="3"
+                                                                            Kind="ChevronRight"
+                                                                            Width="16" Height="16"
+                                                                            IsVisible="{Binding ShowChevron}"
+                                                                            Foreground="{DynamicResource Text.Muted}"
+                                                                            VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- What will happen -->
+            <Border Background="{DynamicResource Surface.Card}"
+                    CornerRadius="{DynamicResource Radius.Control}"
+                    Padding="12,10">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="WILL CREATE" />
+                    <TextBlock Text="{Binding SummaryText}"
+                               TextWrapping="Wrap"
+                               FontSize="13"
+                               Foreground="{DynamicResource Text.Primary}" />
+                    <TextBlock Text="{Binding SummaryDetail}"
+                               FontSize="12"
+                               Foreground="{DynamicResource Text.Secondary}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0"
+                                Classes.reserved="{Binding !HasValidationMessage}">
+                        <icons:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16"
+                                            Foreground="{DynamicResource Status.Warning}" />
+                        <TextBlock Text="{Binding ValidationMessage}"
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource Status.Warning}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </controls:DialogLayout>
+</UserControl>

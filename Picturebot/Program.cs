@@ -73,6 +73,7 @@ internal sealed class Program {
             services.AddDatabaseLayer(connectionString);
             services.AddSingleton<ISettingsService, SettingsService>();
             services.AddSingleton<INavigationService, NavigationService>();
+            services.AddSingleton<IRecentLocationsService>(new RecentLocationsService(response.Value));
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddScoped<IPathService, PathService>();
             services.AddScoped<IXmpService, XmpService>();

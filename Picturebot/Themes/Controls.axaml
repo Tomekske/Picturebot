@@ -121,16 +121,32 @@
         <Setter Property="Background" Value="{DynamicResource Accent.Subtle}" />
     </Style>
 
-    <!-- Flyouts: SukiUI's FlyoutPresenter draws a transparent root, so give every flyout the panel surface -->
+    <!-- Flyouts: SukiUI's FlyoutPresenter template draws no opaque background (and has no part to style),
+         so replace the template: every flyout gets the panel surface, a border and a shadow. -->
     <Style Selector="FlyoutPresenter">
         <Setter Property="Padding" Value="8" />
         <Setter Property="CornerRadius" Value="{DynamicResource Radius.Dialog}" />
-    </Style>
-    <Style Selector="FlyoutPresenter /template/ Border#LayoutRoot">
         <Setter Property="Background" Value="{DynamicResource Surface.Panel}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BoxShadow" Value="0 8 24 0 #66000000" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <!-- Margin leaves room for the shadow inside the popup window -->
+                <Border Name="LayoutRoot"
+                        Margin="6,4,6,10"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        BoxShadow="0 6 18 0 #66000000">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="Stretch"
+                                      VerticalContentAlignment="Stretch" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
     </Style>
 
     <!-- Dropdown items: primary text, brand-tint check mark instead of the low-contrast main blue -->

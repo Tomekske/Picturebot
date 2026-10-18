@@ -34,6 +34,7 @@ public partial class NavigationPaneViewModel : ViewModelBase,
     private readonly INodeService _nodeService;
     private readonly ISettingsService _settingsService;
     private readonly INavigationService _navigationService;
+    private readonly IRecentLocationsService _recentLocations;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
 
     [ObservableProperty]
@@ -57,7 +58,8 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         ISettingsService settingsService,
         IImportPicturesCommand importCommand,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
-        INavigationService navigationService) {
+        INavigationService navigationService,
+        IRecentLocationsService recentLocations) {
         _nodeService = nodeService;
         _folderService = folderService;
         _albumService = albumService;
@@ -66,6 +68,7 @@ public partial class NavigationPaneViewModel : ViewModelBase,
         _importCommand = importCommand;
         _scopeFactory = scopeFactory;
         _navigationService = navigationService;
+        _recentLocations = recentLocations;
         _ = LoadFoldersAsync();
         RefreshKeywordSuggestions();
 
@@ -153,6 +156,64 @@ public partial class NavigationPaneViewModel : ViewModelBase,
 
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new AddAlbumDialog { DataContext = vm })
+            .TryShow();
+    }
+
+    /// <summary>
+    ///     New combined Album/Folder dialog with the location picker. Opens at the given node, or at what the
+    ///     gallery shows; for an album that is its parent folder. Kept next to the old dialogs for comparison.
+    /// </summary>
+    [RelayCommand]
+    public void OpenNewNodeDialog(NavigationNodeViewModel? at) {
+        var anchorNode = at?.Node ?? _navigationService.CurrentNode;
+        var startFolderId = anchorNode switch {
+            Folder folder => folder.Id,
+            Album album => album.ParentId,
+            _ => null
+        };
+
+        var vm = new NewNodeDialogViewModel(
+            _folderService,
+            _settingsService,
+            _scopeFactory,
+            _recentLocations,
+            Folders.Select(f => f.Node),
+            startFolderId,
+            startAsAlbum: true,
+            result => {
+                if (result.CreatedFolders.Count > 0 || result.Node != null) {
+                    WeakReferenceMessenger.Default.Send(new NodeCreatedMessage(result.Node ?? result.CreatedFolders[^1]));
+                }
+
+                if (result.Error != null) {
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Import failed")
+                        .WithContent(result.Error)
+                        .Dismiss().ByClicking()
+                        .Queue();
+                    return;
+                }
+
+                if (result.Node is Album album) {
+                    WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(album));
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"Album '{album.Name}' import has completed.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+                } else if (result.Node is Folder folder) {
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent($"Folder '{folder.Name}' has been created.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+                }
+            });
+
+        MainWindow.DialogManager.CreateDialog()
+            .WithContent(new NewNodeDialog { DataContext = vm })
             .TryShow();
     }
 

@@ -393,7 +393,7 @@
         </Button>
 
         <!-- More filters (orientation; room for camera, lens, date range later) -->
-        <Button Classes="Basic" Padding="8,2" Margin="4,0,0,0" VerticalAlignment="Center" ToolTip.Tip="More filters">
+        <Button Classes="Basic" Padding="8,2" Margin="4,0,0,0" VerticalAlignment="Center" ToolTip.Tip="More filters" AutomationProperties.Name="More filters">
             <StackPanel Orientation="Horizontal" Spacing="4">
                 <icons:MaterialIcon Kind="TuneVariant" Width="14" Height="14" />
                 <TextBlock Text="More" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
