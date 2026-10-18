@@ -393,6 +393,25 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         return Current.Ancestors.Reverse().Append(Current).Where(f => f.IsPending).ToList();
     }
 
+    /// <summary>
+    ///     Where Browse opens: the current or last picked source folder. Walks up when that folder no longer exists;
+    ///     falls back to Pictures.
+    /// </summary>
+    private string? GetBrowseStartPath() {
+        foreach (var picked in new[] { SourcePath, _recentLocations.LastSourceFolder }) {
+            if (string.IsNullOrWhiteSpace(picked)) continue;
+
+            var folder = picked.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            while (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) {
+                folder = Path.GetDirectoryName(folder);
+            }
+            if (!string.IsNullOrEmpty(folder)) return folder;
+        }
+
+        var pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+        return Directory.Exists(pictures) ? pictures : null;
+    }
+
     [RelayCommand]
     private async Task SelectSourcePathAsync() {
         try {
@@ -404,11 +423,8 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
                 AllowMultiple = false
             };
 
-            var startPath = SourcePath;
-            if (string.IsNullOrWhiteSpace(startPath) || !Directory.Exists(startPath)) {
-                startPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            }
-            if (Directory.Exists(startPath)) {
+            var startPath = GetBrowseStartPath();
+            if (startPath != null) {
                 try {
                     options.SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(startPath);
                 } catch (Exception ex) {
@@ -420,6 +436,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
             if (folders.Count == 0) return;
 
             SourcePath = folders[0].Path.LocalPath;
+            _recentLocations.LastSourceFolder = SourcePath;
             if (string.IsNullOrWhiteSpace(Name)) {
                 var suggestedName = Path.GetFileName(SourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
                 if (!string.IsNullOrWhiteSpace(suggestedName)) {
@@ -491,6 +508,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         // 2b. Album: close the dialog and import in the background, like the old Add Album dialog.
         var libraryPath = _settingsService.Current.LibraryPath!;
         var sourcePath = SourcePath;
+        _recentLocations.LastSourceFolder = sourcePath;
         MainWindow.DialogManager.DismissDialog();
         var feedback = ImportFeedback.Start(name);
 
