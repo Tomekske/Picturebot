@@ -101,6 +101,70 @@
         <Setter Property="Opacity" Value="1" />
     </Style>
 
+    <!--
+        Curation controls shared by the details inspector and the slideshow:
+          Button.segment (+ pick / neutral / reject, .active) - Pick/Neutral/Reject segmented control
+          Button.dot (+ .active)                             - color label dot with a selection ring
+        Views may override Width/Height/Padding/FontSize to scale them.
+    -->
+    <Style Selector="Button.segment">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="6,5" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.segment:pointerover">
+        <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style Selector="Button.segment.pick.active">
+        <Setter Property="Background" Value="{DynamicResource Status.Picked.Subtle}" />
+        <Setter Property="Foreground" Value="{DynamicResource Status.Picked}" />
+    </Style>
+    <Style Selector="Button.segment.neutral.active">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style Selector="Button.segment.reject.active">
+        <Setter Property="Background" Value="{DynamicResource Status.Danger.Subtle}" />
+        <Setter Property="Foreground" Value="{DynamicResource Status.Rejected}" />
+    </Style>
+
+    <!-- Ring and dot are two circles in the same box, drawn without layout rounding so they
+         stay concentric at every display scaling (125%, 150%, ...). The ring follows the button size. -->
+    <Style Selector="Button.dot">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel Background="Transparent" UseLayoutRounding="False">
+                    <Ellipse Stroke="{TemplateBinding BorderBrush}"
+                             StrokeThickness="2"
+                             UseLayoutRounding="False" />
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      UseLayoutRounding="False" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Button.dot Ellipse">
+        <Setter Property="UseLayoutRounding" Value="False" />
+    </Style>
+    <Style Selector="Button.dot:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    </Style>
+    <Style Selector="Button.dot.active, Button.dot.active:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource Text.Primary}" />
+    </Style>
+
     <!-- Text inputs: focus border, floating placeholder and selection use readable brand tints -->
     <Style Selector="TextBox /template/ Border#PART_TypingGlow">
         <Setter Property="BorderBrush" Value="{DynamicResource Accent.Foreground}" />

@@ -55,66 +55,6 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
-        <!-- Segmented status control -->
-        <Style Selector="Button.segment">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="Padding" Value="6,5" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Button.segment:pointerover">
-            <Setter Property="Background" Value="{DynamicResource State.Hover}" />
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
-        </Style>
-        <Style Selector="Button.segment.pick.active">
-            <Setter Property="Background" Value="{DynamicResource Status.Picked.Subtle}" />
-            <Setter Property="Foreground" Value="{DynamicResource Status.Picked}" />
-        </Style>
-        <Style Selector="Button.segment.neutral.active">
-            <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
-        </Style>
-        <Style Selector="Button.segment.reject.active">
-            <Setter Property="Background" Value="{DynamicResource Status.Danger.Subtle}" />
-            <Setter Property="Foreground" Value="{DynamicResource Status.Rejected}" />
-        </Style>
-
-        <!-- Color label dots: ring and dot are two circles in the same 22px box, drawn without
-             layout rounding so they stay concentric at every display scaling (125%, 150%, ...). -->
-        <Style Selector="Button.dot">
-            <Setter Property="Width" Value="22" />
-            <Setter Property="Height" Value="22" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Panel Width="22" Height="22" Background="Transparent" UseLayoutRounding="False">
-                        <Ellipse Width="22" Height="22"
-                                 Stroke="{TemplateBinding BorderBrush}"
-                                 StrokeThickness="2"
-                                 UseLayoutRounding="False" />
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          UseLayoutRounding="False" />
-                    </Panel>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="Button.dot Ellipse">
-            <Setter Property="UseLayoutRounding" Value="False" />
-        </Style>
-        <Style Selector="Button.dot:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
-        </Style>
-        <Style Selector="Button.dot.active, Button.dot.active:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource Text.Primary}" />
-        </Style>
-
         <!-- Quick tag chips -->
         <Style Selector="ToggleButton.quick-tag">
             <Setter Property="FontSize" Value="12" />
