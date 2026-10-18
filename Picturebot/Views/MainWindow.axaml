@@ -30,14 +30,17 @@
         </Border>
 
         <!-- Picturebot Content Area -->
-        <Grid ColumnDefinitions="350, *, 350">
+        <Grid ColumnDefinitions="350, *, Auto">
             <Border Grid.Column="0" Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,0,1,0">
                 <views:NavigationPaneView DataContext="{Binding NavigationPaneVM}" />
             </Border>
 
             <views:GalleryView Grid.Column="1" Margin="10" DataContext="{Binding GalleryVM}" />
 
-            <Border Grid.Column="2" Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1,0,0,0">
+            <!-- Details only while a picture is selected (selection is cleared when navigating away from an album) -->
+            <Border Grid.Column="2" Width="350"
+                    IsVisible="{Binding DetailsInspectorVM.HasSelection}"
+                    Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1,0,0,0">
                 <views:DetailsInspectorView DataContext="{Binding DetailsInspectorVM}" />
             </Border>
         </Grid>
