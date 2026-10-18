@@ -220,11 +220,13 @@ public class ImportPicturesCommandTests {
         _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Picture>(p =>
             p.Orientation == Orientation.Portrait &&
             p.RawExifOrientation == 8 &&
+            p.OrientationFromExif &&
             p.Width == 1080 &&
             p.Height == 1920)), Times.Once);
 
         _mockXmpService.Verify(x => x.SaveMetadataAsync(It.Is<Picture>(p =>
             p.Orientation == Orientation.Portrait &&
-            p.RawExifOrientation == 8)), Times.Once);
+            p.RawExifOrientation == 8 &&
+            p.OrientationFromExif)), Times.Once);
     }
 }

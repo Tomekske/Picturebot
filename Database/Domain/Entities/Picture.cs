@@ -76,6 +76,13 @@ public class Picture : Node {
     public int RawExifOrientation { get; set; } = 0;
 
     /// <summary>
+    ///     True when <see cref="RawExifOrientation" /> was read from the source file's EXIF (not guessed from dimensions).
+    ///     Persisted as an XMP marker so orientation is only detected once per picture.
+    /// </summary>
+    [NotMapped]
+    public bool OrientationFromExif { get; set; }
+
+    /// <summary>
     ///     The extension of the raw picture file (e.g., .ARW, .CR2).
     /// </summary>
     public string? Extension { get; set; }

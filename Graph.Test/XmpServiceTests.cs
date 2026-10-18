@@ -543,4 +543,67 @@ public class XmpServiceTests : IDisposable {
             Assert.That(loaded.Orientation, Is.EqualTo(Orientation.Portrait));
         });
     }
+
+    [Test]
+    public async Task SaveAndLoad_OrientationFromExif_ShouldRoundTripMarker() {
+        var rawPath = @"C:\RAWs\PicMarker.NEF";
+        var xmpPath = @"C:\RAWs\PicMarker.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+
+        var pic = new Picture {
+            Name = "PicMarker",
+            Orientation = Orientation.Portrait,
+            RawExifOrientation = 8,
+            OrientationFromExif = true,
+            SubFolder = new SubFolder { Raw = rawPath }
+        };
+
+        await _xmpService.SaveMetadataAsync(pic);
+
+        var desc = XDocument.Parse(_mockFileSystem.File.ReadAllText(xmpPath)).Descendants().First(e => e.Name.LocalName == "Description");
+        Assert.That(desc.Attributes().Single(a => a.Name.LocalName == "OrientationSource").Value, Is.EqualTo("exif"));
+
+        var loaded = new Picture { Name = "PicMarker", SubFolder = new SubFolder { Raw = rawPath } };
+        await _xmpService.LoadMetadataAsync(loaded);
+
+        Assert.That(loaded.OrientationFromExif, Is.True);
+    }
+
+    [Test]
+    public async Task Load_LegacyOrientationWithoutMarker_ShouldNotBeMarkedAsExif() {
+        var tiff = XNamespace.Get("http://ns.adobe.com/tiff/1.0/");
+        var xmpPath = @"C:\RAWs\PicLegacy.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+        _mockFileSystem.AddFile(xmpPath, $@"<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'><rdf:Description rdf:about='' xmlns:tiff='{tiff.NamespaceName}' tiff:Orientation='6'/></rdf:RDF></x:xmpmeta>");
+
+        var pic = new Picture { SubFolder = new SubFolder { Raw = @"C:\RAWs\PicLegacy.NEF" } };
+        await _xmpService.LoadMetadataAsync(pic);
+
+        Assert.Multiple(() => {
+            Assert.That(pic.Orientation, Is.EqualTo(Orientation.Portrait));
+            Assert.That(pic.OrientationFromExif, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task Save_WithoutOrientationFromExif_ShouldRemoveExistingMarker() {
+        var rawPath = @"C:\RAWs\PicUnmark.NEF";
+        var xmpPath = @"C:\RAWs\PicUnmark.xmp";
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+
+        var pic = new Picture {
+            Name = "PicUnmark",
+            Orientation = Orientation.Landscape,
+            RawExifOrientation = 1,
+            OrientationFromExif = true,
+            SubFolder = new SubFolder { Raw = rawPath }
+        };
+        await _xmpService.SaveMetadataAsync(pic);
+
+        pic.OrientationFromExif = false;
+        await _xmpService.SaveMetadataAsync(pic);
+
+        var desc = XDocument.Parse(_mockFileSystem.File.ReadAllText(xmpPath)).Descendants().First(e => e.Name.LocalName == "Description");
+        Assert.That(desc.Attributes().Any(a => a.Name.LocalName == "OrientationSource"), Is.False);
+    }
 }

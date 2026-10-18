@@ -19,6 +19,7 @@ using Domain.Enums;
 using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Services;
+using Graph.Infrastructure.Utilities;
 using Domain.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Messages;
@@ -41,6 +42,8 @@ public partial class GalleryViewModel : ViewModelBase,
     IRecipient<CurationCompletedMessage>,
     IRecipient<PictureKeywordsChangedMessage>,
     IRecipient<GlobalSearchMessage> {
+    private static readonly System.IO.Abstractions.IFileSystem SharedFileSystem = new System.IO.Abstractions.FileSystem();
+
     private readonly IAlbumService _albumService;
     private readonly IFolderService _folderService;
     private readonly ICurationQueue _curationQueue;
@@ -2077,10 +2080,10 @@ public partial class GalleryViewModel : ViewModelBase,
 
             var pictureAnalyzer = scope?.ServiceProvider.GetService<IPictureAnalyzer>() ?? _pictureAnalyzer;
 
-            // Load XMP metadata in parallel first and ensure orientation is calculated retroactively
+            // Load XMP metadata in parallel first; orientation is read from EXIF only once per picture
             await Task.WhenAll(firstBatchPics.Select(async pic => {
                 await xmpService.LoadMetadataAsync(pic);
-                await EnsurePictureOrientationAsync(pic, pictureAnalyzer, xmpService);
+                await PictureOrientationResolver.EnsureAsync(pic, pictureAnalyzer, xmpService, SharedFileSystem);
             }));
 
             // Sync picked and highlight files if they are missing
@@ -2214,7 +2217,7 @@ public partial class GalleryViewModel : ViewModelBase,
                     // Load XMP metadata in parallel background threads with capped concurrency
                     await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
                         await _xmpService.LoadMetadataAsync(pic);
-                        await EnsurePictureOrientationAsync(pic, pictureAnalyzer, _xmpService);
+                        await PictureOrientationResolver.EnsureAsync(pic, pictureAnalyzer, _xmpService, SharedFileSystem);
                     });
 
                     // Sync picked and highlight files if they are missing
@@ -2736,44 +2739,6 @@ public partial class GalleryViewModel : ViewModelBase,
             picVm.NotifyKeywordsChanged();
         }
         return keywordsChanged;
-    }
-
-    private static async Task EnsurePictureOrientationAsync(Picture pic, IPictureAnalyzer? pictureAnalyzer, IXmpService xmpService) {
-        var rawFile = pic.SubFolder?.Raw;
-        var imgPath = pic.SubFolder?.Preview ?? pic.SubFolder?.Thumbnail ?? pic.SubFolder?.Raw;
-        var fileToInspect = (!string.IsNullOrEmpty(rawFile) && System.IO.File.Exists(rawFile)) ? rawFile : imgPath;
-
-        if (!string.IsNullOrEmpty(fileToInspect) && System.IO.File.Exists(fileToInspect) && pictureAnalyzer != null) {
-            var oriResult = await pictureAnalyzer.ExtractOrientationAsync(fileToInspect);
-            var trueExif = oriResult is { IsError: false } ? oriResult.Value : 1;
-
-            if (pic.RawExifOrientation != trueExif || pic.Orientation == Domain.Enums.Orientation.Unknown) {
-                pic.RawExifOrientation = trueExif;
-                pic.Orientation = (trueExif is 5 or 6 or 7 or 8 || (pic.Width > 0 && pic.Height > 0 && pic.Width < pic.Height))
-                    ? Domain.Enums.Orientation.Portrait
-                    : Domain.Enums.Orientation.Landscape;
-                await xmpService.SaveMetadataAsync(pic);
-                return;
-            }
-        }
-
-        if (pic.Orientation != Domain.Enums.Orientation.Unknown) return;
-
-        if (pic.Width > 0 && pic.Height > 0) {
-            pic.Orientation = pic.Width < pic.Height ? Domain.Enums.Orientation.Portrait : Domain.Enums.Orientation.Landscape;
-            await xmpService.SaveMetadataAsync(pic);
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(imgPath) && System.IO.File.Exists(imgPath) && pictureAnalyzer != null) {
-            var dimResult = await pictureAnalyzer.GetDimensionsAsync(imgPath);
-            if (!dimResult.IsError && dimResult.Value.Width > 0 && dimResult.Value.Height > 0) {
-                pic.Width = dimResult.Value.Width;
-                pic.Height = dimResult.Value.Height;
-                pic.Orientation = pic.Width < pic.Height ? Domain.Enums.Orientation.Portrait : Domain.Enums.Orientation.Landscape;
-                await xmpService.SaveMetadataAsync(pic);
-            }
-        }
     }
 }
 

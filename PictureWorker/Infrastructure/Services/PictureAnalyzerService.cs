@@ -214,7 +214,9 @@ public class PictureAnalyzerService : IPictureAnalyzer {
                 return 1;
             });
         } catch (Exception) {
-            return 1;
+            return Error.Failure(
+                "Picture.ProcessingFailed",
+                "An unexpected error occurred while extracting orientation.");
         }
     }
 

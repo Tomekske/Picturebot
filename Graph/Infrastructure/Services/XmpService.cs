@@ -29,6 +29,9 @@ public class XmpService(
     private static readonly XNamespace photoshop = "http://ns.adobe.com/photoshop/1.0/";
     private static readonly XNamespace lr = "http://ns.adobe.com/lightroom/1.0/";
     private static readonly XNamespace tiff = "http://ns.adobe.com/tiff/1.0/";
+    private static readonly XNamespace pb = "http://ns.picturebot.app/1.0/";
+
+    private const string OrientationSourceExif = "exif";
 
     public async Task LoadMetadataAsync(Picture picture) {
         if (picture.SubFolder == null) {
@@ -40,6 +43,7 @@ public class XmpService(
             picture.ColorLabel = ColorLabel.None;
             picture.CurationStatus = CurationStatus.Unflagged;
             picture.Orientation = Orientation.Unknown;
+            picture.OrientationFromExif = false;
             return;
         }
 
@@ -50,6 +54,7 @@ public class XmpService(
             picture.ColorLabel = ColorLabel.None;
             picture.CurationStatus = CurationStatus.Unflagged;
             picture.Orientation = Orientation.Unknown;
+            picture.OrientationFromExif = false;
             return;
         }
 
@@ -74,6 +79,7 @@ public class XmpService(
                 picture.ColorLabel = ColorLabel.None;
                 picture.CurationStatus = CurationStatus.Unflagged;
                 picture.Orientation = Orientation.Unknown;
+                picture.OrientationFromExif = false;
                 return;
             }
 
@@ -84,6 +90,7 @@ public class XmpService(
                 picture.ColorLabel = ColorLabel.None;
                 picture.CurationStatus = CurationStatus.Unflagged;
                 picture.Orientation = Orientation.Unknown;
+                picture.OrientationFromExif = false;
                 return;
             }
 
@@ -188,6 +195,8 @@ public class XmpService(
                 picture.RawExifOrientation = rawOri;
             }
             picture.Orientation = ParseOrientation(orientationStr);
+            picture.OrientationFromExif = picture.Orientation != Orientation.Unknown &&
+                string.Equals(desc.Attribute(pb + "OrientationSource")?.Value, OrientationSourceExif, StringComparison.OrdinalIgnoreCase);
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load XMP metadata for picture {Name} from {Path}", picture.Name, xmpPath);
         }
@@ -286,6 +295,13 @@ public class XmpService(
                 desc.SetAttributeValue(tiff + "Orientation", picture.RawExifOrientation.ToString());
             } else {
                 desc.Attribute(tiff + "Orientation")?.Remove();
+            }
+
+            // Marker: the orientation code was verified against the source file's EXIF
+            if (picture.OrientationFromExif && desc.Attribute(tiff + "Orientation") != null) {
+                desc.SetAttributeValue(pb + "OrientationSource", OrientationSourceExif);
+            } else {
+                desc.Attribute(pb + "OrientationSource")?.Remove();
             }
 
             // Write xmpDM:pick and xmpDM:good for Lightroom compatibility
@@ -437,6 +453,7 @@ public class XmpService(
                         if (!oriResult.IsError && oriResult.Value > 0) {
                             picture.RawExifOrientation = oriResult.Value;
                             picture.Orientation = (oriResult.Value is 5 or 6 or 7 or 8) ? Orientation.Portrait : Orientation.Landscape;
+                            picture.OrientationFromExif = true;
                         }
                     }
                 }
@@ -501,6 +518,7 @@ public class XmpService(
         if (desc.Attribute(XNamespace.Xmlns + "xmpDM") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "xmpDM", xmpDM.NamespaceName));
         if (desc.Attribute(XNamespace.Xmlns + "lr") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "lr", lr.NamespaceName));
         if (desc.Attribute(XNamespace.Xmlns + "tiff") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "tiff", tiff.NamespaceName));
+        if (desc.Attribute(XNamespace.Xmlns + "pb") == null) desc.Add(new XAttribute(XNamespace.Xmlns + "pb", pb.NamespaceName));
     }
 
     private void UpdateTitleElement(XElement desc, string title) {

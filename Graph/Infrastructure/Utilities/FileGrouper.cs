@@ -127,4 +127,5 @@ public class CachedPictureData {
     public int Width { get; set; }
     public int Height { get; set; }
     public int RawExifOrientation { get; set; } = 1;
+    public bool OrientationFromExif { get; set; }
 }

@@ -88,6 +88,7 @@ public class ImportPicturesCommand : IImportPicturesCommand {
 
             var oriResult = await _pictureAnalyzer.ExtractOrientationAsync(fileToInspect);
             var rawExifOrientation = oriResult is { IsError: false } ? oriResult.Value : 1;
+            var orientationFromExif = oriResult is { IsError: false };
 
             foreach (var file in pair) {
                 cachedDataList.Add(new CachedPictureData {
@@ -96,7 +97,8 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                     PHash = 0, // Will be calculated by Background Worker
                     Width = width,
                     Height = height,
-                    RawExifOrientation = rawExifOrientation
+                    RawExifOrientation = rawExifOrientation,
+                    OrientationFromExif = orientationFromExif
                 });
             }
         }
@@ -168,7 +170,8 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 Width = cachedData.Width,
                 Height = cachedData.Height,
                 Orientation = orientation,
-                RawExifOrientation = cachedData.RawExifOrientation
+                RawExifOrientation = cachedData.RawExifOrientation,
+                OrientationFromExif = cachedData.OrientationFromExif
             };
 
             await _nodeService.CreateNodeAsync(pictureNode);
