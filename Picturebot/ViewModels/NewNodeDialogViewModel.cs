@@ -396,13 +396,13 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
             var importFeedback = ImportFeedback.Start(ImportRootName);
 
             try {
-                await Task.Run(async () => {
+                var importedRoot = await Task.Run(async () => {
                     using var scope = _scopeFactory.CreateScope();
                     var importService = scope.ServiceProvider.GetRequiredService<IImportAlbumsService>();
-                    await importService.ImportRecursiveAsync(parentId, rootPath, importLibraryPath, importFeedback, importTimeZoneId);
+                    return await importService.ImportRecursiveAsync(parentId, rootPath, importLibraryPath, importFeedback, importTimeZoneId);
                 });
                 importFeedback.Completed();
-                _onResult(new NewNodeResult(null, createdFolders, null, IsBatchImport: true));
+                _onResult(new NewNodeResult(importedRoot, createdFolders, null, IsBatchImport: true));
             } catch (Exception ex) {
                 Log.Error(ex, "Batch import failed");
                 importFeedback.Failed();
