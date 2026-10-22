@@ -138,7 +138,15 @@ public partial class NavigationPaneViewModel : ViewModelBase,
                     return;
                 }
 
-                if (result.Node is Album album) {
+                if (result.IsBatchImport) {
+                    _ = LoadFoldersAsync();
+                    MainWindow.ToastManager.CreateToast()
+                        .WithTitle("Success")
+                        .WithContent("Batch import of albums has completed.")
+                        .Dismiss().ByClicking()
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+                } else if (result.Node is Album album) {
                     WeakReferenceMessenger.Default.Send(new NodeSelectedMessage(album));
                     MainWindow.ToastManager.CreateToast()
                         .WithTitle("Success")

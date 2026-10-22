@@ -107,22 +107,33 @@
                             <TextBlock Text="Folder" />
                         </StackPanel>
                     </Button>
+                    <Button Classes="segment"
+                            Classes.active="{Binding IsImportMode}"
+                            Command="{Binding SetModeCommand}"
+                            CommandParameter="Import"
+                            ToolTip.Tip="Import Albums (Recursive)"
+                            AutomationProperties.Name="Import albums">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:MaterialIcon Kind="FolderSync" Width="14" Height="14" />
+                            <TextBlock Text="Import" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
 
             <!-- Source (albums only); its space stays reserved in folder mode -->
             <Grid>
-            <TextBlock IsVisible="{Binding !IsAlbumMode}"
+            <TextBlock IsVisible="{Binding IsFolderMode}"
                        Text="A folder organises albums and other folders. No photos are imported."
                        TextWrapping="Wrap"
                        FontSize="12"
                        Foreground="{DynamicResource Text.Secondary}"
                        VerticalAlignment="Center" />
-            <StackPanel Spacing="8" Classes.reserved="{Binding !IsAlbumMode}">
-                <TextBlock Classes="fieldLabel" Text="SOURCE FOLDER" />
+            <StackPanel Spacing="8" Classes.reserved="{Binding IsFolderMode}">
+                <TextBlock Classes="fieldLabel" Text="{Binding SourceLabel}" />
                 <Grid ColumnDefinitions="*, Auto">
                     <TextBox Text="{Binding SourcePath}"
-                             Watermark="Folder with the photos to import"
+                             Watermark="{Binding SourceWatermark}"
                              IsReadOnly="True"
                              Height="40"
                              VerticalContentAlignment="Center" />
@@ -139,14 +150,22 @@
             </StackPanel>
             </Grid>
 
-            <!-- Name -->
-            <StackPanel Spacing="8">
-                <TextBlock Classes="fieldLabel" Text="NAME" />
-                <TextBox Text="{Binding Name}"
-                         Watermark="{Binding NameWatermark}"
-                         Height="40"
-                         VerticalContentAlignment="Center" />
-            </StackPanel>
+            <!-- Name (an import names everything after the source folders); its space stays reserved -->
+            <Grid>
+                <TextBlock IsVisible="{Binding IsImportMode}"
+                           Text="Names are taken from the folders in the source."
+                           TextWrapping="Wrap"
+                           FontSize="12"
+                           Foreground="{DynamicResource Text.Secondary}"
+                           VerticalAlignment="Center" />
+                <StackPanel Spacing="8" Classes.reserved="{Binding IsImportMode}">
+                    <TextBlock Classes="fieldLabel" Text="NAME" />
+                    <TextBox Text="{Binding Name}"
+                             Watermark="{Binding NameWatermark}"
+                             Height="40"
+                             VerticalContentAlignment="Center" />
+                </StackPanel>
+            </Grid>
 
             <!-- Location picker -->
             <StackPanel Spacing="8">

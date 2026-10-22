@@ -24,7 +24,7 @@ namespace Picturebot.ViewModels;
 /// <summary>
 ///     Outcome of the New dialog. CreatedFolders holds every folder created on the way, also when the final step failed.
 /// </summary>
-public record NewNodeResult(Node? Node, IReadOnlyList<Folder> CreatedFolders, string? Error);
+public record NewNodeResult(Node? Node, IReadOnlyList<Folder> CreatedFolders, string? Error, bool IsBatchImport = false);
 
 /// <summary>
 ///     The combined New Album / New Folder dialog: one location picker with a path bar, one level at a time,
@@ -54,6 +54,13 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
     private bool _isAlbumMode;
+
+    /// <summary>
+    ///     Recursive import: every subfolder of the source becomes a folder or, when it holds pictures, an album.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    private bool _isImportMode;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
@@ -128,9 +135,19 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
 
     public bool HasValidationMessage => !string.IsNullOrEmpty(ValidationMessage);
     public bool HasRows => Rows.Count > 0;
-    public string Title => IsAlbumMode ? "New Album" : "New Folder";
-    public string CreateButtonText => IsAlbumMode ? "Create Album" : "Create Folder";
+    public bool IsFolderMode => !IsAlbumMode && !IsImportMode;
+    public bool HasSource => IsAlbumMode || IsImportMode;
+    public string Title => IsImportMode ? "Import Albums" : IsAlbumMode ? "New Album" : "New Folder";
+    public string CreateButtonText => IsImportMode ? "Import Albums" : IsAlbumMode ? "Create Album" : "Create Folder";
     public string NameWatermark => IsAlbumMode ? "e.g. Kyoto Day 2" : "e.g. Kyoto";
+    public string SourceLabel => IsImportMode ? "ROOT SOURCE FOLDER" : "SOURCE FOLDER";
+    public string SourceWatermark => IsImportMode ? "Folder with the albums to import" : "Folder with the photos to import";
+
+    /// <summary>
+    ///     The folder that the recursive import creates at the chosen location, named after the source folder.
+    /// </summary>
+    private string ImportRootName =>
+        Path.GetFileName(SourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
     private void AddNode(Node node, LocationFolder parent) {
         switch (node) {
@@ -181,10 +198,18 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     partial void OnQueryChanged(string value) => RebuildRows();
     partial void OnNameChanged(string value) => UpdateSummary();
 
-    partial void OnIsAlbumModeChanged(bool value) {
+    partial void OnIsAlbumModeChanged(bool value) => OnModeChanged();
+
+    partial void OnIsImportModeChanged(bool value) => OnModeChanged();
+
+    private void OnModeChanged() {
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(CreateButtonText));
         OnPropertyChanged(nameof(NameWatermark));
+        OnPropertyChanged(nameof(SourceLabel));
+        OnPropertyChanged(nameof(SourceWatermark));
+        OnPropertyChanged(nameof(IsFolderMode));
+        OnPropertyChanged(nameof(HasSource));
         UpdateSummary();
         UpdateTimeZoneHint();
     }
@@ -198,6 +223,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
 
     [RelayCommand]
     private void SetMode(string mode) {
+        IsImportMode = mode == "Import";
         IsAlbumMode = mode == "Album";
     }
 
@@ -344,12 +370,14 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
             : Current.Ancestors.Reverse().Append(Current)
                 .Select(f => f.IsPending ? $"{f.Name} (new)" : f.Name)
                 .Prepend("Library").ToList();
-        var name = Name.Trim();
+        var name = IsImportMode ? ImportRootName : Name.Trim();
         parts.Add(name.Length > 0 ? name : "…");
         SummaryText = string.Join(" › ", parts);
 
         var pendingCount = PendingChain().Count;
-        var detail = IsAlbumMode
+        var detail = IsImportMode
+            ? "Imports every subfolder: folders, and albums where a folder holds pictures"
+            : IsAlbumMode
             ? _sourceCounts switch {
                 null when string.IsNullOrWhiteSpace(SourcePath) => "New album",
                 null => "New album · counting photos…",
@@ -365,9 +393,19 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     }
 
     private string? Validate() {
-        var name = Name.Trim();
+        var name = IsImportMode ? ImportRootName : Name.Trim();
         if (name.Length > 0 && !Current.IsPending && Current.ContainsName(name)) {
             return $"“{name}” already exists in {(Current == _root ? "the library root" : Current.Name)}.";
+        }
+
+        if (IsImportMode) {
+            if (string.IsNullOrEmpty(_settingsService.Current.LibraryPath)) {
+                return "Set a library location in Settings before importing albums.";
+            }
+            if (!string.IsNullOrWhiteSpace(SourcePath) && !Directory.Exists(SourcePath)) {
+                return "The source folder doesn't exist.";
+            }
+            return null;
         }
 
         if (!IsAlbumMode) return null;
@@ -490,7 +528,9 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     }
 
     private bool CanCreate() {
-        if (IsBusy || HasValidationMessage || string.IsNullOrWhiteSpace(Name)) return false;
+        if (IsBusy || HasValidationMessage) return false;
+        if (IsImportMode) return !string.IsNullOrWhiteSpace(SourcePath);
+        if (string.IsNullOrWhiteSpace(Name)) return false;
         // An album also waits for the source count, which is where the RAW/JPG pairing is checked.
         return !IsAlbumMode || (!string.IsNullOrWhiteSpace(SourcePath) && _sourceCounts != null);
     }
@@ -526,6 +566,31 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
 
         if (parentId.HasValue) {
             _recentLocations.Remember(parentId.Value);
+        }
+
+        // 2c. Recursive import: close the dialog and import every subfolder in the background.
+        if (IsImportMode) {
+            var importLibraryPath = _settingsService.Current.LibraryPath!;
+            var rootPath = SourcePath;
+            var importTimeZoneId = OwnTimeZoneId();
+            _recentLocations.LastSourceFolder = rootPath;
+            MainWindow.DialogManager.DismissDialog();
+            var importFeedback = ImportFeedback.Start(ImportRootName);
+
+            try {
+                await Task.Run(async () => {
+                    using var scope = _scopeFactory.CreateScope();
+                    var importService = scope.ServiceProvider.GetRequiredService<IImportAlbumsService>();
+                    await importService.ImportRecursiveAsync(parentId, rootPath, importLibraryPath, importFeedback, importTimeZoneId);
+                });
+                importFeedback.Completed();
+                _onResult(new NewNodeResult(null, createdFolders, null, IsBatchImport: true));
+            } catch (Exception ex) {
+                Log.Error(ex, "Batch import failed");
+                importFeedback.Failed();
+                _onResult(new NewNodeResult(null, createdFolders, ex.Message, IsBatchImport: true));
+            }
+            return;
         }
 
         // 2a. Folder: create it and close.
