@@ -1472,7 +1472,8 @@ public partial class GalleryViewModel : ViewModelBase,
                 // Broadcast update to refresh the UI elsewhere
                 WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
             }
-        }, _settingsService.Current.DefaultTimeZoneId);
+        }, _settingsService.Current.DefaultTimeZoneId,
+            _scopeFactory?.CreateScope().ServiceProvider.GetService<IRecentLocationsService>());
 
         Log.Information("Showing edit dialog for {Name}", node.Name);
         var shown = MainWindow.DialogManager.CreateDialog()

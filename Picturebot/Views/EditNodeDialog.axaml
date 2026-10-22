@@ -13,17 +13,13 @@
         <Style Selector="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
         </Style>
-        <Style Selector="TextBlock.Action">
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
-        </Style>
     </UserControl.Styles>
     
     <controls:DialogLayout Title="{Binding Title}" CloseCommand="{Binding CancelCommand}">
         <controls:DialogLayout.Footer>
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelCommand}" />
-                <Button Classes="Primary" Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding !IsCreatingNewFolder}" />
+                <Button Classes="Primary" Content="Save" Command="{Binding SaveCommand}" />
             </StackPanel>
         </controls:DialogLayout.Footer>
 
@@ -35,47 +31,8 @@
             
             <StackPanel Spacing="5">
                 <TextBlock Text="Parent Location" FontWeight="SemiBold" />
-                <ComboBox ItemsSource="{Binding Parents}"
-                          SelectedItem="{Binding SelectedParent}"
-                          HorizontalAlignment="Stretch">
-                    <ComboBox.Styles>
-                        <Style Selector="ComboBoxItem" x:DataType="vm:LocationItem">
-                            <Setter Property="IsEnabled" Value="{Binding !IsSeparator}" />
-                            <Setter Property="Padding" Value="0" />
-                        </Style>
-                    </ComboBox.Styles>
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:LocationItem">
-                            <Panel>
-                                <Separator IsVisible="{Binding IsSeparator}" Margin="0" />
-                                <TextBlock IsVisible="{Binding !IsSeparator}" 
-                                           Text="{Binding Name}" 
-                                           Padding="12,8"
-                                           Classes.Action="{Binding IsAction}" />
-                            </Panel>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <controls:LocationPicker DataContext="{Binding Picker}" />
             </StackPanel>
-
-            <!-- Inline Quick-Add Folder Input -->
-            <Border IsVisible="{Binding IsCreatingNewFolder}"
-                    Padding="15"
-                    Background="{DynamicResource Surface.Card}"
-                    BorderBrush="{DynamicResource Border.Subtle}"
-                    BorderThickness="1"
-                    CornerRadius="{DynamicResource Radius.Dialog}">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="New Parent Folder Name" FontWeight="SemiBold" FontSize="14" />
-                    <TextBox Text="{Binding NewFolderName, Mode=TwoWay}" 
-                             Watermark="Folder name..."
-                             Classes="Simple" />
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button Classes="Secondary" Content="Cancel" Command="{Binding CancelNewFolderCommand}" />
-                        <Button Classes="Primary" Content="Create" Command="{Binding ConfirmNewFolderCommand}" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
 
             <StackPanel Spacing="5" IsVisible="{Binding HasTimeZone}">
                 <TextBlock Text="Time Zone" FontWeight="SemiBold" />

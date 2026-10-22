@@ -127,7 +127,7 @@ public class TimeZoneTests {
         Assert.That(vm.TimeZoneId, Is.Null);
 
         vm.TimeZoneId = "Asia/Taipei";
-        vm.CreateHereCommand.Execute("Japan");
+        vm.Picker.CreateHereCommand.Execute("Japan");
 
         Assert.That(vm.TimeZoneId, Is.EqualTo("Asia/Taipei"));
     }

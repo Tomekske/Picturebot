@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,6 +8,7 @@ using Database.Domain.Entities;
 using Domain.Enums;
 using Domain.TimeZones;
 using Graph.Domain.Interfaces;
+using Picturebot.Services;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Toasts;
@@ -19,21 +19,12 @@ public partial class EditNodeDialogViewModel : ViewModelBase {
     private readonly INodeService _nodeService;
     private readonly IFolderService _folderService;
     private readonly Node _nodeToEdit;
-    private readonly List<Node> _allNodes;
+    private readonly IRecentLocationsService? _recentLocations;
     private readonly Action<Node?> _onResult;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     private string _nodeName;
-
-    [ObservableProperty]
-    private LocationItem? _selectedParent;
-
-    [ObservableProperty]
-    private string _newFolderName = string.Empty;
-
-    [ObservableProperty]
-    private bool _isCreatingNewFolder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TimeZoneHint))]
@@ -46,7 +37,7 @@ public partial class EditNodeDialogViewModel : ViewModelBase {
     private TimeZoneSource? _inheritedTimeZone;
     private readonly string? _defaultTimeZoneId;
 
-    public ObservableCollection<LocationItem> Parents { get; } = new();
+    public LocationPickerViewModel Picker { get; }
 
     public string Title => $"Edit {_nodeToEdit.Type}";
 
@@ -61,11 +52,12 @@ public partial class EditNodeDialogViewModel : ViewModelBase {
         Node nodeToEdit,
         List<Node> allNodes,
         Action<Node?> onResult,
-        string? defaultTimeZoneId = null) {
+        string? defaultTimeZoneId = null,
+        IRecentLocationsService? recentLocations = null) {
         _nodeService = nodeService;
         _folderService = folderService;
         _nodeToEdit = nodeToEdit;
-        _allNodes = allNodes;
+        _recentLocations = recentLocations;
         _onResult = onResult;
         _defaultTimeZoneId = defaultTimeZoneId;
 
@@ -76,10 +68,15 @@ public partial class EditNodeDialogViewModel : ViewModelBase {
             _ => null
         };
 
-        RefreshParents();
-
-        // Select current parent
-        SelectedParent = Parents.FirstOrDefault(p => p.Id == nodeToEdit.ParentId) ?? Parents[0];
+        // A folder can't move into itself or into what it contains, so it and its subtree aren't offered.
+        Picker = new LocationPickerViewModel(allNodes, recentLocations, nodeToEdit.ParentId,
+            nodeToEdit is Folder ? nodeToEdit.Id : null);
+        Picker.PropertyChanged += (_, e) => {
+            if (e.PropertyName == nameof(LocationPickerViewModel.Current)) {
+                _ = LoadInheritedTimeZoneAsync(Picker.NearestExistingId());
+            }
+        };
+        _ = LoadInheritedTimeZoneAsync(Picker.NearestExistingId());
     }
 
     /// <summary>
@@ -98,78 +95,17 @@ public partial class EditNodeDialogViewModel : ViewModelBase {
 
     partial void OnTimeZoneIdChanged(string? value) => OnPropertyChanged(nameof(TimeZoneHint));
 
-    private void RefreshParents() {
-        Parents.Clear();
-        Parents.Add(new LocationItem { Name = "Library (Root)", Id = null });
-        
-        PopulateParents(_allNodes, _nodeToEdit.Id);
-
-        Parents.Add(new LocationItem { IsSeparator = true });
-        Parents.Add(new LocationItem { Name = "+ Create new folder...", IsAction = true });
-    }
-
-    private void PopulateParents(List<Node> nodes, int excludeId, int indent = 1) {
-        foreach (var node in nodes) {
-            if (node.Type == Domain.Enums.NodeType.Folder) {
-                if (node.Id == excludeId) continue;
-
-                Parents.Add(new LocationItem {
-                    Name = $"{new string(' ', indent * 2)}{node.Name}",
-                    Id = node.Id
-                });
-
-                if (node.Children != null) {
-                    PopulateParents(node.Children.ToList(), excludeId, indent + 1);
-                }
-            }
-        }
-    }
-
-    partial void OnSelectedParentChanged(LocationItem? value) {
-        if (value?.IsAction == true) {
-            IsCreatingNewFolder = true;
-            NewFolderName = string.Empty;
-        } else if (value != null && !value.IsSeparator) {
-            IsCreatingNewFolder = false;
-            _ = LoadInheritedTimeZoneAsync(value.Id);
-        }
-    }
-
-    [RelayCommand]
-    private async Task ConfirmNewFolderAsync() {
-        if (string.IsNullOrWhiteSpace(NewFolderName)) return;
-
-        try {
-            // Create the new folder under the same parent as the current node
-            var newFolder = await _folderService.CreateAsync(_nodeToEdit.ParentId, NewFolderName);
-            
-            // Refresh the entire nodes list to include the new folder in hierarchy
-            var updatedNodes = await _nodeService.LoadHydratedTreeAsync();
-            _allNodes.Clear();
-            _allNodes.AddRange(updatedNodes);
-
-            RefreshParents();
-
-            // Select the newly created folder
-            SelectedParent = Parents.FirstOrDefault(p => p.Id == newFolder.Id);
-            IsCreatingNewFolder = false;
-        } catch (Exception ex) {
-            Log.Error(ex, "Failed to create quick-add folder");
-        }
-    }
-
-    [RelayCommand]
-    private void CancelNewFolder() {
-        IsCreatingNewFolder = false;
-        // Select Library Root as fallback or previous?
-        SelectedParent = Parents.FirstOrDefault(p => p.Id == _nodeToEdit.ParentId) ?? Parents[0];
-    }
-
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync() {
         try {
+            // Folders typed into the location picker are created first, outermost first.
+            var parentId = await Picker.EnsurePathAsync(_folderService, new List<Folder>());
+            if (parentId.HasValue) {
+                _recentLocations?.Remember(parentId.Value);
+            }
+
             _nodeToEdit.Name = NodeName;
-            _nodeToEdit.ParentId = SelectedParent?.Id;
+            _nodeToEdit.ParentId = parentId;
             // The same zone as the inherited one is stored as "not set", so it keeps following the folder above
             var ownTimeZoneId = ViewModels.TimeZoneHint.Normalize(TimeZoneId, _inheritedTimeZone, _defaultTimeZoneId);
             switch (_nodeToEdit) {
