@@ -106,6 +106,7 @@
                     <Grid Name="NodeContainer"
                           ColumnDefinitions="Auto, *, Auto"
                           HorizontalAlignment="Stretch"
+                          Background="Transparent"
                           Height="32"
                           VerticalAlignment="Center">
                         <Grid.ContextMenu>

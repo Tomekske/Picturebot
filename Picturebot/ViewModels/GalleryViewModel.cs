@@ -1456,38 +1456,51 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     [RelayCommand]
-    private async Task EditCurrentNodeAsync() {
-        if (_currentNode == null) return;
+    private Task EditCurrentNodeAsync() => EditNodeAsync(_currentNode);
+
+    [RelayCommand]
+    private Task DeleteCurrentNodeAsync() => DeleteNodeAsync(_currentNode);
+
+    [RelayCommand]
+    private async Task EditNodeAsync(Node? node) {
+        Log.Information("EditNodeAsync invoked for {Name} (Id={Id})", node?.Name, node?.Id);
+        if (node == null) return;
 
         var allNodes = await _nodeService.LoadHydratedTreeAsync();
-        var vm = new EditNodeDialogViewModel(_nodeService, _folderService, _currentNode, allNodes, result => {
+        var vm = new EditNodeDialogViewModel(_nodeService, _folderService, node, allNodes, result => {
             if (result != null) {
                 // Broadcast update to refresh the UI elsewhere
                 WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
             }
         }, _settingsService.Current.DefaultTimeZoneId);
 
-        MainWindow.DialogManager.CreateDialog()
+        Log.Information("Showing edit dialog for {Name}", node.Name);
+        var shown = MainWindow.DialogManager.CreateDialog()
             .WithContent(new EditNodeDialog { DataContext = vm })
             .TryShow();
+        Log.Information("Edit dialog TryShow returned {Shown}", shown);
     }
 
     [RelayCommand]
-    private async Task DeleteCurrentNodeAsync() {
-        if (_currentNode == null) return;
+    private async Task DeleteNodeAsync(Node? node) {
+        Log.Information("DeleteNodeAsync invoked for {Name} (Id={Id})", node?.Name, node?.Id);
+        if (node == null) return;
+        var nodeToDelete = node;
+        var isCurrentNode = _currentNode?.Id == nodeToDelete.Id;
 
-        var title = $"Delete {_currentNode.Type}";
-        var message = _currentNode.Type == NodeType.Folder
-            ? $"Are you sure you want to delete the folder '{_currentNode.Name}'? Only empty folders can be deleted."
-            : $"Are you sure you want to delete the album '{_currentNode.Name}'? This will move the physical directory to the 'deleted' folder and remove all picture records from the database.";
+        var title = $"Delete {nodeToDelete.Type}";
+        var message = nodeToDelete.Type == NodeType.Folder
+            ? $"Are you sure you want to delete the folder '{nodeToDelete.Name}'? Only empty folders can be deleted."
+            : $"Are you sure you want to delete the album '{nodeToDelete.Name}'? This will move the physical directory to the 'deleted' folder and remove all picture records from the database.";
 
         var vm = new ConfirmDeleteDialogViewModel(title, message, async result => {
             if (result) {
                 try {
-                    var nodeToDelete = _currentNode;
                     var parent = nodeToDelete.Parent;
 
-                    TearDownXmpWatcher();
+                    if (isCurrentNode) {
+                        TearDownXmpWatcher();
+                    }
 
                     if (nodeToDelete is Folder folder) {
                         await _folderService.DeleteAsync(folder);
@@ -1511,13 +1524,15 @@ public partial class GalleryViewModel : ViewModelBase,
                         .Dismiss().After(TimeSpan.FromSeconds(3))
                         .Queue();
 
-                    // Navigate to parent after DB deletion is complete
-                    _navigationService.NavigateTo(parent);
+                    // Navigate to parent after DB deletion is complete (only when the open node itself was deleted)
+                    if (isCurrentNode) {
+                        _navigationService.NavigateTo(parent);
+                    }
 
                     // Broadcast deletion to refresh the tree and gallery
                     WeakReferenceMessenger.Default.Send(new NodeDeletedMessage(nodeToDelete));
                 } catch (Exception ex) {
-                    Log.Error(ex, "Failed to delete {Type}", _currentNode.Type);
+                    Log.Error(ex, "Failed to delete {Type}", nodeToDelete.Type);
                     MainWindow.ToastManager.CreateToast()
                         .WithTitle("Error")
                         .WithContent(ex.Message)

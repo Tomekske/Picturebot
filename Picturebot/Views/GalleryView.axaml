@@ -334,6 +334,24 @@
                                             Padding="0"
                                             CornerRadius="12"
                                             Cursor="Hand">
+                                        <Button.ContextMenu>
+                                            <ContextMenu Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
+                                                <MenuItem Header="Edit"
+                                                          Click="OnEditTileClick">
+                                                    <MenuItem.Icon>
+                                                        <icons:MaterialIcon Kind="Pencil" Width="16" Height="16" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator />
+                                                <MenuItem Header="Delete"
+                                                          Click="OnDeleteTileClick"
+                                                          Foreground="{DynamicResource Status.Danger}">
+                                                    <MenuItem.Icon>
+                                                        <icons:MaterialIcon Kind="Delete" Width="16" Height="16" Foreground="{DynamicResource Status.Danger}" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
                                         <suki:GlassCard Width="160" Height="140">
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                                         Spacing="10">
@@ -384,6 +402,24 @@
                                             Padding="0"
                                             CornerRadius="12"
                                             Cursor="Hand">
+                                        <Button.ContextMenu>
+                                            <ContextMenu Background="{DynamicResource Surface.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
+                                                <MenuItem Header="Edit"
+                                                          Click="OnEditTileClick">
+                                                    <MenuItem.Icon>
+                                                        <icons:MaterialIcon Kind="Pencil" Width="16" Height="16" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator />
+                                                <MenuItem Header="Delete"
+                                                          Click="OnDeleteTileClick"
+                                                          Foreground="{DynamicResource Status.Danger}">
+                                                    <MenuItem.Icon>
+                                                        <icons:MaterialIcon Kind="Delete" Width="16" Height="16" Foreground="{DynamicResource Status.Danger}" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
                                         <suki:GlassCard Width="160" Height="140">
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                                         Spacing="10">
