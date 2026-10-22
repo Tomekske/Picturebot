@@ -1828,21 +1828,36 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private void UpdateBreadcrumbs(Node? node) {
-        var path = new List<BreadcrumbItem>();
-        var current = node;
+        var nodes = _navigationService.GetPath(node);
+        SetBreadcrumbs(nodes);
 
-        while (current != null) {
-            path.Insert(0, new BreadcrumbItem(current.Name, current));
-            current = current.Parent;
+        // The chain isn't known in memory (e.g. a node that only has a ParentId): complete it from the database.
+        if (nodes.Count > 0 && nodes[0].ParentId.HasValue) {
+            _ = CompleteBreadcrumbsAsync(node, nodes);
         }
+    }
 
-        // Always add root "Library"
-        path.Insert(0, new BreadcrumbItem("Library", null));
+    private async Task CompleteBreadcrumbsAsync(Node? node, IReadOnlyList<Node> partial) {
+        try {
+            var byId = (await _nodeService.GetAllNodesAsync()).ToDictionary(n => n.Id);
+            var path = new List<Node>(partial);
+            while (path[0].ParentId is { } parentId && byId.TryGetValue(parentId, out var parent) && path.Count < 64) {
+                path.Insert(0, parent);
+            }
 
-        // Mark the last one
-        if (path.Count > 0) {
-            path.Last().IsLast = true;
+            await Dispatcher.UIThread.InvokeAsync(() => {
+                // Skip it when the user has moved on in the meantime.
+                if (ReferenceEquals(_currentNode, node)) SetBreadcrumbs(path);
+            });
+        } catch (Exception ex) {
+            Log.Warning(ex, "Could not complete the breadcrumb path of {Name}", node?.Name);
         }
+    }
+
+    private void SetBreadcrumbs(IReadOnlyList<Node> nodes) {
+        var path = new List<BreadcrumbItem> { new("Library", null) };
+        path.AddRange(nodes.Select(n => new BreadcrumbItem(n.Name, n)));
+        path.Last().IsLast = true;
 
         Breadcrumbs.Clear();
         foreach (var item in path) {

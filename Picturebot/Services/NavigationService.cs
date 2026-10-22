@@ -66,6 +66,15 @@ public class NavigationService : INavigationService, IRecipient<NodeSelectedMess
         Select(node);
     }
 
+    public IReadOnlyList<Node> GetPath(Node? node) {
+        var path = new List<Node>();
+        // The depth limit guards against a corrupt parent cycle
+        for (var current = node; current != null && path.Count < 64; current = ParentOf(current)) {
+            path.Insert(0, current);
+        }
+        return path;
+    }
+
     public void GoBack() {
         if (_currentNode == null) return;
 

@@ -202,27 +202,36 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
                 $"DELETE FROM nodes WHERE Id = {node.Id};");
         }
 
-        // Clean up any locally tracked entities in EF Core change tracker
-        var localNodes = _context.Nodes.Local
-            .Where(n => n.Id == node.Id || (node is Album && n.ParentId == node.Id))
-            .ToList();
-        foreach (var local in localNodes) {
-            _context.Entry(local).State = EntityState.Detached;
-        }
+        // The rows are already gone. Cleaning up the change tracker must not run change detection: the node usually
+        // still points at a Parent graph (e.g. from the hydrated tree) whose folders are tracked under another
+        // instance, and detecting that fails with "another instance with the same key is already being tracked".
+        var autoDetect = _context.ChangeTracker.AutoDetectChangesEnabled;
+        _context.ChangeTracker.AutoDetectChangesEnabled = false;
+        try {
+            // Clean up any locally tracked entities in EF Core change tracker
+            var localNodes = _context.Nodes.Local
+                .Where(n => n.Id == node.Id || (node is Album && n.ParentId == node.Id))
+                .ToList();
+            foreach (var local in localNodes) {
+                _context.Entry(local).State = EntityState.Detached;
+            }
 
-        var localMetrics = _context.Metrics.Local
-            .Where(m => m.PictureId == node.Id || localNodes.Any(ln => ln.Id == m.PictureId))
-            .ToList();
-        foreach (var local in localMetrics) {
-            _context.Entry(local).State = EntityState.Detached;
-        }
+            var localMetrics = _context.Metrics.Local
+                .Where(m => m.PictureId == node.Id || localNodes.Any(ln => ln.Id == m.PictureId))
+                .ToList();
+            foreach (var local in localMetrics) {
+                _context.Entry(local).State = EntityState.Detached;
+            }
 
-        // Clean up any stray Added metrics that might have been queued in the change tracker
-        var strayMetrics = _context.ChangeTracker.Entries<Metrics>()
-            .Where(e => e.State == EntityState.Added)
-            .ToList();
-        foreach (var entry in strayMetrics) {
-            entry.State = EntityState.Detached;
+            // Clean up any stray Added metrics that might have been queued in the change tracker
+            var strayMetrics = _context.ChangeTracker.Entries<Metrics>()
+                .Where(e => e.State == EntityState.Added)
+                .ToList();
+            foreach (var entry in strayMetrics) {
+                entry.State = EntityState.Detached;
+            }
+        } finally {
+            _context.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
         }
     }
 }

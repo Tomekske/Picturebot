@@ -129,4 +129,20 @@ public class NavigationServiceTests {
 
         Assert.That(_nav.CanGoForward, Is.False);
     }
+
+    [Test]
+    public void Path_RunsFromTheRootToTheNode() {
+        Select(_biodome);
+
+        Assert.That(_nav.GetPath(_biodome).Select(n => n.Name), Is.EqualTo(new[] { "Montreal", "Olympic Park", "Biodome" }));
+        Assert.That(_nav.GetPath(null), Is.Empty);
+    }
+
+    [Test]
+    public void Path_IsCompleteForANodeWithOnlyAParentId() {
+        Select(_olympic); // its Parent chain is loaded
+        var child = new Album { Id = 9, Name = "2025", ParentId = 2 }; // loaded on its own, no Parent
+
+        Assert.That(_nav.GetPath(child).Select(n => n.Name), Is.EqualTo(new[] { "Montreal", "Olympic Park", "2025" }));
+    }
 }
