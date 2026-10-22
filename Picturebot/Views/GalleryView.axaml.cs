@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Messaging;
 using Picturebot.Messages;
@@ -24,6 +25,28 @@ public partial class GalleryView : UserControl {
         InitializeComponent();
         DataContext = viewModel;
         SetupScrollInterception();
+    }
+
+    // ContextMenu.PlacementTarget is not populated for these menus, so the tile's node comes from the item's inherited DataContext
+    private (GalleryViewModel Vm, Database.Domain.Entities.Node Node)? GetTileMenuTarget(object? sender) {
+        var node = (sender as StyledElement)?.DataContext as Database.Domain.Entities.Node;
+        Serilog.Log.Information("Tile menu click: node={Node}, viewDataContext={Vm}", node?.Name, DataContext?.GetType().Name);
+        if (node != null && DataContext is GalleryViewModel vm) {
+            return (vm, node);
+        }
+        return null;
+    }
+
+    private void OnEditTileClick(object? sender, RoutedEventArgs e) {
+        if (GetTileMenuTarget(sender) is { } t) {
+            t.Vm.EditNodeCommand.Execute(t.Node);
+        }
+    }
+
+    private void OnDeleteTileClick(object? sender, RoutedEventArgs e) {
+        if (GetTileMenuTarget(sender) is { } t) {
+            t.Vm.DeleteNodeCommand.Execute(t.Node);
+        }
     }
 
     private void SetupScrollInterception() {
