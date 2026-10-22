@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tz="clr-namespace:Domain.TimeZones;assembly=Domain"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Picturebot.Controls.TimeZonePicker">
+
+    <UserControl.Resources>
+        <!-- Plain rows: SukiUI's animated ListBoxItem leaves ghost rows behind when the list is refilled while typing -->
+        <ControlTheme x:Key="ZoneItemTheme" TargetType="ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <!-- Focus stays in the search box: a focused row would be kept on screen after the list is refilled -->
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource State.Hover}" />
+            </Style>
+            <Style Selector="^:selected">
+                <Setter Property="Background" Value="{DynamicResource Accent.Subtle}" />
+            </Style>
+        </ControlTheme>
+    </UserControl.Resources>
+
+    <Grid ColumnDefinitions="*, Auto">
+        <TextBox x:Name="SearchBox"
+                 Height="40"
+                 VerticalContentAlignment="Center"
+                 AutomationProperties.Name="Time zone" />
+
+        <Popup x:Name="DropDown"
+               PlacementTarget="{Binding #SearchBox}"
+               Placement="BottomEdgeAlignedLeft"
+               VerticalOffset="4"
+               IsLightDismissEnabled="False">
+            <Border x:Name="DropDownBorder"
+                    Background="{DynamicResource Surface.Panel}"
+                    BorderBrush="{DynamicResource Border.Subtle}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource Radius.Control}"
+                    Padding="4">
+                <Panel>
+                    <ListBox x:Name="Results"
+                             MaxHeight="320"
+                             Background="Transparent"
+                             Padding="0"
+                             Focusable="False"
+                             ItemContainerTheme="{StaticResource ZoneItemTheme}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="tz:TimeZoneOption">
+                                <StackPanel Margin="2,0">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="13"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource Text.Primary}" />
+                                    <TextBlock Text="{Binding Subtitle}"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource Text.Secondary}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock x:Name="NoResults"
+                               Text="No matching country or city."
+                               Margin="10,8"
+                               FontSize="12"
+                               Foreground="{DynamicResource Text.Muted}"
+                               IsVisible="False" />
+                </Panel>
+            </Border>
+        </Popup>
+
+        <Button x:Name="ClearButton"
+                Grid.Column="1"
+                Classes="Secondary"
+                Margin="8,0,0,0"
+                ToolTip.Tip="Clear: inherit the time zone again"
+                AutomationProperties.Name="Clear time zone">
+            <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
+        </Button>
+    </Grid>
+</UserControl>

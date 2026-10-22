@@ -135,14 +135,19 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
                 entry.State = EntityState.Detached;
             }
 
+            // Detach before restoring navigations: restoring first lets change detection attach the
+            // (possibly duplicate) Parent/Children instances and throw an identity conflict.
+            if (trackedEntity == null) {
+                var nodeEntry = _context.ChangeTracker.Entries<Node>().FirstOrDefault(e => ReferenceEquals(e.Entity, node));
+                if (nodeEntry != null) {
+                    nodeEntry.State = EntityState.Detached;
+                }
+            }
+
             node.Parent = parent;
             node.Children = children;
             if (picture != null) {
                 picture.Metrics = metrics;
-            }
-
-            if (trackedEntity == null) {
-                _context.Entry(node).State = EntityState.Detached;
             }
 
             if (metrics != null) {
