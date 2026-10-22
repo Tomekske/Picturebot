@@ -319,6 +319,30 @@ public class NodeRepositoryTests : IDisposable {
         Assert.That(updated!.Name, Is.EqualTo("Renamed Folder"));
     }
 
+    [Test]
+    public async Task FindByIdReadOnlyAsync_ThenUpdatingAnotherCopy_DoesNotClash() {
+        // The time zone lookup reads the album and its folders; the Edit dialog then saves its own copy
+        var folder = new Folder { Name = "Miami", Type = NodeType.Folder, TimeZoneId = "America/New_York" };
+        await _repository.CreateAsync(folder);
+        var album = new Album { Name = "Downtown", Type = NodeType.Album, ParentId = folder.Id, Uuid = Guid.NewGuid().ToString() };
+        await _repository.CreateAsync(album);
+        _context.ChangeTracker.Clear();
+
+        var readOnly = await _repository.FindByIdReadOnlyAsync(album.Id);
+        await _repository.FindByIdReadOnlyAsync(folder.Id);
+
+        var edited = new Album {
+            Id = album.Id, Name = "Downtown", Type = NodeType.Album, ParentId = folder.Id, Uuid = album.Uuid,
+            TimeZoneId = "America/Chicago"
+        };
+        Assert.DoesNotThrowAsync(async () => await _repository.UpdateAsync(edited));
+
+        _context.ChangeTracker.Clear();
+        var saved = (Album?)await _repository.FindByIdReadOnlyAsync(album.Id);
+        Assert.That(readOnly, Is.Not.Null);
+        Assert.That(saved!.TimeZoneId, Is.EqualTo("America/Chicago"));
+    }
+
     public void Dispose() {
     }
 }

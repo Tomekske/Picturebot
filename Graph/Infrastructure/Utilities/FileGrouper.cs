@@ -128,4 +128,6 @@ public class CachedPictureData {
     public int Height { get; set; }
     public int RawExifOrientation { get; set; } = 1;
     public bool OrientationFromExif { get; set; }
+    public TimeSpan? CameraUtcOffset { get; set; }
+    public bool CameraUtcOffsetChecked { get; set; }
 }

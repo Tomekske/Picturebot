@@ -36,6 +36,12 @@ public class NodeRepository(ApplicationDbContext context) : INodeRepository {
             .FirstOrDefaultAsync(n => n.Id == id);
     }
 
+    public async Task<Node?> FindByIdReadOnlyAsync(int id) {
+        return await _context.Nodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(n => n.Id == id);
+    }
+
     public async Task<bool> FindDuplicateAsync(int? parentId, string name, NodeType type) {
         var query = _context.Nodes.AsQueryable();
 

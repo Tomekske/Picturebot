@@ -14,11 +14,12 @@ public class ImportAlbumsService(
     IFolderService folderService,
     IImportPicturesCommand importPicturesCommand
 ) : IImportAlbumsService {
-    public async Task ImportRecursiveAsync(int? parentId, string sourcePath, string libraryPath, IProgress<ImportBatchProgress>? progress = null) {
+    public async Task ImportRecursiveAsync(int? parentId, string sourcePath, string libraryPath, IProgress<ImportBatchProgress>? progress = null,
+        string? timeZoneId = null) {
         var stopwatch = Stopwatch.StartNew();
         var totalAlbums = CountAlbumsRecursive(sourcePath);
         var processedAlbums = 0;
-        await ProcessDirectoryAsync(parentId, sourcePath, libraryPath, progress, totalAlbums, processedAlbums);
+        await ProcessDirectoryAsync(parentId, sourcePath, libraryPath, progress, totalAlbums, processedAlbums, timeZoneId);
         stopwatch.Stop();
         var elapsed = stopwatch.Elapsed;
         Serilog.Log.Information("Batch import completed for {SourcePath} in {Elapsed:hh\\:mm\\:ss}", sourcePath, elapsed);
@@ -36,7 +37,7 @@ public class ImportAlbumsService(
         return count;
     }
 
-    private async Task<int> ProcessDirectoryAsync(int? parentId, string currentPath, string libraryPath, IProgress<ImportBatchProgress>? progress, int totalAlbums, int processedAlbums) {
+    private async Task<int> ProcessDirectoryAsync(int? parentId, string currentPath, string libraryPath, IProgress<ImportBatchProgress>? progress, int totalAlbums, int processedAlbums, string? timeZoneId) {
         bool hasImages = DirectoryContainsImages(currentPath);
         
         // Trim trailing slashes to ensure GetFileName safely extracts the leaf folder
@@ -57,14 +58,14 @@ public class ImportAlbumsService(
                 progress?.Report(new ImportBatchProgress(processedAlbums, totalAlbums, nodeName, p));
             });
             progress?.Report(new ImportBatchProgress(processedAlbums, totalAlbums, nodeName));
-            createdNode = await importPicturesCommand.ExecuteAsync(parentId, nodeName, libraryPath, currentPath, albumProgress);
+            createdNode = await importPicturesCommand.ExecuteAsync(parentId, nodeName, libraryPath, currentPath, albumProgress, timeZoneId);
         } else {
-            createdNode = await folderService.CreateAsync(parentId, nodeName);
+            createdNode = await folderService.CreateAsync(parentId, nodeName, timeZoneId);
         }
 
         try {
             foreach (var subDir in fileSystem.Directory.GetDirectories(currentPath)) {
-                processedAlbums = await ProcessDirectoryAsync(createdNode.Id, subDir, libraryPath, progress, totalAlbums, processedAlbums);
+                processedAlbums = await ProcessDirectoryAsync(createdNode.Id, subDir, libraryPath, progress, totalAlbums, processedAlbums, timeZoneId);
             }
         } catch {
             // Skip directories we can't access

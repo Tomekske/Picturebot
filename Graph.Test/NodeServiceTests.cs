@@ -1,6 +1,7 @@
 using Database.Domain.Entities;
 using Database.Domain.Interfaces;
 using Domain.Enums;
+using Domain.TimeZones;
 using Graph.Domain.Strategies;
 using Graph.Infrastructure.Services;
 using Moq;
@@ -151,5 +152,31 @@ public class NodeServiceTests {
 
         // Assert
         _nodeRepositoryMock.Verify(r => r.CreateAsync(picture), Times.Once);
+    }
+
+    [Test]
+    public async Task ResolveTimeZoneAsync_UsesTheNearestFolderAboveAnAlbumWithoutAZone() {
+        // Miami (America/New_York) › Downtown › Downtown4 (no zone)
+        var miami = new Folder { Id = 1, Name = "Miami", TimeZoneId = "America/New_York" };
+        var downtown = new Folder { Id = 2, Name = "Downtown", ParentId = 1 };
+        var album = new Album { Id = 3, Name = "Downtown4", ParentId = 2 };
+        _nodeRepositoryMock.Setup(r => r.FindByIdReadOnlyAsync(1)).ReturnsAsync(miami);
+        _nodeRepositoryMock.Setup(r => r.FindByIdReadOnlyAsync(2)).ReturnsAsync(downtown);
+        _nodeRepositoryMock.Setup(r => r.FindByIdReadOnlyAsync(3)).ReturnsAsync(album);
+
+        var inherited = await _nodeService.ResolveTimeZoneAsync(3);
+        Assert.That(inherited, Is.EqualTo(new TimeZoneSource("America/New_York", 1, "Miami")));
+
+        album.TimeZoneId = "America/Chicago";
+        var own = await _nodeService.ResolveTimeZoneAsync(3);
+        Assert.That(own, Is.EqualTo(new TimeZoneSource("America/Chicago", 3, "Downtown4")));
+    }
+
+    [Test]
+    public async Task ResolveTimeZoneAsync_WithoutAnyZone_ReturnsNull() {
+        _nodeRepositoryMock.Setup(r => r.FindByIdReadOnlyAsync(1)).ReturnsAsync(new Folder { Id = 1, Name = "Trips" });
+        _nodeRepositoryMock.Setup(r => r.FindByIdReadOnlyAsync(2)).ReturnsAsync(new Album { Id = 2, Name = "Day 1", ParentId = 1 });
+
+        Assert.That(await _nodeService.ResolveTimeZoneAsync(2), Is.Null);
     }
 }

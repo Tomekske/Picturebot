@@ -20,6 +20,7 @@ using Domain.Interfaces;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Services;
 using Graph.Infrastructure.Utilities;
+using Domain.TimeZones;
 using Domain.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Picturebot.Messages;
@@ -61,6 +62,9 @@ public partial class GalleryViewModel : ViewModelBase,
     private readonly IGlobalExemplarCentroidService? _centroidService;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory? _scopeFactory;
     private CancellationTokenSource? _albumLoadCts;
+    // The open album's time zone, or the nearest folder's above it; null means the default zone
+    private TimeZoneSource? _albumTimeZone;
+    private string? AlbumTimeZoneLabel => _currentNode == null ? null : CaptureTimeResolver.SourceLabel(_albumTimeZone, _currentNode.Id);
     private readonly HashSet<string> _pendingThumbnailRefreshes = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly List<PictureItemViewModel> _allPictures = new();
@@ -171,9 +175,9 @@ public partial class GalleryViewModel : ViewModelBase,
     private IEnumerable<PictureItemViewModel> SortWithinGroup(IEnumerable<PictureItemViewModel> pictures) {
         return (SelectedSort?.Sort ?? GallerySort.CaptureTime) switch {
             GallerySort.Name => pictures.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase),
-            GallerySort.Rating => pictures.OrderByDescending(p => p.Rating).ThenBy(p => p.Picture.CapturedAt),
-            GallerySort.Sharpness => pictures.OrderByDescending(p => p.Picture.Sharpness).ThenBy(p => p.Picture.CapturedAt),
-            _ => pictures.OrderBy(p => p.Picture.CapturedAt)
+            GallerySort.Rating => pictures.OrderByDescending(p => p.Rating).ThenBy(p => p.Picture.LocalCapturedAt),
+            GallerySort.Sharpness => pictures.OrderByDescending(p => p.Picture.Sharpness).ThenBy(p => p.Picture.LocalCapturedAt),
+            _ => pictures.OrderBy(p => p.Picture.LocalCapturedAt)
         };
     }
 
@@ -252,6 +256,14 @@ public partial class GalleryViewModel : ViewModelBase,
         _navigationService = navigationService;
         _settingsService = settingsService;
         _curationQueue = curationQueue;
+
+        // A new default time zone changes the local times of albums without their own zone
+        var defaultTimeZoneId = settingsService.Current.DefaultTimeZoneId;
+        settingsService.PropertyChanged += (_, _) => {
+            if (settingsService.Current.DefaultTimeZoneId == defaultTimeZoneId) return;
+            defaultTimeZoneId = settingsService.Current.DefaultTimeZoneId;
+            Avalonia.Threading.Dispatcher.UIThread.Post(ReapplyCaptureTimes);
+        };
         _albumService = albumService;
         _folderService = folderService;
         _copyService = copyService;
@@ -382,6 +394,15 @@ public partial class GalleryViewModel : ViewModelBase,
             _currentNode.Name = updatedNode.Name;
             _currentNode.ParentId = updatedNode.ParentId;
             UpdateBreadcrumbs(_currentNode);
+
+            if (_currentNode is Album currentAlbum && updatedNode is Album updatedAlbum) {
+                currentAlbum.TimeZoneId = updatedAlbum.TimeZoneId;
+            }
+        }
+
+        // The open album's zone may come from this node (itself, or a folder above it, or after a move)
+        if (IsShowingAlbum && _currentNode is Album openAlbum) {
+            _ = RefreshAlbumTimeZoneAsync(openAlbum.Id);
         }
 
         // If we are in the parent folder of the updated node, refresh its name in the items list
@@ -821,7 +842,7 @@ public partial class GalleryViewModel : ViewModelBase,
     }
 
     private void ApplyDateGrouping() {
-        var groups = PicturesList.GroupBy(p => p.Picture.CapturedAt.Date)
+        var groups = PicturesList.GroupBy(p => p.Picture.LocalCapturedAt.Date)
             .OrderBy(g => g.Key);
 
         var groupVms = new List<PictureGroupViewModel>();
@@ -876,7 +897,7 @@ public partial class GalleryViewModel : ViewModelBase,
         var hashThreshold = settings.GroupingThreshold > 0 ? settings.GroupingThreshold : 8;
 
         // 2. Sort everything chronologically
-        var sortedPics = PicturesList.OrderBy(p => p.Picture.CapturedAt).ToList();
+        var sortedPics = PicturesList.OrderBy(p => p.Picture.LocalCapturedAt).ToList();
 
         var burstGroups = new List<List<PictureItemViewModel>>();
         if (sortedPics.Count > 0) {
@@ -887,7 +908,7 @@ public partial class GalleryViewModel : ViewModelBase,
                 var currentPic = sortedPics[i];
                 var prevPic = sortedPics[i - 1];
 
-                var timeDiff = (currentPic.Picture.CapturedAt - prevPic.Picture.CapturedAt).TotalSeconds;
+                var timeDiff = (currentPic.Picture.LocalCapturedAt - prevPic.Picture.LocalCapturedAt).TotalSeconds;
 
                 // Condition A: Orientation must match exactly
                 var orientationMatches = GetOrientation(prevPic.Picture) == GetOrientation(currentPic.Picture);
@@ -1298,6 +1319,8 @@ public partial class GalleryViewModel : ViewModelBase,
                     await _xmpService.LoadMetadataAsync(pic);
                 }
             });
+            _albumTimeZone = await _nodeService.ResolveTimeZoneAsync(album.Id);
+            CaptureTimeResolver.Apply(pics, _albumTimeZone?.ZoneId, _settingsService.Current.DefaultTimeZoneId, AlbumTimeZoneLabel);
 
             UpdateGalleryItems(album, children);
             
@@ -1442,7 +1465,7 @@ public partial class GalleryViewModel : ViewModelBase,
                 // Broadcast update to refresh the UI elsewhere
                 WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
             }
-        });
+        }, _settingsService.Current.DefaultTimeZoneId);
 
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new EditNodeDialog { DataContext = vm })
@@ -1577,7 +1600,7 @@ public partial class GalleryViewModel : ViewModelBase,
         if (children != null) {
             if (IsShowingAlbum) {
                 var pics = children.OfType<Picture>()
-                    .OrderBy(p => p.CapturedAt)
+                    .OrderBy(p => p.LocalCapturedAt)
                     .ToList();
 
                 _pathService.PopulatePaths(pics);
@@ -2053,6 +2076,8 @@ public partial class GalleryViewModel : ViewModelBase,
             var xmpService = scope?.ServiceProvider.GetService<IXmpService>() ?? _xmpService;
             var pickedService = scope?.ServiceProvider.GetService<IPickedService>() ?? _pickedService;
 
+            _albumTimeZone = await nodeService.ResolveTimeZoneAsync(album.Id);
+            var timeZoneLabel = CaptureTimeResolver.SourceLabel(_albumTimeZone, album.Id);
             var children = await nodeService.FindChildrenAsync(album.Id);
             var pics = children.OfType<Picture>().ToList();
             Log.Information("Loading album '{AlbumName}' (Id={AlbumId}) with {Count} pictures...", album.Name, album.Id, pics.Count);
@@ -2084,7 +2109,9 @@ public partial class GalleryViewModel : ViewModelBase,
             await Task.WhenAll(firstBatchPics.Select(async pic => {
                 await xmpService.LoadMetadataAsync(pic);
                 await PictureOrientationResolver.EnsureAsync(pic, pictureAnalyzer, xmpService, SharedFileSystem);
+                await CaptureTimeResolver.EnsureCameraOffsetAsync(pic, pictureAnalyzer, xmpService, SharedFileSystem);
             }));
+            CaptureTimeResolver.Apply(firstBatchPics, _albumTimeZone?.ZoneId, _settingsService.Current.DefaultTimeZoneId, timeZoneLabel);
 
             // Sync picked and highlight files if they are missing
             foreach (var pic in firstBatchPics) {
@@ -2136,11 +2163,11 @@ public partial class GalleryViewModel : ViewModelBase,
 
             // Date Grouping
             var groupVmsInitial = new List<PictureGroupViewModel>();
-            var groupsInitial = filteredListInitial.GroupBy(p => p.Picture.CapturedAt.Date).OrderBy(g => g.Key);
+            var groupsInitial = filteredListInitial.GroupBy(p => p.Picture.LocalCapturedAt.Date).OrderBy(g => g.Key);
             foreach (var group in groupsInitial) {
                 var dateStr = group.Key.ToString("yyyy-MM-dd");
                 var header = $"{dateStr} ({group.Count()})";
-                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                var sortedGroup = group.OrderBy(p => p.Picture.LocalCapturedAt).ToList();
                 
                 foreach (var pic in sortedGroup) {
                     pic.GroupName = null;
@@ -2218,7 +2245,9 @@ public partial class GalleryViewModel : ViewModelBase,
                     await Parallel.ForEachAsync(chunk, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (pic, token) => {
                         await _xmpService.LoadMetadataAsync(pic);
                         await PictureOrientationResolver.EnsureAsync(pic, pictureAnalyzer, _xmpService, SharedFileSystem);
+                        await CaptureTimeResolver.EnsureCameraOffsetAsync(pic, pictureAnalyzer, _xmpService, SharedFileSystem);
                     });
+                    CaptureTimeResolver.Apply(chunk, _albumTimeZone?.ZoneId, _settingsService.Current.DefaultTimeZoneId, timeZoneLabel);
 
                     // Sync picked and highlight files if they are missing
                     foreach (var pic in chunk) {
@@ -2281,7 +2310,7 @@ public partial class GalleryViewModel : ViewModelBase,
                         }
 
                         // Add to GroupedPictures
-                        var groups = filteredChunkList.GroupBy(p => p.Picture.CapturedAt.Date);
+                        var groups = filteredChunkList.GroupBy(p => p.Picture.LocalCapturedAt.Date);
                         foreach (var group in groups) {
                             var dateStr = group.Key.ToString("yyyy-MM-dd");
                             
@@ -2300,7 +2329,7 @@ public partial class GalleryViewModel : ViewModelBase,
                             } else {
                                 // Create new group
                                 var header = $"{dateStr} ({group.Count()})";
-                                var sortedGroup = group.OrderBy(p => p.Picture.CapturedAt).ToList();
+                                var sortedGroup = group.OrderBy(p => p.Picture.LocalCapturedAt).ToList();
                                 foreach (var pic in sortedGroup) {
                                     pic.GroupName = null;
                                     pic.BurstIndex = 0;
@@ -2506,6 +2535,34 @@ public partial class GalleryViewModel : ViewModelBase,
         OnPropertyChanged(nameof(IsPurpleColorFilterActive));
     }
 
+    /// <summary>
+    ///     Recalculates a picture's local capture time for the open album's time zone.
+    /// </summary>
+    private void ApplyCaptureTime(Picture picture) {
+        CaptureTimeResolver.Apply(picture, _albumTimeZone?.ZoneId, _settingsService.Current.DefaultTimeZoneId, AlbumTimeZoneLabel);
+    }
+
+    private async Task RefreshAlbumTimeZoneAsync(int albumId) {
+        var source = await _nodeService.ResolveTimeZoneAsync(albumId);
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => {
+            if (_currentNode?.Id != albumId || source == _albumTimeZone) return;
+            _albumTimeZone = source;
+            ReapplyCaptureTimes();
+        });
+    }
+
+    /// <summary>
+    ///     After the album's or the default time zone changed: new local times, so days and order may change.
+    /// </summary>
+    private void ReapplyCaptureTimes() {
+        if (!IsShowingAlbum) return;
+        foreach (var picVm in _allPictures) {
+            ApplyCaptureTime(picVm.Picture);
+            picVm.NotifyCaptureTimeChanged();
+        }
+        _ = RefreshGalleryGrouping();
+    }
+
     private void SetupXmpWatcher(Album album) {
         TearDownXmpWatcher();
 
@@ -2621,6 +2678,7 @@ public partial class GalleryViewModel : ViewModelBase,
                                picVm.Picture.CapturedAt != originalCapturedAt;
 
                 if (picVm.Picture.CapturedAt != originalCapturedAt) {
+                    ApplyCaptureTime(picVm.Picture);
                     await _nodeService.UpdateNodeAsync(picVm.Picture);
                     _ = RefreshGalleryGrouping();
                 }
@@ -2712,6 +2770,7 @@ public partial class GalleryViewModel : ViewModelBase,
                     }
 
                     if (newPicVm.Picture.CapturedAt != originalCapturedAt) {
+                        ApplyCaptureTime(newPicVm.Picture);
                         await _nodeService.UpdateNodeAsync(newPicVm.Picture);
                         _ = RefreshGalleryGrouping();
                     }

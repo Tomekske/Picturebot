@@ -16,9 +16,53 @@ public class Picture : Node {
     }
 
     /// <summary>
-    ///     The date and time the picture was captured.
+    ///     The date and time the picture was captured, as the camera's clock showed it.
     /// </summary>
     public DateTime CapturedAt { get; set; }
+
+    /// <summary>
+    ///     The camera clock's UTC offset from EXIF (OffsetTimeOriginal), loaded from and saved to XMP.
+    ///     Null when the camera didn't write one.
+    /// </summary>
+    [NotMapped]
+    public TimeSpan? CameraUtcOffset { get; set; }
+
+    /// <summary>
+    ///     True once the source file's EXIF was checked for <see cref="CameraUtcOffset" />, found or not.
+    ///     Persisted as an XMP marker so the file is read only once per picture.
+    /// </summary>
+    [NotMapped]
+    public bool CameraUtcOffsetChecked { get; set; }
+
+    private DateTime? _localCapturedAt;
+
+    /// <summary>
+    ///     The capture time where the picture was taken (the album's time zone). Calculated when pictures are
+    ///     loaded; falls back to <see cref="CapturedAt" /> until then.
+    /// </summary>
+    [NotMapped]
+    public DateTime LocalCapturedAt {
+        get => _localCapturedAt ?? CapturedAt;
+        set => _localCapturedAt = value;
+    }
+
+    /// <summary>
+    ///     The IANA zone <see cref="LocalCapturedAt" /> is in; null when it shows the camera time.
+    /// </summary>
+    [NotMapped]
+    public string? LocalTimeZoneId { get; set; }
+
+    /// <summary>
+    ///     The UTC offset of <see cref="LocalCapturedAt" />, summer time included.
+    /// </summary>
+    [NotMapped]
+    public TimeSpan? LocalUtcOffset { get; set; }
+
+    /// <summary>
+    ///     Where <see cref="LocalTimeZoneId" /> comes from, e.g. "set on album", "from Miami" or "default".
+    /// </summary>
+    [NotMapped]
+    public string? LocalTimeZoneSource { get; set; }
 
     /// <summary>
     ///     The width of the picture in pixels.

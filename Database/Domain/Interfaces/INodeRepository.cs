@@ -28,6 +28,12 @@ public interface INodeRepository {
     Task<Node?> FindByIdAsync(int id);
 
     /// <summary>
+    ///     Reads a node without tracking it or loading related nodes, so a later update of a separately loaded
+    ///     copy of the same node doesn't clash with it.
+    /// </summary>
+    Task<Node?> FindByIdReadOnlyAsync(int id);
+
+    /// <summary>
     ///     Checks if a node with the same name and type already exists under a specific parent.
     /// </summary>
     /// <param name="parentId">The identifier of the parent node, or null for root-level nodes.</param>

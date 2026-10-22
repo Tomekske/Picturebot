@@ -256,4 +256,14 @@ public class AlbumServiceTests {
             _mockNodeService.Verify(s => s.DeleteNodeAsync(picture), Times.Once);
         });
     }
+
+    [Test]
+    public async Task CreateAsync_StoresTheTimeZone() {
+        _mockFileSystem.AddDirectory(@"C:\Photos");
+
+        var result = await _albumService.CreateAsync(1, "Bamboo forest", @"C:\Photos", "Asia/Tokyo");
+
+        Assert.That(result.TimeZoneId, Is.EqualTo("Asia/Tokyo"));
+        _mockNodeService.Verify(s => s.CreateNodeAsync(It.Is<Album>(a => a.TimeZoneId == "Asia/Tokyo")), Times.Once);
+    }
 }

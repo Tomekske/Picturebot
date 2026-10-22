@@ -27,6 +27,20 @@ public partial class FolderNodeViewModel : ViewModelBase {
     public int? Id { get; }
     public string Name { get; }
     public FolderNodeViewModel? ParentNode { get; set; }
+
+    /// <summary>
+    ///     This folder when it has a time zone, otherwise the nearest folder above it that has one.
+    /// </summary>
+    public FolderNodeViewModel? NearestWithTimeZone {
+        get {
+            for (var current = this; current != null; current = current.ParentNode) {
+                if (!string.IsNullOrEmpty(current._folder?.TimeZoneId)) return current;
+            }
+            return null;
+        }
+    }
+
+    public string? TimeZoneId => _folder?.TimeZoneId;
     public ObservableCollection<FolderNodeViewModel> Children { get; } = new();
 
     public string FullPath {

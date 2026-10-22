@@ -47,7 +47,7 @@ public class ImportPicturesCommandTests {
         var albumPath = _mockFileSystem.Path.Combine(libraryPath, albumUuid);
 
         var album = new Album { Id = 11, Uuid = albumUuid, Name = albumName };
-        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath, null))
             .ReturnsAsync(album);
 
         _mockFileSystem.AddDirectory(sourcePath);
@@ -95,7 +95,7 @@ public class ImportPicturesCommandTests {
         var albumPath = _mockFileSystem.Path.Combine(libraryPath, albumUuid);
 
         var album = new Album { Id = 10, Uuid = albumUuid, Name = albumName };
-        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath, null))
             .ReturnsAsync(album);
 
         _mockFileSystem.AddDirectory(sourcePath);
@@ -143,7 +143,7 @@ public class ImportPicturesCommandTests {
         var albumPath = _mockFileSystem.Path.Combine(libraryPath, albumUuid);
 
         var album = new Album { Id = 12, Uuid = albumUuid, Name = albumName };
-        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath, null))
             .ReturnsAsync(album);
 
         _mockFileSystem.AddDirectory(sourcePath);
@@ -193,7 +193,7 @@ public class ImportPicturesCommandTests {
         var albumPath = _mockFileSystem.Path.Combine(libraryPath, albumUuid);
 
         var album = new Album { Id = 15, Uuid = albumUuid, Name = albumName };
-        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath))
+        _mockAlbumService.Setup(s => s.CreateAsync(parentId, albumName, libraryPath, null))
             .ReturnsAsync(album);
 
         _mockFileSystem.AddDirectory(sourcePath);

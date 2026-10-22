@@ -36,11 +36,11 @@ public class ImportPicturesCommand : IImportPicturesCommand {
     }
 
     public async Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath,
-        IProgress<ImportProgress>? progress = null) {
+        IProgress<ImportProgress>? progress = null, string? timeZoneId = null) {
         var stopwatch = Stopwatch.StartNew();
         
         // Task 1: Create the Album
-        var album = await _albumService.CreateAsync(parentId, albumName, libraryPath);
+        var album = await _albumService.CreateAsync(parentId, albumName, libraryPath, timeZoneId);
         var albumPath = _fileSystem.Path.Combine(libraryPath, album.Uuid ?? string.Empty);
 
         var rawsPath = _fileSystem.Path.Combine(albumPath, "RAWs");
@@ -90,6 +90,8 @@ public class ImportPicturesCommand : IImportPicturesCommand {
             var rawExifOrientation = oriResult is { IsError: false } ? oriResult.Value : 1;
             var orientationFromExif = oriResult is { IsError: false };
 
+            var offsetResult = await _pictureAnalyzer.ExtractUtcOffsetAsync(fileToInspect);
+
             foreach (var file in pair) {
                 cachedDataList.Add(new CachedPictureData {
                     FilePath = file,
@@ -98,7 +100,9 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                     Width = width,
                     Height = height,
                     RawExifOrientation = rawExifOrientation,
-                    OrientationFromExif = orientationFromExif
+                    OrientationFromExif = orientationFromExif,
+                    CameraUtcOffset = offsetResult is { IsError: false } ? offsetResult.Value : null,
+                    CameraUtcOffsetChecked = offsetResult is { IsError: false }
                 });
             }
         }
@@ -171,7 +175,9 @@ public class ImportPicturesCommand : IImportPicturesCommand {
                 Height = cachedData.Height,
                 Orientation = orientation,
                 RawExifOrientation = cachedData.RawExifOrientation,
-                OrientationFromExif = cachedData.OrientationFromExif
+                OrientationFromExif = cachedData.OrientationFromExif,
+                CameraUtcOffset = cachedData.CameraUtcOffset,
+                CameraUtcOffsetChecked = cachedData.CameraUtcOffsetChecked
             };
 
             await _nodeService.CreateNodeAsync(pictureNode);

@@ -18,6 +18,8 @@ namespace Tests;
 [TestFixture]
 public class DetailsInspectorViewModelTests {
     private class FakeNodeService : INodeService {
+        public Task<Domain.TimeZones.TimeZoneSource?> ResolveTimeZoneAsync(int nodeId) =>
+            Task.FromResult<Domain.TimeZones.TimeZoneSource?>(null);
         public Task<List<Node>> GetAllNodesAsync() => Task.FromResult(new List<Node>());
         public Task<Node?> GetNodeByIdAsync(Guid id) => Task.FromResult<Node?>(null);
         public Task CreateNodeAsync(Node node) => Task.CompletedTask;
@@ -40,7 +42,7 @@ public class DetailsInspectorViewModelTests {
 
     private class FakeAlbumService : IAlbumService {
         public Task DeletePictureAsync(Picture picture) => Task.CompletedTask;
-        public Task<Album> CreateAsync(int? parentId, string name, string path) => Task.FromResult(new Album());
+        public Task<Album> CreateAsync(int? parentId, string name, string path, string? timeZoneId = null) => Task.FromResult(new Album());
         public Task DeleteAsync(Album album) => Task.CompletedTask;
         public Task SyncPickedStatusAsync(Album album) => Task.CompletedTask;
         public Task SyncHighlightsAsync(Album album) => Task.CompletedTask;

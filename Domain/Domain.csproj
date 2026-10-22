@@ -10,4 +10,10 @@
       <PackageReference Include="ErrorOr" Version="2.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <!-- tzdb tables (public domain) behind TimeZoneCatalog -->
+      <EmbeddedResource Include="TimeZones\zone.tab" LogicalName="Domain.TimeZones.zone.tab" />
+      <EmbeddedResource Include="TimeZones\iso3166.tab" LogicalName="Domain.TimeZones.iso3166.tab" />
+    </ItemGroup>
+
 </Project>

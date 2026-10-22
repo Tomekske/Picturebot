@@ -76,6 +76,17 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+
+            <StackPanel Spacing="5" IsVisible="{Binding HasTimeZone}">
+                <TextBlock Text="Time Zone" FontWeight="SemiBold" />
+                <controls:TimeZonePicker SelectedZoneId="{Binding TimeZoneId}"
+                                         InheritedZoneId="{Binding InheritedTimeZoneId}"
+                                         AllowNone="True" />
+                <TextBlock Text="{Binding TimeZoneHint}"
+                           TextWrapping="Wrap"
+                           FontSize="12"
+                           Foreground="{DynamicResource Text.Secondary}" />
+            </StackPanel>
         </StackPanel>
     </controls:DialogLayout>
 </UserControl>

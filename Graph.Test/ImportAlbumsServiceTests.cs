@@ -73,18 +73,18 @@ public class ImportAlbumsServiceTests {
         var libraryPath = @"C:\Library";
 
         int idCounter = 1;
-        _folderServiceMock.Setup(s => s.CreateAsync(It.IsAny<int?>(), It.IsAny<string>()))
-            .ReturnsAsync((int? parentId, string name) => new Folder { Id = idCounter++, Name = name, ParentId = parentId });
+        _folderServiceMock.Setup(s => s.CreateAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .ReturnsAsync((int? parentId, string name, string? _) => new Folder { Id = idCounter++, Name = name, ParentId = parentId });
 
-        _importPicturesCommandMock.Setup(s => s.ExecuteAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<Graph.Domain.DTOs.ImportProgress>>()))
-            .ReturnsAsync((int? parentId, string name, string libPath, string srcPath, IProgress<Graph.Domain.DTOs.ImportProgress> p) => new Album { Id = idCounter++, Name = name, ParentId = parentId });
+        _importPicturesCommandMock.Setup(s => s.ExecuteAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<Graph.Domain.DTOs.ImportProgress>>(), It.IsAny<string?>()))
+            .ReturnsAsync((int? parentId, string name, string libPath, string srcPath, IProgress<Graph.Domain.DTOs.ImportProgress> p, string? _) => new Album { Id = idCounter++, Name = name, ParentId = parentId });
 
         // Act
         await _service.ImportRecursiveAsync(null, rootPath, libraryPath);
 
         // Assert
         // Verify Root Folder creation (since C:\Batch Import has no images itself)
-        _folderServiceMock.Verify(s => s.CreateAsync(null, "Batch Import"), Times.Once);
+        _folderServiceMock.Verify(s => s.CreateAsync(null, "Batch Import", null), Times.Once);
         
         // We can't easily check exact IDs in Verify without tracking them, 
         // but we can check the calls were made for all paths.
@@ -95,14 +95,14 @@ public class ImportAlbumsServiceTests {
         VerifyAlbumImported("Album 3", rootPath);
 
         // Folder 1 creation
-        _folderServiceMock.Verify(s => s.CreateAsync(It.IsAny<int?>(), "Folder 1"), Times.Exactly(2)); // One under root, one under Folder 2
+        _folderServiceMock.Verify(s => s.CreateAsync(It.IsAny<int?>(), "Folder 1", null), Times.Exactly(2)); // One under root, one under Folder 2
         
         // Folder 1 children albums
         VerifyAlbumImported("Album 1", folder1Path);
         VerifyAlbumImported("Album 2", folder1Path);
 
         // Folder 2 creation
-        _folderServiceMock.Verify(s => s.CreateAsync(It.IsAny<int?>(), "Folder 2"), Times.Once);
+        _folderServiceMock.Verify(s => s.CreateAsync(It.IsAny<int?>(), "Folder 2", null), Times.Once);
         
         // Folder 2 children albums
         VerifyAlbumImported("Album 1", folder2Path);
@@ -125,7 +125,8 @@ public class ImportAlbumsServiceTests {
             name, 
             @"C:\Library", 
             fullPath, 
-            It.IsAny<IProgress<Graph.Domain.DTOs.ImportProgress>>()), 
+            It.IsAny<IProgress<Graph.Domain.DTOs.ImportProgress>>(),
+            null), 
             Times.Once);
     }
 }

@@ -89,6 +89,21 @@
                 </Grid>
             </StackPanel>
 
+            <StackPanel Spacing="10">
+                <TextBlock Text="TIME ZONE"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource SukiLowText}"
+                           LetterSpacing="1" />
+                <controls:TimeZonePicker SelectedZoneId="{Binding TimeZoneId}"
+                                         InheritedZoneId="{Binding InheritedTimeZoneId}"
+                                         AllowNone="True" />
+                <TextBlock Text="{Binding TimeZoneHint}"
+                           TextWrapping="Wrap"
+                           FontSize="12"
+                           Foreground="{DynamicResource Text.Secondary}" />
+            </StackPanel>
+
         </StackPanel>
     </controls:DialogLayout>
 </UserControl>

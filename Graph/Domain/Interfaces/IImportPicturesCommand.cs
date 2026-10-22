@@ -4,5 +4,6 @@ using Graph.Domain.DTOs;
 namespace Graph.Domain.Interfaces;
 
 public interface IImportPicturesCommand {
-    Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath, IProgress<ImportProgress>? progress = null);
+    Task<Album> ExecuteAsync(int? parentId, string albumName, string libraryPath, string sourcePath, IProgress<ImportProgress>? progress = null,
+        string? timeZoneId = null);
 }

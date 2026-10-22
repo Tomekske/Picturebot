@@ -11,8 +11,9 @@ public interface IFolderService {
     /// </summary>
     /// <param name="parentId">The ID of the parent folder, or null for root.</param>
     /// <param name="folderName">The name of the new folder.</param>
+    /// <param name="timeZoneId">The IANA time zone suggested for albums inside the folder, or null for none.</param>
     /// <returns>A Task that returns the created Folder entity.</returns>
-    Task<Folder> CreateAsync(int? parentId, string folderName);
+    Task<Folder> CreateAsync(int? parentId, string folderName, string? timeZoneId = null);
 
     Task<List<Folder>> FindAllAsync();
 

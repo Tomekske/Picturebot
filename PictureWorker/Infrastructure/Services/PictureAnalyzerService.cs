@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Abstractions;
 using CoenM.ImageHash.HashAlgorithms;
+using Domain.TimeZones;
 using ErrorOr;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
@@ -150,6 +151,36 @@ public class PictureAnalyzerService : IPictureAnalyzer {
             return Error.Failure(
                 "Picture.MetadataExtractionFailed",
                 "An unexpected error occurred while extracting metadata.");
+        }
+    }
+
+    public async Task<ErrorOr<TimeSpan?>> ExtractUtcOffsetAsync(string filePath) {
+        if (!_fileSystem.File.Exists(filePath)) {
+            return Error.NotFound(
+                "Picture.NotFound",
+                $"The file was not found at path: {filePath}");
+        }
+
+        try {
+            return await Task.Run<ErrorOr<TimeSpan?>>(() => {
+                using var stream = _fileSystem.File.OpenRead(filePath);
+                var directories = ImageMetadataReader.ReadMetadata(stream);
+
+                // OffsetTimeOriginal belongs to DateTimeOriginal; OffsetTime (to DateTime) is the fallback
+                foreach (var directory in directories.OfType<ExifDirectoryBase>()) {
+                    var offset = CaptureTime.ParseOffset(directory.GetString(ExifDirectoryBase.TagTimeZoneOriginal))
+                                 ?? CaptureTime.ParseOffset(directory.GetString(ExifDirectoryBase.TagTimeZone));
+                    if (offset != null) {
+                        return offset;
+                    }
+                }
+
+                return (TimeSpan?)null;
+            });
+        } catch (Exception) {
+            return Error.Failure(
+                "Picture.MetadataExtractionFailed",
+                "An unexpected error occurred while extracting the UTC offset.");
         }
     }
 

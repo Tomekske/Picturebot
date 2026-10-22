@@ -281,6 +281,18 @@
                 </Border>
             </StackPanel>
 
+            <!-- Time zone: empty inherits the zone of the nearest folder up the path that has one -->
+            <StackPanel Spacing="8">
+                <TextBlock Classes="fieldLabel" Text="TIME ZONE" />
+                <controls:TimeZonePicker SelectedZoneId="{Binding TimeZoneId}"
+                                         InheritedZoneId="{Binding InheritedTimeZoneId}"
+                                         AllowNone="True" />
+                <TextBlock Text="{Binding TimeZoneHint}"
+                           TextWrapping="Wrap"
+                           FontSize="12"
+                           Foreground="{DynamicResource Text.Secondary}" />
+            </StackPanel>
+
             <!-- What will happen -->
             <Border Background="{DynamicResource Surface.Card}"
                     CornerRadius="{DynamicResource Radius.Control}"

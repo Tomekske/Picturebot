@@ -114,6 +114,10 @@ namespace Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DefaultTimeZoneId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("EditFolderPath")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -254,7 +258,7 @@ namespace Database.Migrations
                         new
                         {
                             Id = 1,
-                            AiCurationModel = "gemini-2.5-flash",
+                            AiCurationModel = "gemini-3.6-flash",
                             BlueLabelName = "Blue",
                             BlueLabelShortcut = "Ctrl+NumPad5",
                             BurstFallbackTimeThresholdSeconds = 10,
@@ -264,6 +268,7 @@ namespace Database.Migrations
                             CurationNeutralShortcut = "U",
                             CurationPickedShortcut = "P",
                             CurationRejectedShortcut = "X",
+                            DefaultTimeZoneId = "",
                             EditFolderPath = "",
                             EnableAiBurstCuration = true,
                             FullscreenShortcut = "F",
@@ -305,6 +310,10 @@ namespace Database.Migrations
                 {
                     b.HasBaseType("Database.Domain.Entities.Node");
 
+                    b.Property<string>("TimeZoneId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Uuid")
                         .HasMaxLength(36)
                         .HasColumnType("TEXT");
@@ -315,6 +324,10 @@ namespace Database.Migrations
             modelBuilder.Entity("Database.Domain.Entities.Folder", b =>
                 {
                     b.HasBaseType("Database.Domain.Entities.Node");
+
+                    b.Property<string>("TimeZoneId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
 
                     b.ToTable("folders", (string)null);
                 });

@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Database.Domain.Entities;
 using Domain.Enums;
+using Domain.TimeZones;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -124,6 +125,36 @@ public partial class PictureItemViewModel : ViewModelBase, IDisposable {
 
     public void NotifyKeywordsChanged() {
         OnPropertyChanged(nameof(Keywords));
+    }
+
+    /// <summary>
+    ///     When the picture was taken, in the album's time zone.
+    /// </summary>
+    public DateTime CapturedAt => Picture.LocalCapturedAt;
+
+    /// <summary>
+    ///     "Taiwan — Taipei · UTC+08:00 · from Asia · camera 14:00:12", or empty when the camera time is shown unconverted.
+    /// </summary>
+    public string CaptureTimeDetail {
+        get {
+            if (Picture.LocalTimeZoneId == null) return string.Empty;
+            var zone = TimeZoneCatalog.Find(Picture.LocalTimeZoneId)?.Title ?? Picture.LocalTimeZoneId;
+            var offset = Picture.LocalUtcOffset is { } o ? $" · UTC{CaptureTime.FormatOffset(o)}" : string.Empty;
+            var camera = Picture.LocalCapturedAt == Picture.CapturedAt
+                ? string.Empty
+                : $" · camera {Picture.CapturedAt:HH:mm:ss}" +
+                  (Picture.LocalCapturedAt.Date != Picture.CapturedAt.Date ? $" ({Picture.CapturedAt:d MMM})" : string.Empty);
+            var source = string.IsNullOrEmpty(Picture.LocalTimeZoneSource) ? string.Empty : $" · {Picture.LocalTimeZoneSource}";
+            return zone + offset + source + camera;
+        }
+    }
+
+    public bool HasCaptureTimeDetail => CaptureTimeDetail.Length > 0;
+
+    public void NotifyCaptureTimeChanged() {
+        OnPropertyChanged(nameof(CapturedAt));
+        OnPropertyChanged(nameof(CaptureTimeDetail));
+        OnPropertyChanged(nameof(HasCaptureTimeDetail));
     }
 
     public void CancelLoading() {

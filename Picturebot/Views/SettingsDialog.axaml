@@ -4,6 +4,7 @@
         xmlns:models="using:Domain.Models"
         xmlns:material="using:Material.Icons.Avalonia"
         xmlns:icons="using:Material.Icons"
+        xmlns:controls="using:Picturebot.Controls"
         x:DataType="vm:SettingsDialogViewModel"
         x:Class="Picturebot.Views.SettingsDialog"
         x:Name="RootSettingsWindow"
@@ -413,6 +414,14 @@
                             <Grid ColumnDefinitions="*, 350" Height="40">
                                 <TextBlock Text="Launch Application in Full Screen" VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}" FontSize="13" />
                                 <CheckBox Grid.Column="1" IsChecked="{Binding LaunchFullScreen}" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, 350" MinHeight="40">
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="Default Time Zone" Foreground="{DynamicResource Text.Primary}" FontSize="13" />
+                                    <TextBlock Text="Used for albums without a time zone of their own." Foreground="{DynamicResource Text.Secondary}" FontSize="11" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <controls:TimeZonePicker Grid.Column="1" SelectedZoneId="{Binding DefaultTimeZoneId}" Width="350" HorizontalAlignment="Right" />
                             </Grid>
                         </StackPanel>
 

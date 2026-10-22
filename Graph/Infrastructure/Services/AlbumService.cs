@@ -15,11 +15,12 @@ public class AlbumService(
     IPictureRepository pictureRepository,
     IPathService pathService,
     IXmpService xmpService) : IAlbumService {
-    public async Task<Album> CreateAsync(int? parentId, string albumName, string path) {
+    public async Task<Album> CreateAsync(int? parentId, string albumName, string path, string? timeZoneId = null) {
         var album = new Album {
             Name = albumName,
             ParentId = parentId,
-            Type = NodeType.Album
+            Type = NodeType.Album,
+            TimeZoneId = timeZoneId
         };
 
         // NodeService will call AlbumCreationStrategy.Prepare(album), which generates the UUID

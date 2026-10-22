@@ -9,6 +9,7 @@ using System.IO.Abstractions;
 using Database.Domain.Entities;
 using Database.Infrastructure.Data;
 using Domain.Enums;
+using Domain.TimeZones;
 using Graph.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,8 @@ public class XmpService(
     private static readonly XNamespace pb = "http://ns.picturebot.app/1.0/";
 
     private const string OrientationSourceExif = "exif";
+    // pb:CameraUtcOffset value for "EXIF was checked and has no offset"
+    private const string CameraUtcOffsetNone = "none";
 
     public async Task LoadMetadataAsync(Picture picture) {
         if (picture.SubFolder == null) {
@@ -197,6 +200,12 @@ public class XmpService(
             picture.Orientation = ParseOrientation(orientationStr);
             picture.OrientationFromExif = picture.Orientation != Orientation.Unknown &&
                 string.Equals(desc.Attribute(pb + "OrientationSource")?.Value, OrientationSourceExif, StringComparison.OrdinalIgnoreCase);
+
+            // 7. Camera UTC offset, copied from EXIF once
+            var offsetStr = desc.Attribute(pb + "CameraUtcOffset")?.Value;
+            picture.CameraUtcOffset = CaptureTime.ParseOffset(offsetStr);
+            picture.CameraUtcOffsetChecked = picture.CameraUtcOffset != null ||
+                string.Equals(offsetStr, CameraUtcOffsetNone, StringComparison.OrdinalIgnoreCase);
         } catch (Exception ex) {
             Log.Error(ex, "Failed to load XMP metadata for picture {Name} from {Path}", picture.Name, xmpPath);
         }
@@ -302,6 +311,15 @@ public class XmpService(
                 desc.SetAttributeValue(pb + "OrientationSource", OrientationSourceExif);
             } else {
                 desc.Attribute(pb + "OrientationSource")?.Remove();
+            }
+
+            // Camera UTC offset from EXIF; "none" records that EXIF was checked and had none
+            if (picture.CameraUtcOffset is { } cameraOffset) {
+                desc.SetAttributeValue(pb + "CameraUtcOffset", CaptureTime.FormatOffset(cameraOffset));
+            } else if (picture.CameraUtcOffsetChecked) {
+                desc.SetAttributeValue(pb + "CameraUtcOffset", CameraUtcOffsetNone);
+            } else {
+                desc.Attribute(pb + "CameraUtcOffset")?.Remove();
             }
 
             // Write xmpDM:pick and xmpDM:good for Lightroom compatibility

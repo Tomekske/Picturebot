@@ -125,6 +125,26 @@ public class XmpServiceTests : IDisposable {
         });
     }
 
+    [TestCase(60, true)]
+    [TestCase(null, true)]
+    [TestCase(null, false)]
+    public async Task SaveAndLoad_PreservesTheCameraUtcOffset(int? offsetMinutes, bool isChecked) {
+        _mockFileSystem.AddDirectory(@"C:\RAWs");
+        var picture = new Picture {
+            Name = "Pic1",
+            CameraUtcOffset = offsetMinutes.HasValue ? TimeSpan.FromMinutes(offsetMinutes.Value) : null,
+            CameraUtcOffsetChecked = isChecked,
+            SubFolder = new SubFolder { Raw = @"C:\RAWs\Pic1.ARW" }
+        };
+        await _xmpService.SaveMetadataAsync(picture);
+
+        var loaded = new Picture { Name = "Pic1", SubFolder = new SubFolder { Raw = @"C:\RAWs\Pic1.ARW" } };
+        await _xmpService.LoadMetadataAsync(loaded);
+
+        Assert.That(loaded.CameraUtcOffset, Is.EqualTo(picture.CameraUtcOffset));
+        Assert.That(loaded.CameraUtcOffsetChecked, Is.EqualTo(isChecked));
+    }
+
     [Test]
     public async Task SaveMetadataAsync_WhenXmpExists_ShouldPreserveOtherXmlElements() {
         // Arrange

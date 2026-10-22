@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Domain.Enums;
 using Domain.Interfaces;
 using Domain.Models;
+using Domain.TimeZones;
 using Picturebot.Views;
 using Serilog;
 using SukiUI.Toasts;
@@ -157,6 +158,12 @@ public partial class SettingsDialogViewModel : ViewModelBase {
 
     [ObservableProperty]
     private bool _launchFullScreen;
+
+    /// <summary>
+    ///     The IANA zone for albums without their own; starts as this computer's zone.
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultTimeZoneId;
 
     [ObservableProperty]
     private string _libraryLocation = string.Empty;
@@ -357,6 +364,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             : "gemini-3.6-flash";
         EnableAiBurstCuration = settings.EnableAiBurstCuration;
         LaunchFullScreen = settings.LaunchMaximized;
+        DefaultTimeZoneId = TimeZoneCatalog.DefaultZoneId(settings.DefaultTimeZoneId);
         RedLabelName = settings.RedLabelName;
         OrangeLabelName = settings.OrangeLabelName;
         YellowLabelName = settings.YellowLabelName;
@@ -627,6 +635,7 @@ public partial class SettingsDialogViewModel : ViewModelBase {
             AiCurationModel = !string.IsNullOrWhiteSpace(AiCurationModel) ? AiCurationModel.Trim() : "gemini-3.6-flash",
             EnableAiBurstCuration = EnableAiBurstCuration,
             LaunchMaximized = LaunchFullScreen,
+            DefaultTimeZoneId = DefaultTimeZoneId ?? string.Empty,
             RedLabelName = RedLabelName,
             OrangeLabelName = OrangeLabelName,
             YellowLabelName = YellowLabelName,

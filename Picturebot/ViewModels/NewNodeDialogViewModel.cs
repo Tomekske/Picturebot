@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Database.Domain.Entities;
 using Domain.Interfaces;
+using Domain.TimeZones;
 using Graph.Domain.Interfaces;
 using Graph.Infrastructure.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +79,20 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     [ObservableProperty]
     private string _summaryText = string.Empty;
 
+    /// <summary>
+    ///     The zone chosen for the new album or folder; null inherits it from the folders above.
+    /// </summary>
+    [ObservableProperty]
+    private string? _timeZoneId;
+
+    [ObservableProperty]
+    private string? _inheritedTimeZoneId;
+
+    [ObservableProperty]
+    private string _timeZoneHint = string.Empty;
+
+    private TimeZoneSource? _inheritedTimeZone;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasValidationMessage))]
     [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
@@ -105,6 +120,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         _isAlbumMode = startAsAlbum;
         _current = startFolderId.HasValue && _byId.TryGetValue(startFolderId.Value, out var start) ? start : _root;
         Refresh();
+        UpdateInheritedTimeZone();
     }
 
     public ObservableCollection<PathSegment> PathSegments { get; } = new();
@@ -119,7 +135,9 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
     private void AddNode(Node node, LocationFolder parent) {
         switch (node) {
             case Folder folder: {
-                var location = new LocationFolder(folder.Id, folder.Name, parent == _root ? null : parent);
+                var location = new LocationFolder(folder.Id, folder.Name, parent == _root ? null : parent) {
+                    TimeZoneId = folder.TimeZoneId
+                };
                 parent.Folders.Add(location);
                 _byId[folder.Id] = location;
                 foreach (var child in node.Children ?? []) {
@@ -137,7 +155,29 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         return folder == _root ? null : folder.Parent ?? _root;
     }
 
-    partial void OnCurrentChanged(LocationFolder value) => Refresh();
+    partial void OnCurrentChanged(LocationFolder value) {
+        Refresh();
+        UpdateInheritedTimeZone();
+    }
+
+    partial void OnTimeZoneIdChanged(string? value) => UpdateTimeZoneHint();
+
+    /// <summary>
+    ///     The zone of the nearest folder up the path that has one (Japan › Kyoto › here: Japan's zone).
+    /// </summary>
+    private void UpdateInheritedTimeZone() {
+        var source = Current == _root
+            ? null
+            : Current.Ancestors.Prepend(Current).FirstOrDefault(f => f.Id.HasValue && !string.IsNullOrEmpty(f.TimeZoneId));
+        _inheritedTimeZone = source == null ? null : new TimeZoneSource(source.TimeZoneId!, source.Id!.Value, source.Name);
+        InheritedTimeZoneId = ViewModels.TimeZoneHint.InheritedZoneId(_inheritedTimeZone, _settingsService.Current.DefaultTimeZoneId);
+        UpdateTimeZoneHint();
+    }
+
+    private void UpdateTimeZoneHint() {
+        TimeZoneHint = ViewModels.TimeZoneHint.Describe(TimeZoneId, _inheritedTimeZone,
+            _settingsService.Current.DefaultTimeZoneId, isFolder: !IsAlbumMode);
+    }
     partial void OnQueryChanged(string value) => RebuildRows();
     partial void OnNameChanged(string value) => UpdateSummary();
 
@@ -146,6 +186,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         OnPropertyChanged(nameof(CreateButtonText));
         OnPropertyChanged(nameof(NameWatermark));
         UpdateSummary();
+        UpdateTimeZoneHint();
     }
 
     partial void OnSourcePathChanged(string value) {
@@ -490,7 +531,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         // 2a. Folder: create it and close.
         if (!IsAlbumMode) {
             try {
-                var folder = await _folderService.CreateAsync(parentId, name);
+                var folder = await _folderService.CreateAsync(parentId, name, OwnTimeZoneId());
                 MainWindow.DialogManager.DismissDialog();
                 _onResult(new NewNodeResult(folder, createdFolders, null));
             } catch (Exception ex) {
@@ -508,6 +549,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
         // 2b. Album: close the dialog and import in the background, like the old Add Album dialog.
         var libraryPath = _settingsService.Current.LibraryPath!;
         var sourcePath = SourcePath;
+        var timeZoneId = OwnTimeZoneId();
         _recentLocations.LastSourceFolder = sourcePath;
         MainWindow.DialogManager.DismissDialog();
         var feedback = ImportFeedback.Start(name);
@@ -516,7 +558,7 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
             var album = await Task.Run(async () => {
                 using var scope = _scopeFactory.CreateScope();
                 var importCommand = scope.ServiceProvider.GetRequiredService<IImportPicturesCommand>();
-                return await importCommand.ExecuteAsync(parentId, name, libraryPath, sourcePath, feedback);
+                return await importCommand.ExecuteAsync(parentId, name, libraryPath, sourcePath, feedback, timeZoneId);
             });
             feedback.Completed();
             _onResult(new NewNodeResult(album, createdFolders, null));
@@ -525,6 +567,13 @@ public partial class NewNodeDialogViewModel : ViewModelBase {
             feedback.Failed();
             _onResult(new NewNodeResult(null, createdFolders, ex.Message));
         }
+    }
+
+    /// <summary>
+    ///     The chosen zone, or null when it's the same as the inherited one so the new node keeps following it.
+    /// </summary>
+    private string? OwnTimeZoneId() {
+        return ViewModels.TimeZoneHint.Normalize(TimeZoneId, _inheritedTimeZone, _settingsService.Current.DefaultTimeZoneId);
     }
 
     [RelayCommand]

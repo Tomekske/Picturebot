@@ -4,5 +4,6 @@ using Graph.Domain.DTOs;
 namespace Graph.Domain.Interfaces;
 
 public interface IImportAlbumsService {
-    Task ImportRecursiveAsync(int? parentId, string sourcePath, string libraryPath, IProgress<ImportBatchProgress>? progress = null);
+    Task ImportRecursiveAsync(int? parentId, string sourcePath, string libraryPath, IProgress<ImportBatchProgress>? progress = null,
+        string? timeZoneId = null);
 }

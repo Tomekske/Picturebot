@@ -13,4 +13,11 @@ public class Album : Node {
     /// </summary>
     [MaxLength(36)]
     public string? Uuid { get; set; }
+
+    /// <summary>
+    ///     The IANA time zone (e.g. "Asia/Taipei") the album's pictures were taken in.
+    ///     Null means the default time zone from the settings.
+    /// </summary>
+    [MaxLength(64)]
+    public string? TimeZoneId { get; set; }
 }

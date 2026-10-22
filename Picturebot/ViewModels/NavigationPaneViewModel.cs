@@ -199,7 +199,7 @@ public partial class NavigationPaneViewModel : ViewModelBase,
                 // Broadcast update to refresh the tree and gallery
                 WeakReferenceMessenger.Default.Send(new NodeUpdatedMessage(result));
             }
-        });
+        }, _settingsService.Current.DefaultTimeZoneId);
 
         MainWindow.DialogManager.CreateDialog()
             .WithContent(new EditNodeDialog { DataContext = vm })

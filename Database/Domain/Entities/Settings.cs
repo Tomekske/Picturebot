@@ -102,4 +102,9 @@ public class Settings {
     public string GeminiApiKey { get; set; } = string.Empty;
     public string AiCurationModel { get; set; } = "gemini-3.6-flash";
     public bool EnableAiBurstCuration { get; set; } = true;
+
+    /// <summary>
+    ///     The IANA time zone used for albums without their own time zone. Empty means the system time zone.
+    /// </summary>
+    public string DefaultTimeZoneId { get; set; } = string.Empty;
 }

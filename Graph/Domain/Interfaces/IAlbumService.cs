@@ -12,8 +12,9 @@ public interface IAlbumService {
     /// <param name="parentId">The ID of the parent folder, or null for root.</param>
     /// <param name="albumName">The display name of the new album.</param>
     /// <param name="path">The base path where the album directory should be created.</param>
+    /// <param name="timeZoneId">The IANA time zone the album's pictures were taken in, or null for the default.</param>
     /// <returns>A Task that returns the created Album entity.</returns>
-    Task<Album> CreateAsync(int? parentId, string albumName, string path);
+    Task<Album> CreateAsync(int? parentId, string albumName, string path, string? timeZoneId = null);
 
     Task DeleteAsync(Album album);
 

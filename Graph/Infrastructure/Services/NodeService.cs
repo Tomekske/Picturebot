@@ -1,6 +1,7 @@
 using Database.Domain.Entities;
 using Database.Domain.Interfaces;
 using Domain.Enums;
+using Domain.TimeZones;
 using Graph.Domain.Interfaces;
 using Graph.Domain.Strategies;
 
@@ -62,6 +63,22 @@ public class NodeService(
 
     public async Task<List<Node>> FindChildrenAsync(int parentId) {
         return await nodeRepository.FindChildrenAsync(parentId);
+    }
+
+    public async Task<TimeZoneSource?> ResolveTimeZoneAsync(int nodeId) {
+        int? currentId = nodeId;
+        // The depth limit guards against a corrupt parent cycle
+        for (var depth = 0; currentId.HasValue && depth < 64; depth++) {
+            var node = await nodeRepository.FindByIdReadOnlyAsync(currentId.Value);
+            var zoneId = node switch {
+                Album album => album.TimeZoneId,
+                Folder folder => folder.TimeZoneId,
+                _ => null
+            };
+            if (node != null && !string.IsNullOrEmpty(zoneId)) return new TimeZoneSource(zoneId, node.Id, node.Name);
+            currentId = node?.ParentId;
+        }
+        return null;
     }
 
     public async Task UpdateNodeAsync(Node node) {

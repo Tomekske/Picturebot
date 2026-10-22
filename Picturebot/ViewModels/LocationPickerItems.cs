@@ -22,6 +22,11 @@ public class LocationFolder {
     public string Name { get; }
     public LocationFolder? Parent { get; }
     public bool IsPending { get; set; }
+
+    /// <summary>
+    ///     The folder's own time zone, if set; suggested for what's created inside it.
+    /// </summary>
+    public string? TimeZoneId { get; init; }
     public List<LocationFolder> Folders { get; } = new();
     public List<string> AlbumNames { get; } = new();
 

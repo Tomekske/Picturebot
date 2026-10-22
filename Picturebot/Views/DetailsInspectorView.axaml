@@ -97,7 +97,7 @@
                         <TextBlock FontSize="12" Foreground="{DynamicResource Text.Secondary}" TextTrimming="CharacterEllipsis">
                             <TextBlock.Text>
                                 <MultiBinding StringFormat="{}{0:d MMM yyyy · HH:mm} · {1}">
-                                    <Binding Path="SelectedPicture.Picture.CapturedAt" />
+                                    <Binding Path="SelectedPicture.CapturedAt" />
                                     <Binding Path="SelectedPicture.FileTypesText" />
                                 </MultiBinding>
                             </TextBlock.Text>
@@ -454,7 +454,14 @@
                     <StackPanel Spacing="10" IsVisible="{Binding IsInfoExpanded}">
                         <Grid ColumnDefinitions="96,*">
                             <TextBlock Classes="field-label" Text="Captured" />
-                            <TextBlock Grid.Column="1" Classes="field-value" Text="{Binding SelectedPicture.Picture.CapturedAt, StringFormat='{}{0:d MMM yyyy · HH:mm:ss}'}" />
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Classes="field-value" Text="{Binding SelectedPicture.CapturedAt, StringFormat='{}{0:d MMM yyyy · HH:mm:ss}'}" />
+                                <TextBlock Text="{Binding SelectedPicture.CaptureTimeDetail}"
+                                           IsVisible="{Binding SelectedPicture.HasCaptureTimeDetail}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Text.Secondary}" />
+                            </StackPanel>
                         </Grid>
                         <Grid ColumnDefinitions="96,*">
                             <TextBlock Classes="field-label" Text="Dimensions" />

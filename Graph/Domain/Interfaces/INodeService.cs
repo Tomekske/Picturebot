@@ -1,4 +1,5 @@
 using Database.Domain.Entities;
+using Domain.TimeZones;
 using Domain.Enums;
 
 namespace Graph.Domain.Interfaces;
@@ -40,6 +41,12 @@ public interface INodeService {
     Task<List<Node>> GetAllNodesAsync();
     
     Task<List<Node>> FindChildrenAsync(int parentId);
+
+    /// <summary>
+    ///     The time zone of an album or folder or, when it has none, of the nearest folder above it, with the
+    ///     node it was set on. Null when none of them has one (the default time zone from the settings applies).
+    /// </summary>
+    Task<TimeZoneSource?> ResolveTimeZoneAsync(int nodeId);
 
     /// <summary>
     ///     Updates an existing node's information within the hierarchy.

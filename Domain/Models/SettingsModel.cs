@@ -71,4 +71,6 @@ public class SettingsModel {
     public string GeminiApiKey { get; set; } = string.Empty;
     public string AiCurationModel { get; set; } = "gemini-3.6-flash";
     public bool EnableAiBurstCuration { get; set; } = true;
+
+    public string DefaultTimeZoneId { get; set; } = string.Empty;
 }
